@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
+using SmartFleetBE.Model;
 namespace SmartFleetBE;
 
 public partial class SmartFleetDbContext : DbContext

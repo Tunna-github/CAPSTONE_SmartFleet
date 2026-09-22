@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
+using SmartFleetBE.Model;
 namespace SmartFleetBE;
 
 public partial class Role
