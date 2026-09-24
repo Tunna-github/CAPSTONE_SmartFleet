@@ -4,5 +4,7 @@ namespace SmartFleetBE.Services.Interfaces;
 
 public interface IAuthService
 {
-    Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
+    Task<SessionResponse?> CreateSessionAsync(
+        CreateSessionRequest request,
+        CancellationToken cancellationToken = default);
 }
