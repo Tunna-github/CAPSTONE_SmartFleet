@@ -30,35 +30,35 @@ export function TaskCreationPage() {
     const priorityColors: Record<Priority, string> = { HIGH: "#f87171", MEDIUM: "#fbbf24", LOW: "#94a3b8" };
 
     return (
-        <div className="flex flex-col h-full p-6 overflow-y-auto" style={{ background: "#070d1e" }}>
+        <div className="flex flex-col h-full p-6 overflow-y-auto" style={{ background: "var(--background)" }}>
             <div className="max-w-2xl w-full mx-auto">
                 <div className="mb-6">
-                    <h1 className="text-[18px] font-bold text-white">Create Transport Task</h1>
-                    <p className="text-[12px] font-mono mt-1" style={{ color: "#4a5a80" }}>Dispatch a new mission to the autonomous fleet.</p>
+                    <h1 className="text-[18px] font-bold text-foreground">Create Transport Task</h1>
+                    <p className="text-[12px] font-mono mt-1" style={{ color: "var(--text-faint)" }}>Dispatch a new mission to the autonomous fleet.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="rounded-2xl p-6 space-y-6" style={{ background: "#0c1128", border: "1px solid #151d35" }}>
+                <form onSubmit={handleSubmit} className="rounded-2xl p-6 space-y-6" style={{ background: "var(--surface-2)", border: "1px solid #151d35" }}>
                     <div>
-                        <label className="block text-[11px] font-mono mb-2" style={{ color: "#4a5a80" }}>PICKUP LOCATION</label>
-                        <select value={pickup} onChange={e => setPickup(e.target.value)} className="w-full px-3 py-2.5 rounded-lg text-[13px] text-white focus:outline-none appearance-none" style={{ background: "#07091a", border: "1px solid #151d35" }}>
+                        <label className="block text-[11px] font-mono mb-2" style={{ color: "var(--text-faint)" }}>PICKUP LOCATION</label>
+                        <select value={pickup} onChange={e => setPickup(e.target.value)} className="w-full px-3 py-2.5 rounded-lg text-[13px] text-foreground focus:outline-none appearance-none" style={{ background: "var(--surface-1)", border: "1px solid #151d35" }}>
                             {PICKUP_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-mono mb-2" style={{ color: "#4a5a80" }}>DELIVERY DESTINATION</label>
-                        <select value={delivery} onChange={e => setDelivery(e.target.value)} className="w-full px-3 py-2.5 rounded-lg text-[13px] text-white focus:outline-none appearance-none" style={{ background: "#07091a", border: "1px solid #151d35" }}>
+                        <label className="block text-[11px] font-mono mb-2" style={{ color: "var(--text-faint)" }}>DELIVERY DESTINATION</label>
+                        <select value={delivery} onChange={e => setDelivery(e.target.value)} className="w-full px-3 py-2.5 rounded-lg text-[13px] text-foreground focus:outline-none appearance-none" style={{ background: "var(--surface-1)", border: "1px solid #151d35" }}>
                             {DELIVERY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-mono mb-2" style={{ color: "#4a5a80" }}>PACKAGE DESCRIPTION</label>
-                        <input type="text" value={pkg} onChange={e => setPkg(e.target.value)} placeholder="e.g. Industrial Parts × 3" className="w-full px-3 py-2.5 rounded-lg text-[13px] text-white focus:outline-none" style={{ background: "#07091a", border: "1px solid #151d35" }} />
+                        <label className="block text-[11px] font-mono mb-2" style={{ color: "var(--text-faint)" }}>PACKAGE DESCRIPTION</label>
+                        <input type="text" value={pkg} onChange={e => setPkg(e.target.value)} placeholder="e.g. Industrial Parts × 3" className="w-full px-3 py-2.5 rounded-lg text-[13px] text-foreground focus:outline-none" style={{ background: "var(--surface-1)", border: "1px solid #151d35" }} />
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-mono mb-2" style={{ color: "#4a5a80" }}>PRIORITY LEVEL</label>
+                        <label className="block text-[11px] font-mono mb-2" style={{ color: "var(--text-faint)" }}>PRIORITY LEVEL</label>
                         <div className="flex gap-3">
                             {(["HIGH", "MEDIUM", "LOW"] as Priority[]).map(p => {
                                 const selected = priority === p;

@@ -7,10 +7,11 @@ import { TaskCreationPage } from "./pages/TaskCreationPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { RobotsPage } from "./pages/RobotsPage";
 import { DataProvider } from "./context/DataContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 function DashboardLayout({ role, onLogout }: { role: "operator" | "admin", onLogout: () => void }) {
     return (
-        <div className="flex h-full overflow-hidden" style={{ background: "#070d1e" }}>
+        <div className="flex h-full overflow-hidden" style={{ background: "var(--background)" }}>
             <Sidebar role={role} onLogout={onLogout} />
             <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
                 <Outlet />
@@ -25,25 +26,27 @@ export default function App() {
     const handleLogout = () => setRole(null);
 
     return (
-        <DataProvider>
-            <BrowserRouter>
-                <Routes>
-                    <Route path="/login" element={role ? <Navigate to={role === "admin" ? "/admin" : "/dashboard"} replace /> : <LoginPage onLogin={handleLogin} />} />
+        <ThemeProvider>
+            <DataProvider>
+                <BrowserRouter>
+                    <Routes>
+                        <Route path="/login" element={role ? <Navigate to={role === "admin" ? "/admin" : "/dashboard"} replace /> : <LoginPage onLogin={handleLogin} />} />
 
-                    <Route element={role ? <DashboardLayout role={role} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
-                        <Route path="/dashboard" element={<OperatorDashboard />} />
-                        <Route path="/dashboard/create-task" element={<TaskCreationPage />} />
-                        <Route path="/dashboard/robots" element={<RobotsPage />} />
-                        <Route path="/dashboard/analytics" element={<div className="p-6 text-white">Analytics Page (Coming Soon)</div>} />
+                        <Route element={role ? <DashboardLayout role={role} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
+                            <Route path="/dashboard" element={<OperatorDashboard />} />
+                            <Route path="/dashboard/create-task" element={<TaskCreationPage />} />
+                            <Route path="/dashboard/robots" element={<RobotsPage />} />
+                            <Route path="/dashboard/analytics" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Analytics Page (Coming Soon)</div>} />
 
-                        <Route path="/admin" element={<AdminDashboard />} />
-                        <Route path="/admin/robots" element={<div className="p-6 text-white">Admin Robots Page (Coming Soon)</div>} />
-                        <Route path="/admin/maps" element={<div className="p-6 text-white">Admin Maps Page (Coming Soon)</div>} />
-                    </Route>
+                            <Route path="/admin" element={<AdminDashboard />} />
+                            <Route path="/admin/robots" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Robots Page (Coming Soon)</div>} />
+                            <Route path="/admin/maps" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Maps Page (Coming Soon)</div>} />
+                        </Route>
 
-                    <Route path="*" element={<Navigate to={role ? (role === "admin" ? "/admin" : "/dashboard") : "/login"} replace />} />
-                </Routes>
-            </BrowserRouter>
-        </DataProvider>
+                        <Route path="*" element={<Navigate to={role ? (role === "admin" ? "/admin" : "/dashboard") : "/login"} replace />} />
+                    </Routes>
+                </BrowserRouter>
+            </DataProvider>
+        </ThemeProvider>
     );
 }
