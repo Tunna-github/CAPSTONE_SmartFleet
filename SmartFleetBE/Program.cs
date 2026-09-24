@@ -17,14 +17,7 @@ builder.Services.AddDbContext<SmartFleetDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<ITransportTaskRepository, TransportTaskRepository>();
-builder.Services.AddScoped<IMaintenanceRecordRepository, MaintenanceRecordRepository>();
-
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ITransportTaskService, TransportTaskService>();
-builder.Services.AddScoped<IMaintenanceRecordService, MaintenanceRecordService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
