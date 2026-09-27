@@ -13,7 +13,7 @@ public sealed class AuthRepository : IAuthRepository
         _dbContext = dbContext;
     }
 
-    public Task<User?> GetUserForLoginAsync(
+    public Task<User?> GetUserForAuthenticationAsync(
         string usernameOrEmail,
         CancellationToken cancellationToken = default)
     {
