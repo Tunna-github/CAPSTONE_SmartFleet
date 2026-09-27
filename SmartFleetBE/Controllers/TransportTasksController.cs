@@ -14,10 +14,15 @@ namespace SmartFleetBE.Controllers;
 public sealed class TransportTasksController : ControllerBase
 {
     private readonly ITransportTaskService _transportTaskService;
+    private readonly ITaskDispatchService _taskDispatchService;
 
-    public TransportTasksController(ITransportTaskService transportTaskService)
+
+    public TransportTasksController(
+    ITransportTaskService transportTaskService,
+    ITaskDispatchService taskDispatchService)
     {
         _transportTaskService = transportTaskService;
+        _taskDispatchService = taskDispatchService;
     }
 
     /// <summary>
@@ -187,5 +192,69 @@ public sealed class TransportTasksController : ControllerBase
             Title = title,
             Detail = detail
         };
+    }
+
+    [HttpPost("{taskId:long}/assign")]
+    [ProducesResponseType(
+    typeof(ManualAssignTaskResponse),
+    StatusCodes.Status200OK)]
+    [ProducesResponseType(
+    typeof(ProblemDetails),
+    StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+    typeof(ProblemDetails),
+    StatusCodes.Status404NotFound)]
+    [ProducesResponseType(
+    typeof(ProblemDetails),
+    StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ManualAssignTaskResponse>>
+    AssignTaskManually(
+        long taskId,
+        [FromBody] ManualAssignTaskRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _taskDispatchService.AssignManualAsync(
+            taskId,
+            request.RobotId,
+            request.MovementPattern,
+            userId,
+            cancellationToken);
+
+        if (result.Status == TransportTaskResultStatus.NotFound)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Status = StatusCodes.Status404NotFound,
+                Title = "Task or robot not found",
+                Detail = result.Error
+            });
+        }
+
+        if (result.Status == TransportTaskResultStatus.ValidationFailed)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Invalid assignment",
+                Detail = result.Error
+            });
+        }
+
+        if (result.Status == TransportTaskResultStatus.Conflict)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Cannot assign task",
+                Detail = result.Error
+            });
+        }
+
+        return Ok(result.Value);
     }
 }

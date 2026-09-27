@@ -57,7 +57,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITransportTaskService, TransportTaskService>();
 builder.Services.AddScoped<IMaintenanceRecordService, MaintenanceRecordService>();
-
+builder.Services.AddScoped<ITaskDispatchService, TaskDispatchService>();
+builder.Services.AddScoped<IMqttRobotService, MqttRobotService>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
 
