@@ -1,0 +1,10 @@
+{
+  "description": "Streamline warehouse operations with real-time fleet management, task tracking, and robot monitoring for enhanced efficiency in B2B environments.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
