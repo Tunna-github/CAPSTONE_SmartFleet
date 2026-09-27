@@ -15,11 +15,11 @@ public sealed class AuthService : IAuthService
         _jwtTokenService = jwtTokenService;
     }
 
-    public async Task<LoginResponse?> LoginAsync(
-        LoginRequest request,
+    public async Task<SessionResponse?> CreateSessionAsync(
+        CreateSessionRequest request,
         CancellationToken cancellationToken = default)
     {
-        var user = await _authRepository.GetUserForLoginAsync(
+        var user = await _authRepository.GetUserForAuthenticationAsync(
             request.UsernameOrEmail,
             cancellationToken);
 
@@ -45,11 +45,11 @@ public sealed class AuthService : IAuthService
 
         var token = _jwtTokenService.CreateAccessToken(user, roles);
 
-        return new LoginResponse
+        return new SessionResponse
         {
             AccessToken = token.Token,
             ExpiresAtUtc = token.ExpiresAtUtc,
-            User = new AuthenticatedUserDto
+            User = new AuthenticatedUserResponse
             {
                 UserId = user.UserId,
                 Username = user.Username,
