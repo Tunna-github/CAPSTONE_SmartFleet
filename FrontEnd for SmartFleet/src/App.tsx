@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import { Sidebar } from "./components/Sidebar";
 import { LoginPage } from "./pages/LoginPage";
 import { OperatorDashboard } from "./pages/OperatorDashboard";
-import { TaskCreationPage } from "./pages/TaskCreationPage";
+import { TasksPage } from "./pages/TasksPage";           // ← NEW
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { RobotsPage } from "./pages/RobotsPage";
 import { DataProvider } from "./context/DataContext";
@@ -34,13 +34,13 @@ export default function App() {
 
                         <Route element={role ? <DashboardLayout role={role} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
                             <Route path="/dashboard" element={<OperatorDashboard />} />
-                            <Route path="/dashboard/create-task" element={<TaskCreationPage />} />
+                            <Route path="/dashboard/tasks" element={<TasksPage />} />           {/* ← REPLACED */}
                             <Route path="/dashboard/robots" element={<RobotsPage />} />
                             <Route path="/dashboard/analytics" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Analytics Page (Coming Soon)</div>} />
 
                             <Route path="/admin" element={<AdminDashboard />} />
-                            <Route path="/admin/robots" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Robots Page (Coming Soon)</div>} />
-                            <Route path="/admin/maps" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Maps Page (Coming Soon)</div>} />
+                            <Route path="/admin/robots" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Robots (Coming Soon)</div>} />
+                            <Route path="/admin/maps" element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Maps (Coming Soon)</div>} />
                         </Route>
 
                         <Route path="*" element={<Navigate to={role ? (role === "admin" ? "/admin" : "/dashboard") : "/login"} replace />} />

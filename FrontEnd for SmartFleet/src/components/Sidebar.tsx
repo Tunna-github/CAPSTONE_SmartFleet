@@ -15,7 +15,7 @@ export function Sidebar({ role, onLogout }: { role: "operator" | "admin", onLogo
         ]
         : [
             { id: "dashboard", label: "Dashboard", path: "/dashboard", icon: IC.dashboard },
-            { id: "tasks", label: "Create Task", path: "/dashboard/create-task", icon: IC.tasks },
+            { id: "tasks", label: "Tasks", path: "/dashboard/tasks", icon: IC.tasks },           
             { id: "robots", label: "Fleet Status", path: "/dashboard/robots", icon: IC.robots },
             { id: "analytics", label: "Analytics", path: "/dashboard/analytics", icon: IC.analytics },
         ];
