@@ -7,6 +7,8 @@ using SmartFleetBE.Repositories;
 using SmartFleetBE.Repositories.Interfaces;
 using SmartFleetBE.Services;
 using SmartFleetBE.Services.Interfaces;
+using SmartFleetBE.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,7 +54,7 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-
+builder.Services.AddSingleton<MqttService>();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
