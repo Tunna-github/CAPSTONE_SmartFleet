@@ -1,10 +1,9 @@
-﻿namespace SmartFleetBE.DTOs.TransportTasks
-{
-    public class ManualAssignTaskRequest
-    {
-        public int RobotId { get; set; }
+﻿using System.ComponentModel.DataAnnotations;
 
-        // Tạm thời dùng FIGURE_8 cho integration test
-        public string MovementPattern { get; set; } = "FIGURE_8";
-    }
+namespace SmartFleetBE.DTOs.TransportTasks;
+
+public sealed class ManualAssignTaskRequest
+{
+    [Range(1, int.MaxValue)]
+    public int RobotId { get; set; }
 }
