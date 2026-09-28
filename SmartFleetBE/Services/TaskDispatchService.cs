@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+
 using SmartFleetBE.Constants;
 using SmartFleetBE.DTOs.TransportTasks;
 using SmartFleetBE.Model;
@@ -10,6 +10,8 @@ namespace SmartFleetBE.Services;
 
 public sealed class TaskDispatchService : ITaskDispatchService
 {
+    private const decimal MinimumBatteryPercent = 20m;
+
     private readonly SmartFleetDbContext _dbContext;
     private readonly MqttService _mqttService;
 
@@ -21,14 +23,108 @@ public sealed class TaskDispatchService : ITaskDispatchService
         _mqttService = mqttService;
     }
 
-    public async Task<TransportTaskServiceResult<ManualAssignTaskResponse>>
+
+    // =====================================================
+    // VIEW AVAILABLE ROBOTS
+    // =====================================================
+
+    public async Task<
+        TransportTaskServiceResult<
+            IReadOnlyCollection<AvailableRobotResponse>>>
+        GetAvailableRobotsAsync(
+            long taskId,
+            CancellationToken cancellationToken = default)
+    {
+        var task = await _dbContext.TransportTasks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                t => t.TaskId == taskId,
+                cancellationToken);
+
+        if (task is null)
+        {
+            return TransportTaskServiceResult<
+                IReadOnlyCollection<AvailableRobotResponse>>
+                .NotFound(
+                    $"Transport task {taskId} was not found.");
+        }
+
+        if (!string.Equals(
+                task.TaskStatus,
+                TransportTaskStatuses.Queued,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return TransportTaskServiceResult<
+                IReadOnlyCollection<AvailableRobotResponse>>
+                .Conflict(
+                    $"Task must be QUEUED before assignment. Current status: {task.TaskStatus}.");
+        }
+
+
+        var robots = await _dbContext.Robots
+            .AsNoTracking()
+            .Where(r =>
+                r.WarehouseId == task.WarehouseId
+                &&
+                r.IsActive
+                &&
+                r.ConnectionStatus == "ONLINE"
+                &&
+                r.OperationalStatus == "AVAILABLE"
+                &&
+                r.BatteryPercent != null
+                &&
+                r.BatteryPercent >= MinimumBatteryPercent
+                &&
+                !_dbContext.TaskAssignments.Any(a =>
+                    a.RobotId == r.RobotId &&
+                    a.AssignmentStatus == "ACTIVE")
+                &&
+                !_dbContext.RobotMaintenanceRecords.Any(m =>
+                    m.RobotId == r.RobotId &&
+                    (
+                        m.MaintenanceStatus == "SCHEDULED" ||
+                        m.MaintenanceStatus == "IN_PROGRESS"
+                    )))
+            .OrderByDescending(r => r.BatteryPercent)
+            .Select(r => new AvailableRobotResponse
+            {
+                RobotId = r.RobotId,
+                RobotCode = r.RobotCode,
+                BatteryPercent = r.BatteryPercent,
+                ConnectionStatus = r.ConnectionStatus,
+                OperationalStatus = r.OperationalStatus
+            })
+            .ToListAsync(cancellationToken);
+
+
+        return TransportTaskServiceResult<
+            IReadOnlyCollection<AvailableRobotResponse>>
+            .Success(robots);
+    }
+
+
+    // =====================================================
+    // MANUAL ASSIGNMENT + CREATE MISSION + TEST MOVE
+    // =====================================================
+
+    public async Task<
+        TransportTaskServiceResult<ManualAssignTaskResponse>>
         AssignManualAsync(
             long taskId,
             int robotId,
-            string movementPattern,
             int operatorUserId,
             CancellationToken cancellationToken = default)
     {
+        await using var transaction =
+            await _dbContext.Database
+                .BeginTransactionAsync(cancellationToken);
+
+
+        // -------------------------------------------------
+        // 1. FIND TASK
+        // -------------------------------------------------
+
         var task = await _dbContext.TransportTasks
             .FirstOrDefaultAsync(
                 t => t.TaskId == taskId,
@@ -36,18 +132,49 @@ public sealed class TaskDispatchService : ITaskDispatchService
 
         if (task is null)
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .NotFound($"Transport task {taskId} was not found.");
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .NotFound(
+                    $"Transport task {taskId} was not found.");
         }
 
-        // For this test, allow assignment only from PENDING/QUEUED.
-        if (task.TaskStatus != TransportTaskStatuses.Pending &&
-            task.TaskStatus != TransportTaskStatuses.Queued)
+
+        // -------------------------------------------------
+        // 2. VALIDATE TASK
+        // -------------------------------------------------
+
+        if (!string.Equals(
+                task.TaskStatus,
+                TransportTaskStatuses.Queued,
+                StringComparison.OrdinalIgnoreCase))
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
                 .Conflict(
-                    $"Task cannot be assigned because its current status is {task.TaskStatus}.");
+                    $"Task must be QUEUED. Current status: {task.TaskStatus}.");
         }
+
+
+        var taskAlreadyAssigned =
+            await _dbContext.TaskAssignments
+                .AnyAsync(
+                    a =>
+                        a.TaskId == taskId &&
+                        a.AssignmentStatus == "ACTIVE",
+                    cancellationToken);
+
+        if (taskAlreadyAssigned)
+        {
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .Conflict(
+                    "Task already has an active assignment.");
+        }
+
+
+        // -------------------------------------------------
+        // 3. FIND ROBOT
+        // -------------------------------------------------
 
         var robot = await _dbContext.Robots
             .FirstOrDefaultAsync(
@@ -56,133 +183,308 @@ public sealed class TaskDispatchService : ITaskDispatchService
 
         if (robot is null)
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .NotFound($"Robot {robotId} was not found.");
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .NotFound(
+                    $"Robot {robotId} was not found.");
         }
+
+
+        // -------------------------------------------------
+        // 4. VALIDATE ROBOT
+        // -------------------------------------------------
 
         if (!robot.IsActive)
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .Conflict("Robot is inactive.");
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .Conflict(
+                    "Robot is inactive.");
         }
+
 
         if (robot.WarehouseId != task.WarehouseId)
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
                 .Conflict(
-                    "Robot and transport task must belong to the same warehouse.");
+                    "Robot and task must belong to the same warehouse.");
         }
+
 
         if (!string.Equals(
                 robot.ConnectionStatus,
                 "ONLINE",
                 StringComparison.OrdinalIgnoreCase))
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .Conflict("Robot is currently offline.");
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .Conflict(
+                    "Robot is offline.");
         }
+
 
         if (!string.Equals(
                 robot.OperationalStatus,
                 "AVAILABLE",
                 StringComparison.OrdinalIgnoreCase))
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
                 .Conflict(
                     $"Robot is not available. Current status: {robot.OperationalStatus}.");
         }
 
-        var robotHasActiveTask = await _dbContext.TaskAssignments
-            .AnyAsync(
-                a => a.RobotId == robotId &&
-                     a.AssignmentStatus == "ACTIVE",
-                cancellationToken);
 
-        if (robotHasActiveTask)
+        if (!robot.BatteryPercent.HasValue)
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .Conflict("Robot already has an active task.");
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .Conflict(
+                    "Robot battery information is unavailable.");
         }
 
-        var taskAlreadyAssigned = await _dbContext.TaskAssignments
-            .AnyAsync(
-                a => a.TaskId == taskId &&
-                     a.AssignmentStatus == "ACTIVE",
-                cancellationToken);
 
-        if (taskAlreadyAssigned)
+        if (robot.BatteryPercent.Value <
+            MinimumBatteryPercent)
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .Conflict("Task already has an active assignment.");
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .Conflict(
+                    $"Robot battery must be at least {MinimumBatteryPercent}%.");
         }
 
-        movementPattern = movementPattern.Trim().ToUpperInvariant();
 
-        if (movementPattern != "FIGURE_8" &&
-            movementPattern != "CIRCLE")
+        var hasActiveMaintenance =
+            await _dbContext.RobotMaintenanceRecords
+                .AnyAsync(
+                    m =>
+                        m.RobotId == robotId &&
+                        (
+                            m.MaintenanceStatus == "SCHEDULED" ||
+                            m.MaintenanceStatus == "IN_PROGRESS"
+                        ),
+                    cancellationToken);
+
+        if (hasActiveMaintenance)
         {
-            return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .ValidationFailed(
-                    "MovementPattern must be FIGURE_8 or CIRCLE.");
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .Conflict(
+                    "Robot is under maintenance.");
         }
+
+
+        var robotAlreadyBusy =
+            await _dbContext.TaskAssignments
+                .AnyAsync(
+                    a =>
+                        a.RobotId == robotId &&
+                        a.AssignmentStatus == "ACTIVE",
+                    cancellationToken);
+
+        if (robotAlreadyBusy)
+        {
+            return TransportTaskServiceResult<
+                ManualAssignTaskResponse>
+                .Conflict(
+                    "Robot already has an active task.");
+        }
+
+
+        // -------------------------------------------------
+        // 5. CONFIRM ASSIGNMENT
+        // -------------------------------------------------
 
         var now = DateTime.UtcNow;
+
 
         var assignment = new TaskAssignment
         {
             TaskId = task.TaskId,
+
             RobotId = robot.RobotId,
 
             AssignmentType = "MANUAL",
+
             AssignedBy = operatorUserId,
+
             AssignmentStatus = "ACTIVE",
 
-            BatteryPercentAtAssignment = robot.BatteryPercent,
+            BatteryPercentAtAssignment =
+                robot.BatteryPercent,
+
+            WorkloadAtAssignment = 0,
 
             AssignmentReason =
-                $"Manual assignment for {movementPattern} integration test.",
+                $"Manual assignment of {task.TaskTrackingCode} to {robot.RobotCode}.",
 
             AssignedAt = now
         };
 
-        _dbContext.TaskAssignments.Add(assignment);
 
-        var previousStatus = task.TaskStatus;
+        _dbContext.TaskAssignments.Add(
+            assignment);
 
-        // User requirement:
-        // Robot accepts task -> task becomes EXECUTING.
-        task.TaskStatus = TransportTaskStatuses.Executing;
-        task.AssignedAt = now;
-        task.StartedAt = now;
 
-        robot.OperationalStatus = "BUSY";
-        robot.UpdatedAt = now;
+        // -------------------------------------------------
+        // 6. UPDATE TASK
+        // QUEUED -> ASSIGNED
+        // -------------------------------------------------
+
+        var previousTaskStatus =
+            task.TaskStatus;
+
+        task.TaskStatus =
+            TransportTaskStatuses.Assigned;
+
+        task.AssignedAt =
+            now;
+
 
         _dbContext.TaskStatusHistories.Add(
             new TaskStatusHistory
             {
                 TaskId = task.TaskId,
-                PreviousStatus = previousStatus,
-                NewStatus = TransportTaskStatuses.Executing,
-                ChangedBy = operatorUserId,
+
+                PreviousStatus =
+                    previousTaskStatus,
+
+                NewStatus =
+                    TransportTaskStatuses.Assigned,
+
+                ChangedBy =
+                    operatorUserId,
+
                 Reason =
-                    $"Manually assigned to robot {robot.RobotCode}.",
-                ChangedAt = now
+                    $"Assigned manually to robot {robot.RobotCode}.",
+
+                ChangedAt =
+                    now
             });
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // MQTT command
+        // -------------------------------------------------
+        // 7. UPDATE ROBOT
+        // AVAILABLE -> BUSY
+        // -------------------------------------------------
+
+        var previousRobotStatus =
+            robot.OperationalStatus;
+
+        robot.OperationalStatus =
+            "BUSY";
+
+        robot.UpdatedAt =
+            now;
+
+
+        _dbContext.RobotStatusHistories.Add(
+            new RobotStatusHistory
+            {
+                RobotId =
+                    robot.RobotId,
+
+                PreviousOperationalStatus =
+                    previousRobotStatus,
+
+                NewOperationalStatus =
+                    "BUSY",
+
+                Reason =
+                    $"Assigned to task {task.TaskTrackingCode}.",
+
+                ChangedAt =
+                    now
+            });
+
+
+        // -------------------------------------------------
+        // 8. CREATE MISSION
+        // -------------------------------------------------
+
+        var mission =
+            new Mission
+            {
+                // Temporary unique code.
+                // Changed to M001/M002/... after identity is created.
+                MissionCode =
+                    $"TMP-{Guid.NewGuid():N}",
+
+                Assignment =
+                    assignment,
+
+                MissionStatus =
+                    "INITIALIZING",
+
+                TotalDistanceMeters =
+                    0,
+
+                TotalDurationSeconds =
+                    0,
+
+                CreatedAt =
+                    now
+            };
+
+
+        _dbContext.Missions.Add(
+            mission);
+
+
+        // First save:
+        // generates AssignmentID + MissionID
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+
+        // Example:
+        // MissionID = 1 -> M001
+        // MissionID = 2 -> M002
+        mission.MissionCode =
+            $"M{mission.MissionId:000}";
+
+
+        _dbContext.MissionStatusHistories.Add(
+            new MissionStatusHistory
+            {
+                MissionId =
+                    mission.MissionId,
+
+                PreviousStatus =
+                    null,
+
+                NewStatus =
+                    "INITIALIZING",
+
+                Source =
+                    "OPERATOR",
+
+                ChangedBy =
+                    operatorUserId,
+
+                Reason =
+                    $"Mission created from transport task {task.TaskTrackingCode}.",
+
+                ChangedAt =
+                    now
+            });
+
+
+        await _dbContext.SaveChangesAsync(
+            cancellationToken);
+
+
+        // -------------------------------------------------
+        // 9. SEND SAME TEST COMMAND AS EXISTING API
+        // -------------------------------------------------
+
         var topic =
             $"smartfleet/robot/{robot.RobotCode}/command";
 
-        var command = JsonSerializer.Serialize(new
-        {
-            command = "EXECUTE_TASK",
-            taskId = task.TaskId,
-            assignmentId = assignment.AssignmentId,
-            pattern = movementPattern
-        });
+        const string command =
+            "TEST_MOVE";
+
 
         try
         {
@@ -193,40 +495,61 @@ public sealed class TaskDispatchService : ITaskDispatchService
         }
         catch
         {
-            // MQTT failed -> rollback operational state.
-            assignment.AssignmentStatus = "FAILED";
-            assignment.EndedAt = DateTime.UtcNow;
-
-            task.TaskStatus = previousStatus;
-            task.AssignedAt = null;
-            task.StartedAt = null;
-
-            robot.OperationalStatus = "AVAILABLE";
-            robot.UpdatedAt = DateTime.UtcNow;
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.RollbackAsync(
+                cancellationToken);
 
             throw;
         }
 
-        return TransportTaskServiceResult<ManualAssignTaskResponse>.Success(
-            new ManualAssignTaskResponse
-            {
-                TaskId = task.TaskId,
-                TaskTrackingCode = task.TaskTrackingCode,
 
-                RobotId = robot.RobotId,
-                RobotCode = robot.RobotCode,
+        // -------------------------------------------------
+        // 10. COMPLETE
+        // -------------------------------------------------
 
-                AssignmentId = assignment.AssignmentId,
+        await transaction.CommitAsync(
+            cancellationToken);
 
-                TaskStatus = task.TaskStatus,
-                RobotStatus = robot.OperationalStatus,
 
-                MovementPattern = movementPattern,
+        return TransportTaskServiceResult<
+            ManualAssignTaskResponse>
+            .Success(
+                new ManualAssignTaskResponse
+                {
+                    TaskId =
+                        task.TaskId,
 
-                Message =
-                    "Robot accepted the task. Task is now executing."
-            });
+                    TaskTrackingCode =
+                        task.TaskTrackingCode,
+
+                    RobotId =
+                        robot.RobotId,
+
+                    RobotCode =
+                        robot.RobotCode,
+
+                    AssignmentId =
+                        assignment.AssignmentId,
+
+                    MissionId =
+                        mission.MissionId,
+
+                    MissionCode =
+                        mission.MissionCode,
+
+                    TaskStatus =
+                        task.TaskStatus,
+
+                    RobotStatus =
+                        robot.OperationalStatus,
+
+                    MissionStatus =
+                        mission.MissionStatus,
+
+                    RobotCommand =
+                        command,
+
+                    Message =
+                        "Task assigned, mission created, and test move command sent to robot."
+                });
     }
 }
