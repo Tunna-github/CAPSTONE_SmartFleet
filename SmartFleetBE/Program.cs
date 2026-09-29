@@ -23,6 +23,22 @@ builder.Services.AddControllers();
 
 
 // =====================================================
+// CORS Configuration (CHÈN VÀO ĐÂY)
+// =====================================================
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:8443") // Cổng HTTPS của Frontend bên bạn
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
+
+// =====================================================
 // Swagger / OpenAPI
 // =====================================================
 
@@ -117,25 +133,25 @@ builder.Services.AddSingleton<MqttService>();
 
 
 // =====================================================
-// JWT Configuration
+// JWT Configuration (ĐÃ ĐỔI THÀNH IN HOA "JWT" ĐỂ KHỚP JSON)
 // =====================================================
 
 var jwtKey =
-    builder.Configuration["Jwt:Key"]
+    builder.Configuration["JWT:Key"]
     ?? throw new InvalidOperationException(
-        "Jwt:Key is missing from configuration."
+        "JWT:Key is missing from configuration."
     );
 
 var jwtIssuer =
-    builder.Configuration["Jwt:Issuer"]
+    builder.Configuration["JWT:Issuer"]
     ?? throw new InvalidOperationException(
-        "Jwt:Issuer is missing from configuration."
+        "JWT:Issuer is missing from configuration."
     );
 
 var jwtAudience =
-    builder.Configuration["Jwt:Audience"]
+    builder.Configuration["JWT:Audience"]
     ?? throw new InvalidOperationException(
-        "Jwt:Audience is missing from configuration."
+        "JWT:Audience is missing from configuration."
     );
 
 
@@ -231,6 +247,10 @@ if (app.Environment.IsDevelopment())
 // =====================================================
 
 app.UseHttpsRedirection();
+
+
+// Kích hoạt CORS (BẮT BUỘC PHẢI ĐẶT TRƯỚC AUTHENTICATION)
+app.UseCors("AllowFrontend");
 
 
 // Authentication MUST come before Authorization
