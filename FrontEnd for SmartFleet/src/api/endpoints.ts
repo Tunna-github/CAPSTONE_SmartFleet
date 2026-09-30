@@ -10,6 +10,10 @@ export const ENDPOINTS = {
     users: {
         list: `${BASE}/users`,
         me: `${BASE}/users/me`,
+        update: (userId: number) => `${BASE}/users/${userId}`,
+        delete: (userId: number) => `${BASE}/users/${userId}`,
+        activate: (userId: number) => `${BASE}/users/${userId}/activate`,
+        deactivate: (userId: number) => `${BASE}/users/${userId}/deactivate`,
     },
     accessTest: {
         authenticated: `${BASE}/access-test/authenticated`,

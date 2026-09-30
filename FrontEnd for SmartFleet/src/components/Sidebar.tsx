@@ -21,6 +21,7 @@ export function Sidebar({
         role === "admin"
             ? [
                 { id: "admin-dashboard", label: "Admin Dashboard", path: "/admin", icon: IC.dashboard },
+                { id: "users", label: "User Management", path: "/admin/users", icon: IC.users },
                 { id: "robots", label: "Robot Assets", path: "/admin/robots", icon: IC.robots },
                 { id: "maps", label: "Warehouse Maps", path: "/admin/maps", icon: IC.maps },
             ]
@@ -45,7 +46,7 @@ export function Sidebar({
 
     return (
         <aside
-            className="w-[220px] h-full flex flex-col shrink-0 transition-colors"
+            className="w-55 h-full flex flex-col shrink-0 transition-colors"
             style={{
                 background: "var(--surface-1)",
                 borderRight: "1px solid var(--border-subtle)",

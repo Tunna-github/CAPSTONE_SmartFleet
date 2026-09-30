@@ -6,6 +6,7 @@ import { TasksPage } from "./pages/TasksPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { RobotsPage } from "./pages/RobotsPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { DataProvider } from "./context/DataContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider, useAuth, Role } from "./context/AuthContext";
@@ -42,6 +43,12 @@ function RootRedirect() {
     return <Navigate to={roleHome(role)} replace />;
 }
 
+function RequireAdmin() {
+    const { role } = useAuth();
+    if (role !== "admin") return <Navigate to={role ? roleHome(role) : "/login"} replace />;
+    return <Outlet />;
+}
+
 export default function App() {
     return (
         <ThemeProvider>
@@ -62,6 +69,9 @@ export default function App() {
                                 />
 
                                 <Route path="/admin" element={<AdminDashboard />} />
+                                <Route element={<RequireAdmin />}>
+                                    <Route path="/admin/users" element={<AdminUsersPage />} />
+                                </Route>
                                 <Route
                                     path="/admin/robots"
                                     element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Robots (Coming Soon)</div>}
