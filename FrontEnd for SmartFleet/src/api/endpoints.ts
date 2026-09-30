@@ -9,6 +9,7 @@ export const ENDPOINTS = {
     },
     users: {
         list: `${BASE}/users`,
+        me: `${BASE}/users/me`,
     },
     accessTest: {
         authenticated: `${BASE}/access-test/authenticated`,

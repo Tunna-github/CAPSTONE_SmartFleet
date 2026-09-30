@@ -5,6 +5,7 @@ import { OperatorDashboard } from "./pages/OperatorDashboard";
 import { TasksPage } from "./pages/TasksPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { RobotsPage } from "./pages/RobotsPage";
+import { UserProfilePage } from "./pages/UserProfilePage";
 import { DataProvider } from "./context/DataContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider, useAuth, Role } from "./context/AuthContext";
@@ -54,6 +55,7 @@ export default function App() {
                                 <Route path="/dashboard" element={<OperatorDashboard />} />
                                 <Route path="/dashboard/tasks" element={<TasksPage />} />
                                 <Route path="/dashboard/robots" element={<RobotsPage />} />
+                                <Route path="/profile" element={<UserProfilePage />} />
                                 <Route
                                     path="/dashboard/analytics"
                                     element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Analytics (Coming Soon)</div>}

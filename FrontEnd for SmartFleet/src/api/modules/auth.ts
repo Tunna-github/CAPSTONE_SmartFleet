@@ -35,6 +35,10 @@ export function getCurrentUser(): AuthUser | null {
     return tokenStorage.getUser();
 }
 
+export function saveCurrentUser(user: AuthUser): void {
+    tokenStorage.setUser(user);
+}
+
 export function isAuthenticated(): boolean {
     return !!tokenStorage.get();
 }
