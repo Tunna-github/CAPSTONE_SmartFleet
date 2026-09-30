@@ -1,38 +1,72 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SmartFleetBE.Services;
+using MQTTnet;
+using System.Text.Json;
 
-namespace SmartFleetBE.Controllers
+namespace SmartFleetBE.Controllers;
+
+[ApiController]
+[Route("api/v1/robot-test")]
+public class RobotTestController : ControllerBase
 {
-    [ApiController]
-    [Route("api/robots")]
-    public class RobotTestController : ControllerBase
+    private readonly IConfiguration _configuration;
+
+    public RobotTestController(IConfiguration configuration)
     {
-        private readonly MqttService _mqttService;
+        _configuration = configuration;
+    }
 
-        public RobotTestController(MqttService mqttService)
+    [HttpPost("circle")]
+    public async Task<IActionResult> RunCircle(
+        CancellationToken cancellationToken)
+    {
+        // Mosquitto is running on the same Windows PC as .NET
+        var brokerHost = "localhost";
+        var brokerPort = 1883;
+
+        // Must match the topic used by the Jetson
+        var topic = "smartfleet/robot/R01/command";
+
+        // This is exactly the JSON format already tested successfully
+        var command = new
         {
-            _mqttService = mqttService;
-        }
+            command = "EXECUTE_TASK",
+            taskId = 1,
+            assignmentId = 1,
+            pattern = "CIRCLE"
+        };
 
-        [HttpPost("R01/test-move")]
-        public async Task<IActionResult> TestMove(
-            CancellationToken cancellationToken)
+        var payload = JsonSerializer.Serialize(command);
+
+        var factory = new MqttClientFactory();
+
+        using var mqttClient = factory.CreateMqttClient();
+
+        var options = new MqttClientOptionsBuilder()
+            .WithTcpServer(brokerHost, brokerPort)
+            .Build();
+
+        await mqttClient.ConnectAsync(
+            options,
+            cancellationToken
+        );
+
+        var message = new MqttApplicationMessageBuilder()
+            .WithTopic(topic)
+            .WithPayload(payload)
+            .Build();
+
+        await mqttClient.PublishAsync(
+            message,
+            cancellationToken
+        );
+
+        await mqttClient.DisconnectAsync();
+
+        return Ok(new
         {
-            const string topic = "smartfleet/robot/R01/command";
-            const string command = "TEST_MOVE";
-
-            await _mqttService.PublishAsync(
-                topic,
-                command,
-                cancellationToken);
-
-            return Ok(new
-            {
-                robotId = "R01",
-                command,
-                topic,
-                message = "Test move command published successfully."
-            });
-        }
+            message = "Circle command sent to R01",
+            topic,
+            command
+        });
     }
 }

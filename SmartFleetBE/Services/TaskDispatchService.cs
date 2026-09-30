@@ -480,10 +480,15 @@ public sealed class TaskDispatchService : ITaskDispatchService
         // -------------------------------------------------
 
         var topic =
-            $"smartfleet/robot/{robot.RobotCode}/command";
+    $"smartfleet/robot/{robot.RobotCode}/command";
 
-        const string command =
-            "TEST_MOVE";
+        var command = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            command = "EXECUTE_TASK",
+            taskId = task.TaskId,
+            assignmentId = assignment.AssignmentId,
+            pattern = "CIRCLE"
+        });
 
 
         try
