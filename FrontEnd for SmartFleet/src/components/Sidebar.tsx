@@ -1,7 +1,7 @@
 ﻿import { Icon, IC } from "./Icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
-import type { Role } from "../context/AuthContext";
+import { useAuth, type Role } from "../context/AuthContext";
 
 export function Sidebar({
     role,
@@ -13,6 +13,9 @@ export function Sidebar({
     const navigate = useNavigate();
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
+    const { user } = useAuth();
+    const userName = user?.fullName || user?.username || "SmartFleet User";
+    const userInitials = userName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "SF";
 
     const navItems =
         role === "admin"
@@ -171,25 +174,31 @@ export function Sidebar({
 
             {/* User */}
             <div className="px-4 py-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                <button
+                    onClick={() => navigate("/profile")}
+                    aria-current={location.pathname === "/profile" ? "page" : undefined}
+                    className="w-full rounded-lg p-1 text-left transition-colors hover:bg-white/5"
+                >
                 <div className="flex items-center gap-2.5">
                     <div
                         className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
                         style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
                     >
-                        DN
+                        {userInitials}
                     </div>
                     <div className="min-w-0 flex-1">
                         <div
                             className="text-[12px] font-semibold truncate"
                             style={{ color: "var(--text-primary)" }}
                         >
-                            Duc Nguyen
+                            {userName}
                         </div>
                         <div className="font-mono text-[9px]" style={{ color: "var(--text-faint)" }}>
                             {roleLabel}
                         </div>
                     </div>
                 </div>
+                </button>
 
                 {/* Theme toggle */}
                 <button

@@ -1,6 +1,7 @@
 ﻿import {
     createContext,
     useContext,
+    useCallback,
     useState,
     ReactNode,
 } from "react";
@@ -16,6 +17,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (usernameOrEmail: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
+    updateUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,9 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
     }
 
+    const updateUser = useCallback((nextUser: AuthUser) => {
+        authApi.saveCurrentUser(nextUser);
+        setUser(nextUser);
+    }, []);
+
     return (
         <AuthContext.Provider
-            value={{ user, role, isAuthenticated, isLoading, login, logout }}
+            value={{ user, role, isAuthenticated, isLoading, login, logout, updateUser }}
         >
             {children}
         </AuthContext.Provider>
