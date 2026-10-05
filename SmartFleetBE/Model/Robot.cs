@@ -62,7 +62,7 @@ public partial class Robot
 
     public virtual ICollection<RobotTelemetryLog> RobotTelemetryLogs { get; set; } = new List<RobotTelemetryLog>();
 
-    public virtual TaskAssignment? TaskAssignment { get; set; }
+    public virtual ICollection<TaskAssignment> TaskAssignments { get; set; } = new List<TaskAssignment>();
 
     public virtual Warehouse Warehouse { get; set; } = null!;
 }

@@ -18,11 +18,13 @@ public sealed class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<ActionResult<LoginResponse>> Login(
-        [FromBody] LoginRequest request,
+    public async Task<ActionResult<SessionResponse>> Login(
+        [FromBody] CreateSessionRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _authService.LoginAsync(request, cancellationToken);
+        var result = await _authService.CreateSessionAsync(
+            request,
+            cancellationToken);
 
         if (result is null)
         {

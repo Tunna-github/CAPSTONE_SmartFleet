@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartFleetBE;
 
@@ -11,9 +12,11 @@ using SmartFleetBE;
 namespace SmartFleetBE.Migrations
 {
     [DbContext(typeof(SmartFleetDbContext))]
-    partial class SmartFleetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261002034136_MissionLifecycleOutbox")]
+    partial class MissionLifecycleOutbox
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
