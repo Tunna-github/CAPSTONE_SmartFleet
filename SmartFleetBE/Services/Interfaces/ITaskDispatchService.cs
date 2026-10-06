@@ -20,4 +20,13 @@ public interface ITaskDispatchService
             int robotId,
             int operatorUserId,
             CancellationToken cancellationToken = default);
+
+
+    Task<
+        TransportTaskServiceResult<CancelTransportTaskResponse>>
+        CancelAsync(
+            long taskId,
+            string? reason,
+            int operatorUserId,
+            CancellationToken cancellationToken = default);
 }

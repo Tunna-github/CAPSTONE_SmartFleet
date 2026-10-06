@@ -1,101 +1,604 @@
 using System.Data;
+
 using Microsoft.EntityFrameworkCore;
+
 using SmartFleetBE.Constants;
 using SmartFleetBE.DTOs;
 using SmartFleetBE.Model;
 
 namespace SmartFleetBE.Services;
 
-public enum MissionEventResult { Applied, Duplicate, Rejected }
+public enum MissionEventResult
+{
+    Applied,
+    Duplicate,
+    Rejected
+}
 
-public sealed class MissionLifecycleService(SmartFleetDbContext db)
+public sealed class MissionLifecycleService(
+    SmartFleetDbContext db)
 {
     public async Task<MissionEventResult> HandleAsync(
-        string robotCode, RobotMissionEvent message, CancellationToken ct = default)
+        string robotCode,
+        RobotMissionEvent message,
+        CancellationToken ct = default)
     {
-        if (message.TaskId <= 0 || message.AssignmentId <= 0 ||
-            message.Event is not ("MISSION_STARTED" or "MISSION_COMPLETED" or "MISSION_FAILED"))
-            return MissionEventResult.Rejected;
+        // =====================================================
+        // 1. BASIC MESSAGE VALIDATION
+        // =====================================================
 
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        // The robot row serializes dispatch, completion and messages from multiple API instances.
-        var robotQuery = db.Database.IsSqlServer()
-            ? db.Robots.FromSqlInterpolated($"SELECT * FROM dbo.Robots WITH (UPDLOCK, HOLDLOCK) WHERE RobotCode = {robotCode}")
-            : db.Robots.Where(r => r.RobotCode == robotCode);
-        var robot = await robotQuery.SingleOrDefaultAsync(ct);
-        if (robot is null || !string.Equals(robot.RobotCode, robotCode, StringComparison.Ordinal))
-            return MissionEventResult.Rejected;
-
-        var assignment = await db.TaskAssignments.SingleOrDefaultAsync(a =>
-            a.AssignmentId == message.AssignmentId && a.TaskId == message.TaskId && a.RobotId == robot.RobotId, ct);
-        if (assignment is null) return MissionEventResult.Rejected;
-        var mission = await db.Missions.SingleOrDefaultAsync(m => m.AssignmentId == assignment.AssignmentId, ct);
-        if (mission is null || (message.MissionId.HasValue && message.MissionId != mission.MissionId))
-            return MissionEventResult.Rejected;
-
-        // Never regress terminal state or release the robot for an obsolete assignment.
-        if (mission.MissionStatus is "COMPLETED" or "FAILED" or "CANCELLED")
-            return message.Event == "MISSION_STARTED" ||
-                (message.Event == "MISSION_COMPLETED" && mission.MissionStatus == "COMPLETED") ||
-                (message.Event == "MISSION_FAILED" && mission.MissionStatus == "FAILED")
-                ? MissionEventResult.Duplicate : MissionEventResult.Rejected;
-        if (assignment.AssignmentStatus != "ACTIVE") return MissionEventResult.Rejected;
-        var task = await db.TransportTasks.SingleAsync(t => t.TaskId == assignment.TaskId, ct);
-        if (task.TaskStatus is not (TransportTaskStatuses.Assigned or TransportTaskStatuses.Executing))
-            return MissionEventResult.Rejected;
-        if (message.Event == "MISSION_STARTED" && mission.MissionStatus == "EXECUTING" && task.TaskStatus == TransportTaskStatuses.Executing)
-            return MissionEventResult.Duplicate;
-
-        var now = DateTime.UtcNow;
-        var status = message.Event switch
+        if (message.TaskId <= 0 ||
+            message.AssignmentId <= 0 ||
+            message.Event is not
+                ("MISSION_STARTED"
+                or "MISSION_COMPLETED"
+                or "MISSION_FAILED"))
         {
-            "MISSION_STARTED" => "EXECUTING",
-            "MISSION_COMPLETED" => "COMPLETED",
-            _ => "FAILED"
-        };
-        var reason = string.IsNullOrWhiteSpace(message.Reason) ? message.Event : message.Reason[..Math.Min(500, message.Reason.Length)];
-        if (mission.MissionStatus != status)
-            db.MissionStatusHistories.Add(new MissionStatusHistory {
-                MissionId = mission.MissionId, PreviousStatus = mission.MissionStatus, NewStatus = status,
-                Source = "ROBOT", Reason = reason, ChangedAt = now });
-        if (task.TaskStatus != status)
-            db.TaskStatusHistories.Add(new TaskStatusHistory {
-                TaskId = task.TaskId, PreviousStatus = task.TaskStatus, NewStatus = status, Reason = reason, ChangedAt = now });
-        mission.MissionStatus = task.TaskStatus = status;
-        mission.LastProgressAt = now;
+            return MissionEventResult.Rejected;
+        }
+
+
+        await using var transaction =
+            await db.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable,
+                ct);
+
+
+        // =====================================================
+        // 2. LOCK ROBOT
+        // =====================================================
+
+        var robotQuery =
+            db.Database.IsSqlServer()
+                ? db.Robots.FromSqlInterpolated(
+                    $"SELECT * FROM dbo.Robots WITH (UPDLOCK, HOLDLOCK) WHERE RobotCode = {robotCode}")
+                : db.Robots.Where(
+                    r => r.RobotCode == robotCode);
+
+
+        var robot =
+            await robotQuery.SingleOrDefaultAsync(ct);
+
+
+        if (robot is null ||
+            !string.Equals(
+                robot.RobotCode,
+                robotCode,
+                StringComparison.Ordinal))
+        {
+            return MissionEventResult.Rejected;
+        }
+
+
+        // =====================================================
+        // 3. FIND ASSIGNMENT
+        // =====================================================
+
+        var assignment =
+            await db.TaskAssignments
+                .SingleOrDefaultAsync(
+                    a =>
+                        a.AssignmentId ==
+                            message.AssignmentId
+                        &&
+                        a.TaskId ==
+                            message.TaskId
+                        &&
+                        a.RobotId ==
+                            robot.RobotId,
+                    ct);
+
+
+        if (assignment is null)
+        {
+            return MissionEventResult.Rejected;
+        }
+
+
+        // =====================================================
+        // 4. FIND MISSION
+        // =====================================================
+
+        var mission =
+            await db.Missions
+                .SingleOrDefaultAsync(
+                    m =>
+                        m.AssignmentId ==
+                        assignment.AssignmentId,
+                    ct);
+
+
+        if (mission is null)
+        {
+            return MissionEventResult.Rejected;
+        }
+
+
+        if (message.MissionId.HasValue &&
+            message.MissionId.Value !=
+                mission.MissionId)
+        {
+            return MissionEventResult.Rejected;
+        }
+
+
+        // =====================================================
+        // 5. TERMINAL MISSION CHECK
+        // =====================================================
+
+        if (mission.MissionStatus is
+            "COMPLETED" or "FAILED" or "ABORTED")
+        {
+            if (mission.MissionStatus == "COMPLETED" &&
+                message.Event == "MISSION_COMPLETED")
+            {
+                return MissionEventResult.Duplicate;
+            }
+
+
+            if (mission.MissionStatus == "FAILED" &&
+                message.Event == "MISSION_FAILED")
+            {
+                return MissionEventResult.Duplicate;
+            }
+
+
+            return MissionEventResult.Rejected;
+        }
+
+
+        // =====================================================
+        // 6. ASSIGNMENT MUST STILL BE ACTIVE
+        // =====================================================
+
+        if (assignment.AssignmentStatus != "ACTIVE")
+        {
+            return MissionEventResult.Rejected;
+        }
+
+
+        // =====================================================
+        // 7. LOAD TASK
+        // =====================================================
+
+        var task =
+            await db.TransportTasks
+                .SingleAsync(
+                    t =>
+                        t.TaskId ==
+                        assignment.TaskId,
+                    ct);
+
+
+        if (task.TaskStatus is not
+            (TransportTaskStatuses.Assigned
+            or TransportTaskStatuses.Executing))
+        {
+            return MissionEventResult.Rejected;
+        }
+
+
+        // Duplicate MISSION_STARTED.
+        if (message.Event == "MISSION_STARTED" &&
+            task.TaskStatus ==
+                TransportTaskStatuses.Executing)
+        {
+            return MissionEventResult.Duplicate;
+        }
+
+
+        var now =
+            DateTime.UtcNow;
+
+
+        var reason =
+            string.IsNullOrWhiteSpace(message.Reason)
+                ? message.Event
+                : message.Reason.Trim();
+
+
+        if (reason.Length > 500)
+        {
+            reason =
+                reason[..500];
+        }
+
+
+        // =====================================================
+        // 8. MISSION STARTED
+        // =====================================================
+
         if (message.Event == "MISSION_STARTED")
         {
-            mission.StartExecutionTime ??= now;
-            task.StartedAt ??= now;
+            // -------------------------------------------------
+            // Mission:
+            // INITIALIZING -> NAVIGATING_TO_PICKUP
+            // -------------------------------------------------
+
+            var previousMissionStatus =
+                mission.MissionStatus;
+
+
+            if (mission.MissionStatus !=
+                "NAVIGATING_TO_PICKUP")
+            {
+                db.MissionStatusHistories.Add(
+                    new MissionStatusHistory
+                    {
+                        MissionId =
+                            mission.MissionId,
+
+                        PreviousStatus =
+                            previousMissionStatus,
+
+                        NewStatus =
+                            "NAVIGATING_TO_PICKUP",
+
+                        Source =
+                            "ROBOT_AGENT",
+
+                        Reason =
+                            reason,
+
+                        ChangedAt =
+                            now
+                    });
+
+
+                mission.MissionStatus =
+                    "NAVIGATING_TO_PICKUP";
+            }
+
+
+            mission.StartExecutionTime ??=
+                now;
+
+            mission.LastProgressAt =
+                now;
+
+
+            // -------------------------------------------------
+            // Task:
+            // ASSIGNED -> EXECUTING
+            // -------------------------------------------------
+
+            var previousTaskStatus =
+                task.TaskStatus;
+
+
+            if (task.TaskStatus !=
+                TransportTaskStatuses.Executing)
+            {
+                db.TaskStatusHistories.Add(
+                    new TaskStatusHistory
+                    {
+                        TaskId =
+                            task.TaskId,
+
+                        PreviousStatus =
+                            previousTaskStatus,
+
+                        NewStatus =
+                            TransportTaskStatuses.Executing,
+
+                        Reason =
+                            reason,
+
+                        ChangedAt =
+                            now
+                    });
+
+
+                task.TaskStatus =
+                    TransportTaskStatuses.Executing;
+            }
+
+
+            task.StartedAt ??=
+                now;
+
+
+            // -------------------------------------------------
+            // Robot:
+            // BUSY / ASSIGNED -> EXECUTING
+            // -------------------------------------------------
+
+            if (robot.OperationalStatus is
+                "BUSY" or "ASSIGNED")
+            {
+                var previousRobotStatus =
+                    robot.OperationalStatus;
+
+
+                robot.OperationalStatus =
+                    "EXECUTING";
+
+                robot.UpdatedAt =
+                    now;
+
+
+                db.RobotStatusHistories.Add(
+                    new RobotStatusHistory
+                    {
+                        RobotId =
+                            robot.RobotId,
+
+                        PreviousOperationalStatus =
+                            previousRobotStatus,
+
+                        NewOperationalStatus =
+                            "EXECUTING",
+
+                        Reason =
+                            reason,
+
+                        ChangedAt =
+                            now
+                    });
+            }
+
+
+            await db.SaveChangesAsync(ct);
+
+            await transaction.CommitAsync(ct);
+
+            return MissionEventResult.Applied;
         }
+
+
+        // =====================================================
+        // 9. MISSION COMPLETED / FAILED
+        // =====================================================
+
+        var completed =
+            message.Event ==
+            "MISSION_COMPLETED";
+
+
+        var finalMissionStatus =
+            completed
+                ? "COMPLETED"
+                : "FAILED";
+
+
+        var finalTaskStatus =
+            completed
+                ? TransportTaskStatuses.Completed
+                : TransportTaskStatuses.Failed;
+
+
+        // -----------------------------------------------------
+        // Mission final state
+        // -----------------------------------------------------
+
+        var previousFinalMissionStatus =
+            mission.MissionStatus;
+
+
+        if (mission.MissionStatus !=
+            finalMissionStatus)
+        {
+            db.MissionStatusHistories.Add(
+                new MissionStatusHistory
+                {
+                    MissionId =
+                        mission.MissionId,
+
+                    PreviousStatus =
+                        previousFinalMissionStatus,
+
+                    NewStatus =
+                        finalMissionStatus,
+
+                    Source =
+                        "ROBOT_AGENT",
+
+                    Reason =
+                        reason,
+
+                    ChangedAt =
+                        now
+                });
+        }
+
+
+        mission.MissionStatus =
+            finalMissionStatus;
+
+        mission.LastProgressAt =
+            now;
+
+        mission.EndExecutionTime =
+            now;
+
+
+        if (mission.StartExecutionTime.HasValue)
+        {
+            mission.TotalDurationSeconds =
+                (int)Math.Clamp(
+                    (
+                        now -
+                        mission.StartExecutionTime.Value
+                    ).TotalSeconds,
+                    0,
+                    int.MaxValue);
+        }
+
+
+        // -----------------------------------------------------
+        // Task final state
+        // -----------------------------------------------------
+
+        var previousFinalTaskStatus =
+            task.TaskStatus;
+
+
+        if (task.TaskStatus !=
+            finalTaskStatus)
+        {
+            db.TaskStatusHistories.Add(
+                new TaskStatusHistory
+                {
+                    TaskId =
+                        task.TaskId,
+
+                    PreviousStatus =
+                        previousFinalTaskStatus,
+
+                    NewStatus =
+                        finalTaskStatus,
+
+                    Reason =
+                        reason,
+
+                    ChangedAt =
+                        now
+                });
+        }
+
+
+        task.TaskStatus =
+            finalTaskStatus;
+
+
+        // -----------------------------------------------------
+        // Assignment final state
+        // -----------------------------------------------------
+
+        assignment.AssignmentStatus =
+            completed
+                ? "COMPLETED"
+                : "FAILED";
+
+        assignment.EndedAt =
+            now;
+
+
+        // -----------------------------------------------------
+        // COMPLETED
+        // -----------------------------------------------------
+
+        if (completed)
+        {
+            task.CompletedAt =
+                now;
+
+            task.FailureReason =
+                null;
+
+            mission.FailureReason =
+                null;
+        }
+
+        // -----------------------------------------------------
+        // FAILED
+        // -----------------------------------------------------
+
         else
         {
-            mission.EndExecutionTime = now;
-            // If STARTED was lost, don't invent an execution start time.
-            if (mission.StartExecutionTime.HasValue)
-                mission.TotalDurationSeconds = (int)Math.Clamp((now - mission.StartExecutionTime.Value).TotalSeconds, 0, int.MaxValue);
-            assignment.AssignmentStatus = status;
-            assignment.EndedAt = now;
-            if (status == "COMPLETED") task.CompletedAt = now;
-            else mission.FailureReason = task.FailureReason = reason;
+            task.FailureReason =
+                reason;
 
-            var anotherAssignment = await db.TaskAssignments.AnyAsync(a => a.RobotId == robot.RobotId &&
-                a.AssignmentId != assignment.AssignmentId && a.AssignmentStatus == "ACTIVE", ct);
-            var maintenance = await db.RobotMaintenanceRecords.AnyAsync(m => m.RobotId == robot.RobotId &&
-                (m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS"), ct);
-            // A failure requires inspection. Preserve externally set maintenance/error states.
-            var nextRobotStatus = status == "FAILED" ? "ERROR" : maintenance ? "MAINTENANCE" : "AVAILABLE";
-            if (!anotherAssignment && robot.OperationalStatus == "BUSY")
-            {
-                db.RobotStatusHistories.Add(new RobotStatusHistory {
-                    RobotId = robot.RobotId, PreviousOperationalStatus = robot.OperationalStatus,
-                    NewOperationalStatus = nextRobotStatus, Reason = reason, ChangedAt = now });
-                robot.OperationalStatus = nextRobotStatus;
-                robot.UpdatedAt = now;
-            }
+            mission.FailureReason =
+                reason;
         }
+
+
+        // =====================================================
+        // 10. CHECK WHETHER ROBOT MAY BE RELEASED
+        // =====================================================
+
+        var anotherActiveAssignment =
+            await db.TaskAssignments
+                .AnyAsync(
+                    a =>
+                        a.RobotId ==
+                            robot.RobotId
+                        &&
+                        a.AssignmentId !=
+                            assignment.AssignmentId
+                        &&
+                        a.AssignmentStatus ==
+                            "ACTIVE",
+                    ct);
+
+
+        var activeMaintenance =
+            await db.RobotMaintenanceRecords
+                .AnyAsync(
+                    m =>
+                        m.RobotId ==
+                            robot.RobotId
+                        &&
+                        (
+                            m.MaintenanceStatus ==
+                                "SCHEDULED"
+                            ||
+                            m.MaintenanceStatus ==
+                                "IN_PROGRESS"
+                        ),
+                    ct);
+
+
+        // =====================================================
+        // 11. RELEASE ROBOT
+        // =====================================================
+
+        if (!anotherActiveAssignment &&
+            robot.OperationalStatus is
+                "BUSY" or "ASSIGNED" or "EXECUTING")
+        {
+            var previousRobotStatus =
+                robot.OperationalStatus;
+
+
+            var nextRobotStatus =
+                completed
+                    ? (
+                        activeMaintenance
+                            ? "MAINTENANCE"
+                            : "AVAILABLE"
+                    )
+                    : "ERROR";
+
+
+            robot.OperationalStatus =
+                nextRobotStatus;
+
+            robot.UpdatedAt =
+                now;
+
+
+            db.RobotStatusHistories.Add(
+                new RobotStatusHistory
+                {
+                    RobotId =
+                        robot.RobotId,
+
+                    PreviousOperationalStatus =
+                        previousRobotStatus,
+
+                    NewOperationalStatus =
+                        nextRobotStatus,
+
+                    Reason =
+                        reason,
+
+                    ChangedAt =
+                        now
+                });
+        }
+
+
+        // =====================================================
+        // 12. SAVE
+        // =====================================================
+
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
+
+        await transaction.CommitAsync(ct);
+
+
         return MissionEventResult.Applied;
     }
 }

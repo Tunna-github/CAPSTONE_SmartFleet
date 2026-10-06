@@ -23,18 +23,18 @@ public sealed class TransportTasksController : ControllerBase
         ITransportTaskService transportTaskService,
         ITaskDispatchService taskDispatchService)
     {
-        _transportTaskService = transportTaskService;
-        _taskDispatchService = taskDispatchService;
+        _transportTaskService =
+            transportTaskService;
+
+        _taskDispatchService =
+            taskDispatchService;
     }
 
 
     // =====================================================
-    // GET ALL TRANSPORT TASKS
+    // GET ALL
     // =====================================================
 
-    /// <summary>
-    /// Returns all transport tasks for Warehouse Operator.
-    /// </summary>
     [HttpGet]
     [ProducesResponseType(
         typeof(IReadOnlyCollection<TransportTaskResponse>),
@@ -47,20 +47,18 @@ public sealed class TransportTasksController : ControllerBase
             CancellationToken cancellationToken)
     {
         var tasks =
-            await _transportTaskService.GetAllAsync(
-                cancellationToken);
+            await _transportTaskService
+                .GetAllAsync(
+                    cancellationToken);
 
         return Ok(tasks);
     }
 
 
     // =====================================================
-    // GET TRANSPORT TASK BY ID
+    // GET BY ID
     // =====================================================
 
-    /// <summary>
-    /// Returns one transport task by ID.
-    /// </summary>
     [HttpGet("{taskId:long}")]
     [ProducesResponseType(
         typeof(TransportTaskResponse),
@@ -76,9 +74,11 @@ public sealed class TransportTasksController : ControllerBase
             CancellationToken cancellationToken)
     {
         var task =
-            await _transportTaskService.GetByIdAsync(
-                taskId,
-                cancellationToken);
+            await _transportTaskService
+                .GetByIdAsync(
+                    taskId,
+                    cancellationToken);
+
 
         if (task is null)
         {
@@ -89,18 +89,15 @@ public sealed class TransportTasksController : ControllerBase
                     $"Transport task {taskId} was not found."));
         }
 
+
         return Ok(task);
     }
 
 
     // =====================================================
-    // CREATE TRANSPORT TASK
+    // CREATE
     // =====================================================
 
-    /// <summary>
-    /// Creates a new PENDING transport task.
-    /// Creator is taken from JWT.
-    /// </summary>
     [HttpPost]
     [ProducesResponseType(
         typeof(TransportTaskResponse),
@@ -112,10 +109,12 @@ public sealed class TransportTasksController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<TransportTaskResponse>>
         CreateTransportTask(
-            [FromBody] CreateTransportTaskRequest request,
+            [FromBody]
+            CreateTransportTaskRequest request,
             CancellationToken cancellationToken)
     {
-        if (!TryGetCurrentUserId(out var userId))
+        if (!TryGetCurrentUserId(
+                out var userId))
         {
             return Unauthorized(
                 CreateProblem(
@@ -124,11 +123,14 @@ public sealed class TransportTasksController : ControllerBase
                     "The access token does not contain a valid user identifier."));
         }
 
+
         var result =
-            await _transportTaskService.CreateAsync(
-                request,
-                userId,
-                cancellationToken);
+            await _transportTaskService
+                .CreateAsync(
+                    request,
+                    userId,
+                    cancellationToken);
+
 
         if (result.Status ==
             TransportTaskResultStatus.ValidationFailed)
@@ -140,26 +142,26 @@ public sealed class TransportTasksController : ControllerBase
                     result.Error));
         }
 
+
         var createdTask =
             result.Value!;
+
 
         return CreatedAtAction(
             nameof(GetTransportTaskById),
             new
             {
-                taskId = createdTask.TaskId
+                taskId =
+                    createdTask.TaskId
             },
             createdTask);
     }
 
 
     // =====================================================
-    // UPDATE TRANSPORT TASK
+    // UPDATE
     // =====================================================
 
-    /// <summary>
-    /// Updates editable fields of a PENDING transport task.
-    /// </summary>
     [HttpPut("{taskId:long}")]
     [ProducesResponseType(
         typeof(TransportTaskResponse),
@@ -178,14 +180,17 @@ public sealed class TransportTasksController : ControllerBase
     public async Task<ActionResult<TransportTaskResponse>>
         UpdateTransportTask(
             long taskId,
-            [FromBody] UpdateTransportTaskRequest request,
+            [FromBody]
+            UpdateTransportTaskRequest request,
             CancellationToken cancellationToken)
     {
         var result =
-            await _transportTaskService.UpdateAsync(
-                taskId,
-                request,
-                cancellationToken);
+            await _transportTaskService
+                .UpdateAsync(
+                    taskId,
+                    request,
+                    cancellationToken);
+
 
         return result.Status switch
         {
@@ -221,13 +226,9 @@ public sealed class TransportTasksController : ControllerBase
 
 
     // =====================================================
-    // DELETE PENDING TRANSPORT TASK
+    // DELETE PENDING TASK
     // =====================================================
 
-    /// <summary>
-    /// Deletes a PENDING task that has not entered
-    /// the operational lifecycle.
-    /// </summary>
     [HttpDelete("{taskId:long}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(
@@ -244,9 +245,11 @@ public sealed class TransportTasksController : ControllerBase
             CancellationToken cancellationToken)
     {
         var result =
-            await _transportTaskService.DeleteAsync(
-                taskId,
-                cancellationToken);
+            await _transportTaskService
+                .DeleteAsync(
+                    taskId,
+                    cancellationToken);
+
 
         return result.Status switch
         {
@@ -275,13 +278,9 @@ public sealed class TransportTasksController : ControllerBase
 
 
     // =====================================================
-    // FLOW 2.3 - VIEW AVAILABLE ROBOTS
+    // FLOW 2 - VIEW AVAILABLE ROBOTS
     // =====================================================
 
-    /// <summary>
-    /// Returns robots that can be manually assigned
-    /// to the selected transport task.
-    /// </summary>
     [HttpGet("{taskId:long}/available-robots")]
     [ProducesResponseType(
         typeof(IReadOnlyCollection<AvailableRobotResponse>),
@@ -305,6 +304,7 @@ public sealed class TransportTasksController : ControllerBase
                 .GetAvailableRobotsAsync(
                     taskId,
                     cancellationToken);
+
 
         return result.Status switch
         {
@@ -340,15 +340,9 @@ public sealed class TransportTasksController : ControllerBase
 
 
     // =====================================================
-    // FLOW 2.3 - CONFIRM MANUAL ASSIGNMENT
+    // FLOW 2 - MANUAL ASSIGNMENT
     // =====================================================
 
-    /// <summary>
-    /// Manually assigns the selected robot to a task.
-    ///
-    /// Process:
-    /// Task -> Robot Assignment -> Mission -> TEST_MOVE.
-    /// </summary>
     [HttpPost("{taskId:long}/assign")]
     [ProducesResponseType(
         typeof(ManualAssignTaskResponse),
@@ -367,10 +361,12 @@ public sealed class TransportTasksController : ControllerBase
     public async Task<ActionResult<ManualAssignTaskResponse>>
         AssignTaskManually(
             long taskId,
-            [FromBody] ManualAssignTaskRequest request,
+            [FromBody]
+            ManualAssignTaskRequest request,
             CancellationToken cancellationToken)
     {
-        if (!TryGetCurrentUserId(out var userId))
+        if (!TryGetCurrentUserId(
+                out var userId))
         {
             return Unauthorized(
                 CreateProblem(
@@ -379,6 +375,7 @@ public sealed class TransportTasksController : ControllerBase
                     "The access token does not contain a valid user identifier."));
         }
 
+
         var result =
             await _taskDispatchService
                 .AssignManualAsync(
@@ -386,6 +383,7 @@ public sealed class TransportTasksController : ControllerBase
                     request.RobotId,
                     userId,
                     cancellationToken);
+
 
         return result.Status switch
         {
@@ -421,6 +419,85 @@ public sealed class TransportTasksController : ControllerBase
 
 
     // =====================================================
+    // CANCEL TASK + RELEASE ROBOT
+    // =====================================================
+
+    [HttpPatch("{taskId:long}/cancel")]
+    [ProducesResponseType(
+        typeof(CancelTransportTaskResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status404NotFound)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<CancelTransportTaskResponse>>
+        CancelTransportTask(
+            long taskId,
+            [FromBody]
+            CancelTransportTaskRequest request,
+            CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(
+                out var userId))
+        {
+            return Unauthorized(
+                CreateProblem(
+                    StatusCodes.Status401Unauthorized,
+                    "Invalid access token",
+                    "The access token does not contain a valid user identifier."));
+        }
+
+
+        var result =
+            await _taskDispatchService
+                .CancelAsync(
+                    taskId,
+                    request.Reason,
+                    userId,
+                    cancellationToken);
+
+
+        return result.Status switch
+        {
+            TransportTaskResultStatus.Success =>
+                Ok(result.Value),
+
+            TransportTaskResultStatus.NotFound =>
+                NotFound(
+                    CreateProblem(
+                        StatusCodes.Status404NotFound,
+                        "Transport task not found",
+                        result.Error)),
+
+            TransportTaskResultStatus.ValidationFailed =>
+                BadRequest(
+                    CreateProblem(
+                        StatusCodes.Status400BadRequest,
+                        "Invalid cancellation",
+                        result.Error)),
+
+            TransportTaskResultStatus.Conflict =>
+                Conflict(
+                    CreateProblem(
+                        StatusCodes.Status409Conflict,
+                        "Task cannot be cancelled",
+                        result.Error)),
+
+            _ =>
+                StatusCode(
+                    StatusCodes.Status500InternalServerError)
+        };
+    }
+
+
+    // =====================================================
     // JWT HELPER
     // =====================================================
 
@@ -435,7 +512,7 @@ public sealed class TransportTasksController : ControllerBase
 
 
     // =====================================================
-    // PROBLEM DETAILS HELPER
+    // PROBLEM DETAILS
     // =====================================================
 
     private static ProblemDetails CreateProblem(
@@ -445,9 +522,14 @@ public sealed class TransportTasksController : ControllerBase
     {
         return new ProblemDetails
         {
-            Status = status,
-            Title = title,
-            Detail = detail
+            Status =
+                status,
+
+            Title =
+                title,
+
+            Detail =
+                detail
         };
     }
 }
