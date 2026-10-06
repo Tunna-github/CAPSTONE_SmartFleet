@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace SmartFleetBE.Services;
 
@@ -19,10 +19,9 @@ public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttSe
                 {
                     var active = await db.Missions.AnyAsync(m => m.AssignmentId == command.AssignmentId &&
                         m.MissionStatus == "INITIALIZING" && m.Assignment.AssignmentStatus == "ACTIVE", stoppingToken);
-
-                    if (active) 
+                    if (active) await mqtt.PublishAsync(command.Topic, command.Payload, stoppingToken);
+                    if (!active)
                     {
-                        await mqtt.PublishAsync(command.Topic, command.Payload, stoppingToken);
                         command.DeliveredAt = DateTime.UtcNow;
                         await db.SaveChangesAsync(stoppingToken);
                     }
