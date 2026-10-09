@@ -1,4 +1,4 @@
-﻿import axios, {
+import axios, {
     AxiosError,
     AxiosInstance,
     InternalAxiosRequestConfig,
@@ -66,6 +66,7 @@ apiClient.interceptors.response.use(
             status,
             message:
                 data?.message ||
+                data?.detail ||
                 data?.title ||
                 data?.error ||
                 error.message ||

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId, useRef } from "react";
+import { TaskCreateForm } from "./TaskCreationPage";
 import { useData } from "../context/DataContext";
 import { Priority, Task } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
@@ -10,23 +11,22 @@ import { PageHeader, PrimaryBtn, PriorityBadge, StatusBadge } from "../component
 
 interface EditState { delivery: string; priority: Priority; }
 
+const PRIORITY_ORDER: Record<Priority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+
 export function TasksPage() {
-    const { tasks, robots, addTask, updateTaskStatus, cancelTask, refreshTasks, isTasksLoading, tasksError } = useData();
+    const { tasks, robots, cancelTask, deleteTask, refreshTasks, isTasksLoading, tasksError } = useData();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [createOpen, setCreateOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<Task | null>(null);
     const [editState, setEditState] = useState<EditState>({ delivery: "", priority: "MEDIUM" });
     const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const deleteInFlight = useRef(false);
+    const [deleteError, setDeleteError] = useState("");
     const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
 
-    // Create form state
-    const PICKUP_OPTIONS = ["Station A-01", "Station A-02", "Station A-03", "Station B-02", "Station B-03", "Station C-01", "Receiving Dock"];
-    const DELIVERY_OPTIONS = ["Bay A-04", "Bay B-07", "Bay C-08", "Bay C-11", "Bay D-12", "Bay E-01", "Storage F-03", "Shipping Zone", "Receiving Dock"];
-    const [newPickup, setNewPickup] = useState(PICKUP_OPTIONS[0]);
-    const [newDelivery, setNewDelivery] = useState(DELIVERY_OPTIONS[0]);
-    const [newPkg, setNewPkg] = useState("");
-    const [newPrio, setNewPrio] = useState<Priority>("MEDIUM");
+    const [isCreating, setIsCreating] = useState(false);
 
     useEffect(() => {
         void refreshTasks().catch(() => {});
@@ -51,18 +51,42 @@ export function TasksPage() {
     }, [refreshTasks]);
 
     // ── Filtering ──
-    const filtered = tasks.filter((t) => {
-        const q = search.toLowerCase();
+    const searchedTasks = tasks.filter((t) => {
+        const q = search.trim().toLowerCase();
         const matchSearch = !q
             || t.id.toLowerCase().includes(q)
             || t.pickup.toLowerCase().includes(q)
             || t.delivery.toLowerCase().includes(q)
+            || t.packageInfo.toLowerCase().includes(q)
             || (t.robotId || "").toLowerCase().includes(q);
-        const matchStatus = statusFilter === "ALL" || t.status === statusFilter;
-        return matchSearch && matchStatus;
-    });
+        return matchSearch;
+    }).sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+        || a.id.localeCompare(b.id, undefined, { numeric: true }));
 
-    const statusOptions = ["ALL", "PENDING", "QUEUED", "ASSIGNED", "EXECUTING", "COMPLETED", "CANCELLED"];
+    const queueTasks = searchedTasks.filter((t) => t.status !== "COMPLETED"
+        && (statusFilter === "ALL" || t.status === statusFilter));
+    const completedTasks = searchedTasks.filter((t) => t.status === "COMPLETED");
+    const sections = [
+        {
+            id: "queue",
+            title: "Task Queue",
+            description: "Sorted by priority: HIGH > MEDIUM > LOW. Cancelled tasks remain available via the status filter.",
+            items: queueTasks,
+            total: tasks.filter((t) => t.status !== "COMPLETED").length,
+            color: "#22d3ee",
+            empty: search.trim() || statusFilter !== "ALL" ? "No queued tasks match your filters." : "No tasks in the queue.",
+        },
+        {
+            id: "completed",
+            title: "Completed Tasks",
+            description: "Completed transport tasks only. Search applies here; queue status filters do not.",
+            items: completedTasks,
+            total: tasks.filter((t) => t.status === "COMPLETED").length,
+            color: "#22c55e",
+            empty: search.trim() ? "No completed tasks match your search." : "No completed tasks yet.",
+        },
+    ];
+    const statusOptions = ["ALL", "PENDING", "QUEUED", "ASSIGNED", "EXECUTING", "CANCELLED"];
     const counts = {
         total: tasks.length,
         pending: tasks.filter((t) => t.status === "PENDING" || t.status === "QUEUED").length,
@@ -71,14 +95,6 @@ export function TasksPage() {
     };
 
     // ── Actions ──
-    const handleCreate = () => {
-        if (!newPkg.trim()) { setToast({ msg: "Package description is required.", type: "error" }); return; }
-        addTask(newPickup, newDelivery, newPkg, newPrio);
-        setCreateOpen(false);
-        setNewPkg("");
-        setToast({ msg: `Task created: ${newPickup} → ${newDelivery}`, type: "success" });
-    };
-
     const openEdit = (task: Task) => {
         setEditTarget(task);
         setEditState({ delivery: task.delivery, priority: task.priority });
@@ -86,9 +102,7 @@ export function TasksPage() {
 
     const confirmEdit = () => {
         if (!editTarget) return;
-        // In a real app this would call a service. For mock, we just close.
-        setEditTarget(null);
-        setToast({ msg: `${editTarget.id} updated.`, type: "success" });
+        setToast({ msg: "Editing is not connected to the backend yet. No changes were saved.", type: "info" });
     };
 
     const handleCancel = (task: Task) => {
@@ -97,6 +111,7 @@ export function TasksPage() {
     };
 
     const handleDelete = (task: Task) => {
+        setDeleteError("");
         setDeleteTarget(task);
     };
 
@@ -109,11 +124,21 @@ export function TasksPage() {
         }
     };
 
-    const confirmDelete = () => {
-        if (!deleteTarget) return;
-        // In a real app this would call a delete service.
-        setToast({ msg: `${deleteTarget.id} deleted permanently.`, type: "error" });
-        setDeleteTarget(null);
+    const confirmDelete = async () => {
+        if (!deleteTarget || deleteInFlight.current) return;
+        deleteInFlight.current = true;
+        setIsDeleting(true);
+        setDeleteError("");
+        try {
+            await deleteTask(deleteTarget);
+            setToast({ msg: `Task ${deleteTarget.id} deleted successfully.`, type: "success" });
+            setDeleteTarget(null);
+        } catch (error) {
+            setDeleteError((error as { message?: string })?.message || "Unable to delete this task. Please try again.");
+        } finally {
+            deleteInFlight.current = false;
+            setIsDeleting(false);
+        }
     };
 
     const canEdit = (s: string) => s === "PENDING" || s === "QUEUED";
@@ -149,7 +174,7 @@ export function TasksPage() {
 
             {/* Stat strip */}
             <div
-                className="shrink-0 flex gap-3 px-6 py-3"
+                className="shrink-0 flex flex-wrap gap-3 px-6 py-3"
                 style={{ borderBottom: "1px solid var(--border-subtle)" }}
             >
                 {[
@@ -171,7 +196,7 @@ export function TasksPage() {
 
             {/* Toolbar */}
             <div
-                className="shrink-0 flex items-center gap-3 px-6 py-3"
+                className="shrink-0 flex flex-wrap items-center gap-3 px-6 py-3"
                 style={{ borderBottom: "1px solid var(--border-subtle)" }}
             >
                 <div className="relative" style={{ width: 320 }}>
@@ -182,9 +207,10 @@ export function TasksPage() {
                         <Icon d={IC.search} size={14} />
                     </span>
                     <input
+                        aria-label="Search transport tasks"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search task ID, station, robot…"
+                        placeholder="Search ID, station, package, robot..."
                         className="w-full pl-9 pr-3 py-2 rounded-lg text-[13px] outline-none transition-colors"
                         style={{
                             background: "var(--surface-3)",
@@ -193,10 +219,13 @@ export function TasksPage() {
                         }}
                     />
                 </div>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap items-center gap-1">
+                    <span className="mr-2 text-[11px]" style={{ color: "var(--text-faint)" }}>Queue status</span>
                     {statusOptions.map((s) => (
                         <button
                             key={s}
+                            type="button"
+                            aria-pressed={statusFilter === s}
                             onClick={() => setStatusFilter(s)}
                             className="font-mono text-[10px] font-bold px-2.5 py-1 rounded-md transition-all"
                             style={{
@@ -226,15 +255,31 @@ export function TasksPage() {
                 </div>
             )}
 
-            {/* Table */}
-            <div className="flex-1 overflow-hidden px-6 pb-6 pt-3">
-                <div
-                    className="h-full rounded-2xl overflow-hidden flex flex-col transition-colors"
-                    style={{ background: "var(--surface-2)", border: "1px solid var(--border-subtle)" }}
+            {/* Separate queue and completed history, sharing the same task table. */}
+            <div className="flex-1 min-h-0 overflow-auto px-6 pb-6 pt-3 space-y-5">
+                {sections.map((section) => (
+                <section
+                    key={section.id}
+                    aria-labelledby={`${section.id}-heading`}
+                    aria-busy={isTasksLoading}
+                    className="rounded-2xl overflow-hidden flex flex-col transition-colors"
+                    style={{ background: "var(--surface-2)", border: `1px solid ${section.color}40` }}
                 >
-                    <div className="overflow-auto flex-1">
+                    <div className="flex items-center gap-3 px-4 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                        <div className="flex-1">
+                            <h2 id={`${section.id}-heading`} className="text-[14px] font-bold flex items-center gap-2">
+                                {section.id === "completed" && <Icon d={IC.check} size={15} />}
+                                {section.title}
+                            </h2>
+                            <p className="mt-1 text-[11px]" style={{ color: "var(--text-faint)" }}>{section.description}</p>
+                        </div>
+                        <span className="rounded-lg px-3 py-1 font-mono text-[13px] font-bold" style={{ background: `${section.color}15`, color: section.color }}>
+                            {section.items.length}
+                        </span>
+                    </div>
+                    <div className="overflow-auto max-h-[480px]">
                         <table className="w-full border-collapse" style={{ minWidth: 1000 }}>
-                            <thead>
+                            <thead className="sticky top-0 z-10">
                                 <tr style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
                                     {["Task ID", "Pickup", "Delivery", "Package", "Priority", "Assigned Robot", "Status", "Actions"].map((h) => (
                                         <th
@@ -248,7 +293,7 @@ export function TasksPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((task) => (
+                                {section.items.map((task) => (
                                     <tr
                                         key={task.id}
                                         style={{
@@ -279,6 +324,7 @@ export function TasksPage() {
                                                 {canEdit(task.status) && (
                                                     <button
                                                         onClick={() => openEdit(task)}
+                                                        aria-label={`Edit task ${task.id}`}
                                                         className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors"
                                                         style={{
                                                             background: "rgba(99,102,241,0.1)",
@@ -292,6 +338,7 @@ export function TasksPage() {
                                                 {canCancel(task.status) && (
                                                     <button
                                                         onClick={() => handleCancel(task)}
+                                                        aria-label={`Cancel task ${task.id}`}
                                                         className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors"
                                                         style={{
                                                             background: "rgba(239,68,68,0.1)",
@@ -305,6 +352,7 @@ export function TasksPage() {
                                                 {(task.status === "COMPLETED" || task.status === "CANCELLED") && (
                                                     <button
                                                         onClick={() => handleDelete(task)}
+                                                        aria-label={`Delete task ${task.id}`}
                                                         className="w-7 h-7 rounded-md flex items-center justify-center transition-colors"
                                                         style={{
                                                             background: "rgba(239,68,68,0.1)",
@@ -319,14 +367,14 @@ export function TasksPage() {
                                         </td>
                                     </tr>
                                 ))}
-                                {filtered.length === 0 && (
+                                {section.items.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan={8}
                                             className="text-center py-12 text-[13px]"
                                             style={{ color: "var(--text-dimmest)" }}
                                         >
-                                            No tasks match your filters.
+                                            {isTasksLoading ? "Loading tasks..." : section.empty}
                                         </td>
                                     </tr>
                                 )}
@@ -338,62 +386,28 @@ export function TasksPage() {
                         style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}
                     >
                         <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>
-                            Showing {filtered.length} of {tasks.length} tasks
+                            Showing {section.items.length} of {section.total} {section.id === "completed" ? "completed" : "queue"} tasks
                         </span>
                         <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>
                             {robots.filter((r) => r.mqtt === "ONLINE").length} robots online
                         </span>
                     </div>
-                </div>
+                </section>
+                ))}
             </div>
 
             {/* ══ Create Task Modal ══ */}
-            {createOpen && (
-                <ModalShell title="Create Transport Task" sub="New task will be queued immediately after submission." onClose={() => setCreateOpen(false)} width={500}>
-                    <div className="p-6 space-y-5">
-                        <SelectField label="Pickup Location" value={newPickup} onChange={setNewPickup} options={PICKUP_OPTIONS} />
-                        <SelectField label="Delivery Destination" value={newDelivery} onChange={setNewDelivery} options={DELIVERY_OPTIONS} />
-                        <InputField
-                            label="Package Description"
-                            value={newPkg}
-                            onChange={setNewPkg}
-                            placeholder="e.g. Industrial Parts × 3"
-                        />
-                        <PriorityPicker value={newPrio} onChange={setNewPrio} label="Priority Level" />
-                    </div>
-                    <div
-                        className="flex gap-3 px-6 py-4"
-                        style={{ borderTop: "1px solid var(--border-subtle)" }}
-                    >
-                        <button
-                            onClick={() => setCreateOpen(false)}
-                            className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-colors"
-                            style={{
-                                background: "var(--surface-3)",
-                                color: "var(--text-muted)",
-                                border: "1px solid var(--border-medium)",
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleCreate}
-                            className="flex-[2] py-2.5 rounded-lg text-[13px] font-bold transition-opacity hover:opacity-90"
-                            style={{
-                                background: "linear-gradient(135deg,#22d3ee,#3b82f6)",
-                                color: "#ffffff",
-                                boxShadow: "0 4px 16px rgba(34,211,238,0.3)",
-                            }}
-                        >
-                            + Create Task
-                        </button>
-                    </div>
+            <ModalShell title="Create Transport Task" sub="Set the route, package details and scheduling preferences." open={createOpen} busy={isCreating} onClose={() => setCreateOpen(false)} width={680}>
+                    <TaskCreateForm onBusyChange={setIsCreating} onCancel={() => setCreateOpen(false)} onCreated={(task) => {
+                        setCreateOpen(false);
+                        setToast({ msg: `Task ${task.id} created successfully.`, type: "success" });
+                    }} />
                 </ModalShell>
-            )}
 
             {/* ══ Edit Task Modal ══ */}
             {editTarget && (
                 <ModalShell title="Edit Transport Task" sub={`Modifying ${editTarget.id}`} onClose={() => setEditTarget(null)} width={500}>
+                    <form onSubmit={(event) => { event.preventDefault(); confirmEdit(); }}>
                     <div
                         className="px-6 py-3 flex gap-6"
                         style={{ background: "rgba(99,102,241,0.06)", borderBottom: "1px solid rgba(99,102,241,0.15)" }}
@@ -415,6 +429,7 @@ export function TasksPage() {
                             <ReadOnlyField label="Package Info" value={editTarget.packageInfo} />
                         </div>
                         <InputField
+                            autoFocus
                             label="Delivery Station / Destination"
                             value={editState.delivery}
                             onChange={(v) => setEditState((s) => ({ ...s, delivery: v }))}
@@ -431,6 +446,7 @@ export function TasksPage() {
                         style={{ borderTop: "1px solid var(--border-subtle)" }}
                     >
                         <button
+                            type="button"
                             onClick={() => setEditTarget(null)}
                             className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold"
                             style={{
@@ -442,7 +458,7 @@ export function TasksPage() {
                             Cancel
                         </button>
                         <button
-                            onClick={confirmEdit}
+                            type="submit"
                             className="flex-[2] py-2.5 rounded-lg text-[13px] font-bold"
                             style={{
                                 background: "linear-gradient(135deg,#22d3ee,#3b82f6)",
@@ -453,12 +469,13 @@ export function TasksPage() {
                             ✓ Confirm Update
                         </button>
                     </div>
+                    </form>
                 </ModalShell>
             )}
 
             {/* ══ Delete Confirm ══ */}
             {deleteTarget && (
-                <ModalShell title="Confirm Deletion" sub="This action cannot be undone." onClose={() => setDeleteTarget(null)} width={400}>
+                <ModalShell title="Confirm Deletion" sub="This action cannot be undone." busy={isDeleting} onClose={() => { setDeleteTarget(null); setDeleteError(""); }} width={400}>
                     <div className="p-6 text-center">
                         <div
                             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -474,9 +491,13 @@ export function TasksPage() {
                             You are about to permanently delete <br />
                             <strong style={{ color: "var(--text-primary)" }}>{deleteTarget.id}</strong>.
                         </p>
+                        {deleteError && <p role="alert" className="mb-4 rounded-lg p-3 text-[12px] text-red-400 bg-red-500/10">{deleteError}</p>}
                         <div className="flex gap-3">
                             <button
-                                onClick={() => setDeleteTarget(null)}
+                                autoFocus
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => { setDeleteTarget(null); setDeleteError(""); }}
                                 className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold"
                                 style={{
                                     background: "var(--surface-3)",
@@ -487,6 +508,8 @@ export function TasksPage() {
                                 Cancel
                             </button>
                             <button
+                                type="button"
+                                disabled={isDeleting}
                                 onClick={confirmDelete}
                                 className="flex-1 py-2.5 rounded-lg text-[13px] font-bold"
                                 style={{
@@ -495,7 +518,7 @@ export function TasksPage() {
                                     border: "1px solid rgba(239,68,68,0.4)",
                                 }}
                             >
-                                Delete Permanently
+                                {isDeleting ? "Deleting..." : "Delete Permanently"}
                             </button>
                         </div>
                     </div>
@@ -511,13 +534,35 @@ export function TasksPage() {
 // ─── Reusable theme-aware form components ────────────────────────────────────
 
 function ModalShell({
-    title, sub, onClose, children, width = 480,
-}: { title: string; sub?: string; onClose: () => void; children: React.ReactNode; width?: number }) {
+    title, sub, onClose, children, width = 480, open = true, busy = false,
+}: { title: string; sub?: string; onClose: () => void; children: React.ReactNode; width?: number; open?: boolean; busy?: boolean }) {
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const titleId = useId();
+    const descriptionId = useId();
+
+    useEffect(() => {
+        const dialog = dialogRef.current;
+        if (!dialog || !open) return;
+        const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        // Native modal dialogs trap focus and make the rest of the page inert.
+        dialog.showModal();
+        dialog.querySelector<HTMLElement>("[autofocus]")?.focus();
+        return () => {
+            dialog.close();
+            if (trigger?.isConnected) trigger.focus();
+        };
+    }, [open]);
+
     return (
-        <div
-            className="fixed inset-0 flex items-center justify-center z-[100] p-6"
-            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
-            onClick={onClose}
+        <dialog
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={sub ? descriptionId : undefined}
+            onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}
+            className="m-auto rounded-2xl p-0 max-h-[90vh] overflow-auto backdrop:bg-black/75 backdrop:backdrop-blur-sm"
+            style={{ width: `min(${width}px, calc(100vw - 32px))`, color: "var(--text-primary)", background: "var(--surface-2)", border: "1px solid var(--border-medium)" }}
         >
             <div
                 className="w-full rounded-2xl overflow-hidden"
@@ -534,10 +579,13 @@ function ModalShell({
                     style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}
                 >
                     <div>
-                        <h2 className="text-[15px] font-bold" style={{ color: "var(--text-primary)" }}>{title}</h2>
-                        {sub && <p className="font-mono text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>{sub}</p>}
+                        <h2 id={titleId} className="text-[15px] font-bold" style={{ color: "var(--text-primary)" }}>{title}</h2>
+                        {sub && <p id={descriptionId} className="font-mono text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>{sub}</p>}
                     </div>
                     <button
+                        type="button"
+                        aria-label="Close"
+                        disabled={busy}
                         onClick={onClose}
                         className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
                         style={{
@@ -551,56 +599,31 @@ function ModalShell({
                 </div>
                 {children}
             </div>
-        </div>
-    );
-}
-
-function SelectField({
-    label, value, onChange, options,
-}: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
-    return (
-        <div>
-            <label
-                className="block font-mono text-[10px] font-bold uppercase tracking-wider mb-1.5"
-                style={{ color: "var(--text-faint)" }}
-            >
-                {label}
-            </label>
-            <select
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg text-[13px] outline-none appearance-none cursor-pointer transition-colors"
-                style={{
-                    background: "var(--surface-3)",
-                    border: "1px solid var(--border-medium)",
-                    color: "var(--text-primary)",
-                }}
-            >
-                {options.map((o) => (
-                    <option key={o} value={o} style={{ background: "var(--surface-2)" }}>{o}</option>
-                ))}
-            </select>
-        </div>
+        </dialog>
     );
 }
 
 function InputField({
-    label, value, onChange, placeholder,
-}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+    label, value, onChange, placeholder, autoFocus = false,
+}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; autoFocus?: boolean }) {
+    const id = useId();
     return (
         <div>
             <label
+                htmlFor={id}
                 className="block font-mono text-[10px] font-bold uppercase tracking-wider mb-1.5"
                 style={{ color: "var(--text-faint)" }}
             >
                 {label}
             </label>
             <input
+                id={id}
+                autoFocus={autoFocus}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full px-3 py-2.5 rounded-lg text-[13px] outline-none transition-colors"
+                className="w-full px-3 py-2.5 rounded-lg text-[13px] focus-visible:outline-2 focus-visible:outline-cyan-400 transition-colors"
                 style={{
                     background: "var(--surface-3)",
                     border: "1px solid var(--border-medium)",
@@ -614,12 +637,12 @@ function InputField({
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
     return (
         <div>
-            <label
+            <p
                 className="block font-mono text-[10px] font-bold uppercase tracking-wider mb-1.5"
                 style={{ color: "var(--text-faint)" }}
             >
                 {label}
-            </label>
+            </p>
             <div
                 className="px-3 py-2.5 rounded-lg text-[13px]"
                 style={{
@@ -638,36 +661,36 @@ function PriorityPicker({
     value, onChange, label,
 }: { value: Priority; onChange: (p: Priority) => void; label: string }) {
     const colors: Record<Priority, string> = { HIGH: "#f87171", MEDIUM: "#fbbf24", LOW: "#94a3b8" };
+    const name = useId();
     return (
-        <div>
-            <label
+        <fieldset>
+            <legend
                 className="block font-mono text-[10px] font-bold uppercase tracking-wider mb-2"
                 style={{ color: "var(--text-faint)" }}
             >
                 {label}
-            </label>
+            </legend>
             <div className="flex gap-2.5">
                 {(["HIGH", "MEDIUM", "LOW"] as Priority[]).map((p) => {
                     const selected = value === p;
                     const color = colors[p];
                     return (
-                        <button
+                        <label
                             key={p}
-                            type="button"
-                            onClick={() => onChange(p)}
-                            className="flex-1 py-2.5 rounded-lg text-[11px] font-mono font-bold transition-all"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer"
                             style={{
                                 background: selected ? `${color}20` : "var(--surface-3)",
                                 border: `2px solid ${selected ? color : "var(--border-medium)"}`,
                                 color: selected ? color : "var(--text-faint)",
                             }}
                         >
+                            <input type="radio" name={name} value={p} checked={selected} onChange={() => onChange(p)} className="accent-cyan-400" />
                             {p}
-                        </button>
+                        </label>
                     );
                 })}
             </div>
-        </div>
+        </fieldset>
     );
 }
 
