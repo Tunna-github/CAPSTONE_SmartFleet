@@ -2,6 +2,7 @@
     createContext,
     useContext,
     useCallback,
+    useEffect,
     useState,
     ReactNode,
 } from "react";
@@ -47,10 +48,28 @@ function pickRole(roles: string[] | undefined): Role {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(() => authApi.getCurrentUser());
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const role: Role | null = user ? pickRole(user.roles) : null;
     const isAuthenticated = !!user;
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function bootstrapSession() {
+            const currentUser = await authApi.validateCurrentSession();
+
+            if (!isMounted) return;
+            setUser(currentUser);
+            setIsLoading(false);
+        }
+
+        bootstrapSession();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     async function login(usernameOrEmail: string, password: string) {
         setIsLoading(true);

@@ -43,7 +43,3 @@ export async function createUser(payload: CreateUserPayload): Promise<void> {
 export async function updateUser(userId: number, payload: UpdateUserPayload): Promise<void> {
     await apiClient.put(ENDPOINTS.users.update(userId), payload);
 }
-
-export async function deleteUser(userId: number): Promise<void> {
-    await apiClient.delete(ENDPOINTS.users.delete(userId));
-}

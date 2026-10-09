@@ -1,6 +1,7 @@
-﻿import { apiClient, tokenStorage } from "../client";
+import { apiClient, tokenStorage } from "../client";
 import { ENDPOINTS } from "../endpoints";
 import type { LoginRequest, LoginResponse, AuthUser } from "../types";
+import { getMyProfile } from "./users";
 
 /**
  * POST /api/v1/auth/login
@@ -41,4 +42,22 @@ export function saveCurrentUser(user: AuthUser): void {
 
 export function isAuthenticated(): boolean {
     return !!tokenStorage.get();
+}
+
+export async function validateCurrentSession(): Promise<AuthUser | null> {
+    const token = tokenStorage.get();
+
+    if (!token) {
+        tokenStorage.clear();
+        return null;
+    }
+
+    try {
+        const currentUser = await getMyProfile();
+        tokenStorage.setUser(currentUser);
+        return currentUser;
+    } catch {
+        tokenStorage.clear();
+        return null;
+    }
 }
