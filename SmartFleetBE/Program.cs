@@ -20,6 +20,20 @@ var builder = WebApplication.CreateBuilder(args);
 // =====================================================
 
 builder.Services.AddControllers();
+// =====================================================
+// CORS Configuration (CHÈN VÀO ĐÂY)
+// =====================================================
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:8443") // Cổng HTTPS của Frontend bên bạn
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 
 // =====================================================
@@ -234,7 +248,8 @@ if (app.Environment.IsDevelopment())
 // =====================================================
 
 app.UseHttpsRedirection();
-
+// Kích hoạt CORS (BẮT BUỘC PHẢI ĐẶT TRƯỚC AUTHENTICATION)
+app.UseCors("AllowFrontend");
 
 // Authentication MUST come before Authorization
 app.UseAuthentication();
