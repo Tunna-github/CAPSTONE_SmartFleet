@@ -23,22 +23,6 @@ builder.Services.AddControllers();
 
 
 // =====================================================
-// CORS Configuration (CHÈN VÀO ĐÂY)
-// =====================================================
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins("http://localhost:8443") // Cổng HTTPS của Frontend bên bạn
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
-});
-
-
-// =====================================================
 // Swagger / OpenAPI
 // =====================================================
 
@@ -130,28 +114,31 @@ builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 // =====================================================
 
 builder.Services.AddSingleton<MqttService>();
+builder.Services.AddScoped<MissionLifecycleService>();
+builder.Services.AddHostedService<MqttMissionStatusWorker>();
+builder.Services.AddHostedService<RobotCommandOutboxWorker>();
 
 
 // =====================================================
-// JWT Configuration (ĐÃ ĐỔI THÀNH IN HOA "JWT" ĐỂ KHỚP JSON)
+// JWT Configuration
 // =====================================================
 
 var jwtKey =
-    builder.Configuration["JWT:Key"]
+    builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException(
-        "JWT:Key is missing from configuration."
+        "Jwt:Key is missing from configuration."
     );
 
 var jwtIssuer =
-    builder.Configuration["JWT:Issuer"]
+    builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException(
-        "JWT:Issuer is missing from configuration."
+        "Jwt:Issuer is missing from configuration."
     );
 
 var jwtAudience =
-    builder.Configuration["JWT:Audience"]
+    builder.Configuration["Jwt:Audience"]
     ?? throw new InvalidOperationException(
-        "JWT:Audience is missing from configuration."
+        "Jwt:Audience is missing from configuration."
     );
 
 
@@ -247,10 +234,6 @@ if (app.Environment.IsDevelopment())
 // =====================================================
 
 app.UseHttpsRedirection();
-
-
-// Kích hoạt CORS (BẮT BUỘC PHẢI ĐẶT TRƯỚC AUTHENTICATION)
-app.UseCors("AllowFrontend");
 
 
 // Authentication MUST come before Authorization

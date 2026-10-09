@@ -63,10 +63,26 @@ public partial class SmartFleetDbContext : DbContext
     public virtual DbSet<Zone> Zones { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer("Name=ConnectionStrings:DefaultConnection");
+    {
+        if (!optionsBuilder.IsConfigured)
+            optionsBuilder.UseSqlServer("Name=ConnectionStrings:DefaultConnection");
+    }
+
+    public DbSet<RobotCommandOutbox> RobotCommandOutbox { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<RobotCommandOutbox>(entity =>
+        {
+            entity.ToTable("RobotCommandOutbox");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.AssignmentId).IsUnique();
+            entity.HasIndex(e => e.DeliveredAt);
+            entity.Property(e => e.Topic).HasMaxLength(300);
+            entity.Property(e => e.Payload).HasMaxLength(4000);
+            entity.HasOne(e => e.Assignment).WithMany().HasForeignKey(e => e.AssignmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<DeliveryVerification>(entity =>
         {
             entity.HasKey(e => e.VerificationId).HasName("PK__Delivery__306D4927F910F468");
@@ -650,13 +666,13 @@ public partial class SmartFleetDbContext : DbContext
                 .HasForeignKey(d => d.AssignedBy)
                 .HasConstraintName("FK_TaskAssignments_Users");
 
-            entity.HasOne(d => d.Robot).WithOne(p => p.TaskAssignment)
-                .HasForeignKey<TaskAssignment>(d => d.RobotId)
+            entity.HasOne(d => d.Robot).WithMany(p => p.TaskAssignments)
+                .HasForeignKey(d => d.RobotId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TaskAssignments_Robots");
 
-            entity.HasOne(d => d.Task).WithOne(p => p.TaskAssignment)
-                .HasForeignKey<TaskAssignment>(d => d.TaskId)
+            entity.HasOne(d => d.Task).WithMany(p => p.TaskAssignments)
+                .HasForeignKey(d => d.TaskId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_TaskAssignments_Tasks");
         });
