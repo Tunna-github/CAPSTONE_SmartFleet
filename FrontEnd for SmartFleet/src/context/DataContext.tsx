@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
-import { Task, Robot, LogEntry, TASKS, ROBOTS, INITIAL_LOGS, Priority } from "../data/mockData";
-import { getTransportTasks } from "../api/modules/tasks";
+import { Task, Robot, LogEntry, TASKS, ROBOTS, INITIAL_LOGS } from "../data/mockData";
+import { getTransportTasks, createTransportTask, deleteTransportTask, type CreateTransportTaskPayload } from "../api/modules/tasks";
+import { useAuth } from "./AuthContext";
 
 interface DataContextType {
     tasks: Task[];
@@ -8,7 +9,8 @@ interface DataContextType {
     logs: LogEntry[];
     isTasksLoading: boolean;
     tasksError: string | null;
-    addTask: (pickup: string, delivery: string, pkg: string, priority: Priority) => void;
+    addTask: (payload: CreateTransportTaskPayload) => Promise<Task>;
+    deleteTask: (task: Task) => Promise<void>;
     refreshTasks: (showErrorToast?: boolean) => Promise<void>;
     updateTaskStatus: (id: string, status: Task["status"]) => void;
     cancelTask: (id: string) => void;
@@ -19,6 +21,8 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
+    const { user, role, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+    const canLoadTasks = !isAuthLoading && isAuthenticated && (role === "operator" || role === "admin");
     const [tasks, setTasks] = useState<Task[]>(TASKS);
     const [robots, setRobots] = useState<Robot[]>(ROBOTS);
     const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
@@ -34,6 +38,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const refreshTasks = useCallback(async (showErrorToast = false) => {
+        if (!canLoadTasks) return;
         setIsTasksLoading(true);
         setTasksError(null);
 
@@ -52,9 +57,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsTasksLoading(false);
         }
-    }, [addLog]);
+    }, [addLog, canLoadTasks, user?.userId]);
 
     useEffect(() => {
+        if (!canLoadTasks) {
+            setTasks([]);
+            setTasksError(null);
+            setIsTasksLoading(false);
+            return;
+        }
         let isMounted = true;
 
         async function loadTasks() {
@@ -83,26 +94,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [canLoadTasks, user?.userId]);
 
-    const addTask = (pickup: string, delivery: string, packageInfo: string, priority: Priority) => {
-        const newId = `TSK-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-        const newTask: Task = {
-            id: newId,
-            pickup,
-            delivery,
-            packageInfo,
-            priority,
-            robotId: null,
-            status: "PENDING",
-            created: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-        };
-        setTasks(prev => [newTask, ...prev]);
-        addLog({ level: "INFO", robot: "SYSTEM", message: `New task ${newId} created: ${pickup} → ${delivery}` });
+    const addTask = async (payload: CreateTransportTaskPayload): Promise<Task> => {
+        const newTask = await createTransportTask(payload);
+        setTasks(prev => [newTask, ...prev.filter(task => task.id !== newTask.id)]);
+        addLog({ level: "INFO", robot: "SYSTEM", message: `Task ${newTask.id} created successfully.` });
+        return newTask;
     };
 
     const updateTaskStatus = (id: string, status: Task["status"]) => {
         setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+    };
+
+    const deleteTask = async (task: Task): Promise<void> => {
+        if (task.taskId === undefined || task.taskId === null || task.taskId === "") {
+            throw new Error("This task has no backend ID. Reload the task list before deleting.");
+        }
+        await deleteTransportTask(task.taskId);
+        setTasks(prev => prev.filter(item => item.taskId !== task.taskId));
+        addLog({ level: "INFO", robot: "SYSTEM", message: `Task ${task.id} deleted successfully.` });
     };
 
     const cancelTask = (id: string) => {
@@ -132,6 +143,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 isTasksLoading,
                 tasksError,
                 addTask,
+                deleteTask,
                 refreshTasks,
                 updateTaskStatus,
                 cancelTask,

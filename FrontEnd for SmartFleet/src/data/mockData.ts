@@ -3,6 +3,7 @@ export type TaskStatus = "PENDING" | "QUEUED" | "ASSIGNED" | "EXECUTING" | "COMP
 export type MQTTStatus = "ONLINE" | "OFFLINE";
 
 export interface Task {
+    taskId?: number | string;
     id: string; pickup: string; delivery: string; packageInfo: string;
     priority: Priority; robotId: string | null; status: TaskStatus; created: string;
 }

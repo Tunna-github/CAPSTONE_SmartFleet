@@ -1,4 +1,4 @@
-﻿const BASE = "/api/v1";
+const BASE = "/api/v1";
 
 export const ENDPOINTS = {
     auth: {
@@ -16,6 +16,8 @@ export const ENDPOINTS = {
     },
     transportTasks: {
         list: `${BASE}/transport-tasks`,
+        create: `${BASE}/transport-tasks`,
+        delete: (taskId: number | string) => `${BASE}/transport-tasks/${encodeURIComponent(taskId)}`,
         detail: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}`,
         availableRobots: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}/available-robots`,
     },
