@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SmartFleetBE.Model;
@@ -55,7 +55,7 @@ public partial class TransportTask
 
     public virtual ICollection<RobotIncident> RobotIncidents { get; set; } = new List<RobotIncident>();
 
-    public virtual TaskAssignment? TaskAssignment { get; set; }
+    public virtual ICollection<TaskAssignment> TaskAssignments { get; set; } = new List<TaskAssignment>();
 
     public virtual ICollection<TaskStatusHistory> TaskStatusHistories { get; set; } = new List<TaskStatusHistory>();
 

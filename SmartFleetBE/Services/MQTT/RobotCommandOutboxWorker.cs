@@ -1,0 +1,36 @@
+using Microsoft.EntityFrameworkCore;
+
+namespace SmartFleetBE.Services;
+
+public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttService mqtt,
+    ILogger<RobotCommandOutboxWorker> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                using var scope = scopes.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
+                var pending = await db.RobotCommandOutbox.Where(c => c.DeliveredAt == null)
+                    .OrderBy(c => c.Id).ToListAsync(stoppingToken);
+                foreach (var command in pending)
+                {
+                    var active = await db.Missions.AnyAsync(m => m.AssignmentId == command.AssignmentId &&
+                        m.MissionStatus == "INITIALIZING" && m.Assignment.AssignmentStatus == "ACTIVE", stoppingToken);
+
+                    if (active) 
+                    {
+                        await mqtt.PublishAsync(command.Topic, command.Payload, stoppingToken);
+                        command.DeliveredAt = DateTime.UtcNow;
+                        await db.SaveChangesAsync(stoppingToken);
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
+            catch (Exception ex) { logger.LogError(ex, "Robot command delivery failed; pending commands will be retried."); }
+            await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
+        }
+    }
+}

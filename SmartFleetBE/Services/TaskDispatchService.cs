@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 using SmartFleetBE.Constants;
 using SmartFleetBE.DTOs.TransportTasks;
@@ -13,14 +14,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
     private const decimal MinimumBatteryPercent = 20m;
 
     private readonly SmartFleetDbContext _dbContext;
-    private readonly MqttService _mqttService;
 
     public TaskDispatchService(
-        SmartFleetDbContext dbContext,
-        MqttService mqttService)
+        SmartFleetDbContext dbContext)
     {
         _dbContext = dbContext;
-        _mqttService = mqttService;
     }
 
 
@@ -118,17 +116,22 @@ public sealed class TaskDispatchService : ITaskDispatchService
     {
         await using var transaction =
             await _dbContext.Database
-                .BeginTransactionAsync(cancellationToken);
+                .BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
 
+
+        var robotQuery = _dbContext.Database.IsSqlServer()
+            ? _dbContext.Robots.FromSqlInterpolated($"SELECT * FROM dbo.Robots WITH (UPDLOCK, HOLDLOCK) WHERE RobotID = {robotId}")
+            : _dbContext.Robots.Where(r => r.RobotId == robotId);
+        var robot = await robotQuery.SingleOrDefaultAsync(cancellationToken);
 
         // -------------------------------------------------
         // 1. FIND TASK
         // -------------------------------------------------
 
-        var task = await _dbContext.TransportTasks
-            .FirstOrDefaultAsync(
-                t => t.TaskId == taskId,
-                cancellationToken);
+        var taskQuery = _dbContext.Database.IsSqlServer()
+            ? _dbContext.TransportTasks.FromSqlInterpolated($"SELECT * FROM dbo.TransportTasks WITH (UPDLOCK, HOLDLOCK) WHERE TaskID = {taskId}")
+            : _dbContext.TransportTasks.Where(t => t.TaskId == taskId);
+        var task = await taskQuery.SingleOrDefaultAsync(cancellationToken);
 
         if (task is null)
         {
@@ -176,10 +179,6 @@ public sealed class TaskDispatchService : ITaskDispatchService
         // 3. FIND ROBOT
         // -------------------------------------------------
 
-        var robot = await _dbContext.Robots
-            .FirstOrDefaultAsync(
-                r => r.RobotId == robotId,
-                cancellationToken);
 
         if (robot is null)
         {
@@ -479,36 +478,28 @@ public sealed class TaskDispatchService : ITaskDispatchService
         // 9. SEND SAME TEST COMMAND AS EXISTING API
         // -------------------------------------------------
 
-        var topic =
-            $"smartfleet/robot/{robot.RobotCode}/command";
+        var topic = $"smartfleet/robot/{robot.RobotCode}/command";
 
-        const string command =
-            "TEST_MOVE";
-
-
-        try
+        var command = System.Text.Json.JsonSerializer.Serialize(new
         {
-            await _mqttService.PublishAsync(
-                topic,
-                command,
-                cancellationToken);
-        }
-        catch
+            command = "EXECUTE_TASK",
+            taskId = task.TaskId,
+            assignmentId = assignment.AssignmentId,
+            missionId = mission.MissionId,
+            pattern = "CIRCLE"
+        });
+
+
+        // Commit the command with the assignment. The worker publishes only committed commands.
+        _dbContext.RobotCommandOutbox.Add(new RobotCommandOutbox
         {
-            await transaction.RollbackAsync(
-                cancellationToken);
-
-            throw;
-        }
-
-
-        // -------------------------------------------------
-        // 10. COMPLETE
-        // -------------------------------------------------
-
-        await transaction.CommitAsync(
-            cancellationToken);
-
+            AssignmentId = assignment.AssignmentId,
+            Topic = topic,
+            Payload = command,
+            CreatedAt = now
+        });
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return TransportTaskServiceResult<
             ManualAssignTaskResponse>
@@ -549,7 +540,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
                         command,
 
                     Message =
-                        "Task assigned, mission created, and test move command sent to robot."
+                        "Task assigned and mission created. Robot command queued for delivery; completion requires robot confirmation."
                 });
     }
 }
