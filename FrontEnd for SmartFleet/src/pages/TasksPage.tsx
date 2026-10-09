@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useData } from "../context/DataContext";
 import { Priority, Task } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
@@ -11,7 +11,7 @@ import { PageHeader, PrimaryBtn, PriorityBadge, StatusBadge } from "../component
 interface EditState { delivery: string; priority: Priority; }
 
 export function TasksPage() {
-    const { tasks, robots, addTask, updateTaskStatus, cancelTask } = useData();
+    const { tasks, robots, addTask, updateTaskStatus, cancelTask, refreshTasks, isTasksLoading, tasksError } = useData();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [createOpen, setCreateOpen] = useState(false);
@@ -27,6 +27,28 @@ export function TasksPage() {
     const [newDelivery, setNewDelivery] = useState(DELIVERY_OPTIONS[0]);
     const [newPkg, setNewPkg] = useState("");
     const [newPrio, setNewPrio] = useState<Priority>("MEDIUM");
+
+    useEffect(() => {
+        void refreshTasks().catch(() => {});
+
+        const handleWindowFocus = () => {
+            void refreshTasks().catch(() => {});
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                void refreshTasks().catch(() => {});
+            }
+        };
+
+        window.addEventListener("focus", handleWindowFocus);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener("focus", handleWindowFocus);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
+    }, [refreshTasks]);
 
     // ── Filtering ──
     const filtered = tasks.filter((t) => {
@@ -78,6 +100,15 @@ export function TasksPage() {
         setDeleteTarget(task);
     };
 
+    const handleReload = async () => {
+        try {
+            await refreshTasks(true);
+            setToast({ msg: "Task list reloaded.", type: "success" });
+        } catch {
+            setToast({ msg: "Could not reload tasks.", type: "error" });
+        }
+    };
+
     const confirmDelete = () => {
         if (!deleteTarget) return;
         // In a real app this would call a delete service.
@@ -98,6 +129,19 @@ export function TasksPage() {
                 title="Transport Task Management"
                 sub="Create · Edit · Cancel · Track transport tasks across all lifecycle states"
             >
+                <button
+                    onClick={handleReload}
+                    disabled={isTasksLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                        background: "var(--surface-3)",
+                        color: "var(--text-primary)",
+                        border: "1px solid var(--border-medium)",
+                    }}
+                >
+                    <Icon d={IC.refresh} size={15} />
+                    {isTasksLoading ? "Refreshing..." : "Reload"}
+                </button>
                 <PrimaryBtn onClick={() => setCreateOpen(true)}>
                     <Icon d={IC.plus} size={15} /> Create Transport Task
                 </PrimaryBtn>
@@ -166,6 +210,21 @@ export function TasksPage() {
                     ))}
                 </div>
             </div>
+
+            {tasksError && (
+                <div className="px-6 pt-3">
+                    <div
+                        className="rounded-xl px-4 py-3 text-[12px]"
+                        style={{
+                            background: "rgba(239,68,68,0.08)",
+                            border: "1px solid rgba(239,68,68,0.2)",
+                            color: "#fca5a5",
+                        }}
+                    >
+                        API sync issue: {tasksError}
+                    </div>
+                </div>
+            )}
 
             {/* Table */}
             <div className="flex-1 overflow-hidden px-6 pb-6 pt-3">
@@ -355,11 +414,11 @@ export function TasksPage() {
                             <ReadOnlyField label="Pickup Location" value={editTarget.pickup} />
                             <ReadOnlyField label="Package Info" value={editTarget.packageInfo} />
                         </div>
-                        <SelectField
-                            label="Delivery Destination ✎"
+                        <InputField
+                            label="Delivery Station / Destination"
                             value={editState.delivery}
                             onChange={(v) => setEditState((s) => ({ ...s, delivery: v }))}
-                            options={DELIVERY_OPTIONS}
+                            placeholder="e.g. Delivery Station D1"
                         />
                         <PriorityPicker
                             value={editState.priority}

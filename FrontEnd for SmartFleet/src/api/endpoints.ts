@@ -11,9 +11,13 @@ export const ENDPOINTS = {
         list: `${BASE}/users`,
         me: `${BASE}/users/me`,
         update: (userId: number) => `${BASE}/users/${userId}`,
-        delete: (userId: number) => `${BASE}/users/${userId}`,
         activate: (userId: number) => `${BASE}/users/${userId}/activate`,
         deactivate: (userId: number) => `${BASE}/users/${userId}/deactivate`,
+    },
+    transportTasks: {
+        list: `${BASE}/transport-tasks`,
+        detail: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}`,
+        availableRobots: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}/available-robots`,
     },
     accessTest: {
         authenticated: `${BASE}/access-test/authenticated`,

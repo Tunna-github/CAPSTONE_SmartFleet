@@ -18,7 +18,9 @@ function roleHome(role: Role): string {
 }
 
 function ProtectedLayout() {
-    const { isAuthenticated, role, logout } = useAuth();
+    const { isAuthenticated, role, logout, isLoading } = useAuth();
+
+    if (isLoading) return <AuthScreen message="Checking current session..." />;
 
     if (!isAuthenticated) return <Navigate to="/login" replace />;
 
@@ -38,15 +40,36 @@ function ProtectedLayout() {
 }
 
 function RootRedirect() {
-    const { isAuthenticated, role } = useAuth();
+    const { isAuthenticated, role, isLoading } = useAuth();
+    if (isLoading) return <AuthScreen message="Checking current session..." />;
     if (!isAuthenticated || !role) return <Navigate to="/login" replace />;
     return <Navigate to={roleHome(role)} replace />;
 }
 
-function RequireAdmin() {
-    const { role } = useAuth();
-    if (role !== "admin") return <Navigate to={role ? roleHome(role) : "/login"} replace />;
+function RequireRole({ allow }: { allow: Role[] }) {
+    const { role, isLoading } = useAuth();
+    if (isLoading) return <AuthScreen message="Checking current session..." />;
+    if (!role || !allow.includes(role)) {
+        return <Navigate to={role ? roleHome(role) : "/login"} replace />;
+    }
     return <Outlet />;
+}
+
+function AuthScreen({ message }: { message: string }) {
+    return (
+        <div
+            className="min-h-screen flex items-center justify-center p-4"
+            style={{ background: "var(--background)", color: "var(--text-primary)" }}
+        >
+            <div
+                className="rounded-2xl px-6 py-5 text-center"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border-subtle)" }}
+            >
+                <div className="text-[15px] font-bold">SmartFleet WMS</div>
+                <div className="mt-2 text-[12px]" style={{ color: "var(--text-faint)" }}>{message}</div>
+            </div>
+        </div>
+    );
 }
 
 export default function App() {
@@ -59,27 +82,32 @@ export default function App() {
                             <Route path="/login" element={<LoginPage />} />
 
                             <Route element={<ProtectedLayout />}>
-                                <Route path="/dashboard" element={<OperatorDashboard />} />
-                                <Route path="/dashboard/tasks" element={<TasksPage />} />
-                                <Route path="/dashboard/robots" element={<RobotsPage />} />
                                 <Route path="/profile" element={<UserProfilePage />} />
-                                <Route
-                                    path="/dashboard/analytics"
-                                    element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Analytics (Coming Soon)</div>}
-                                />
-
-                                <Route path="/admin" element={<AdminDashboard />} />
-                                <Route element={<RequireAdmin />}>
-                                    <Route path="/admin/users" element={<AdminUsersPage />} />
+                                <Route element={<RequireRole allow={["operator", "admin"]} />}>
+                                    <Route path="/dashboard" element={<OperatorDashboard />} />
+                                    <Route path="/dashboard/tasks" element={<TasksPage />} />
+                                    <Route
+                                        path="/dashboard/analytics"
+                                        element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Analytics (Coming Soon)</div>}
+                                    />
                                 </Route>
-                                <Route
-                                    path="/admin/robots"
-                                    element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Robots (Coming Soon)</div>}
-                                />
-                                <Route
-                                    path="/admin/maps"
-                                    element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Maps (Coming Soon)</div>}
-                                />
+
+                                <Route element={<RequireRole allow={["operator", "admin", "maintenance"]} />}>
+                                    <Route path="/dashboard/robots" element={<RobotsPage />} />
+                                </Route>
+
+                                <Route element={<RequireRole allow={["admin"]} />}>
+                                    <Route path="/admin" element={<AdminDashboard />} />
+                                    <Route path="/admin/users" element={<AdminUsersPage />} />
+                                    <Route
+                                        path="/admin/robots"
+                                        element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Robots (Coming Soon)</div>}
+                                    />
+                                    <Route
+                                        path="/admin/maps"
+                                        element={<div className="p-6" style={{ color: "var(--text-primary)" }}>Admin Maps (Coming Soon)</div>}
+                                    />
+                                </Route>
                             </Route>
 
                             <Route path="*" element={<RootRedirect />} />
