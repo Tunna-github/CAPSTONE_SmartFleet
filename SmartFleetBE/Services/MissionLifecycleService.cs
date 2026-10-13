@@ -44,13 +44,7 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db)
         // 2. LOCK + GET ROBOT
         // =====================================================
 
-        var robotQuery = db.Database.IsSqlServer()
-            ? db.Robots.FromSqlInterpolated(
-                $"SELECT * FROM dbo.Robots WITH (UPDLOCK, HOLDLOCK) WHERE RobotCode = {robotCode}"
-            )
-            : db.Robots.Where(
-                r => r.RobotCode == robotCode
-            );
+        var robotQuery = db.Robots.Where(r => r.RobotCode == robotCode);
 
         var robot =
             await robotQuery.SingleOrDefaultAsync(ct);

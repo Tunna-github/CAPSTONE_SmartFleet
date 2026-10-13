@@ -57,7 +57,7 @@ public sealed class UserRepository : IUserRepository
     {
         return _dbContext.Users.AnyAsync(
             u =>
-                u.Username == username &&
+                u.Username.ToLower() == username.ToLower() &&
                 (!excludeUserId.HasValue ||
                  u.UserId != excludeUserId.Value),
             cancellationToken);
@@ -70,7 +70,7 @@ public sealed class UserRepository : IUserRepository
     {
         return _dbContext.Users.AnyAsync(
             u =>
-                u.Email == email &&
+                u.Email.ToLower() == email.ToLower() &&
                 (!excludeUserId.HasValue ||
                  u.UserId != excludeUserId.Value),
             cancellationToken);
@@ -81,11 +81,11 @@ public sealed class UserRepository : IUserRepository
         CancellationToken cancellationToken = default)
     {
         var names = roleNames
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(n => n.ToLowerInvariant()).Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         return await _dbContext.Roles
-            .Where(r => names.Contains(r.RoleName))
+            .Where(r => names.Contains(r.RoleName.ToLower()))
             .ToListAsync(cancellationToken);
     }
 

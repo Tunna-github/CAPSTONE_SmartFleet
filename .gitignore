@@ -1,1 +1,15 @@
 /FrontEnd for SmartFleet/.vs
+
+# Local secrets and build files
+SmartFleetBE/appsettings.Development.json
+SmartFleetBE/appsettings.Local.json
+**/*.csproj.user
+**/bin/
+**/obj/
+**/.vs/
+**/node_modules/
+*.pem
+*.pfx
+*.key
+.env
+.env.*

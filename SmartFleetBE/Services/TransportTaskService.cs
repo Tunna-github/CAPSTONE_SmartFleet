@@ -56,7 +56,8 @@ public sealed class TransportTaskService : ITransportTaskService
             PickupStationId = request.PickupStationId,
             DeliveryStationId = request.DeliveryStationId,
             PriorityLevel = request.PriorityLevel,
-            TaskStatus = TransportTaskStatuses.Pending,
+            TaskStatus = TransportTaskStatuses.Queued,
+            QueuedAt = now,
             PackageCode = NormalizeOptional(request.PackageCode),
             ItemDescription = NormalizeOptional(request.ItemDescription),
             PayloadWeightKg = request.PayloadWeightKg,
@@ -74,9 +75,9 @@ public sealed class TransportTaskService : ITransportTaskService
             {
                 Task = task,
                 PreviousStatus = null,
-                NewStatus = TransportTaskStatuses.Pending,
+                NewStatus = TransportTaskStatuses.Queued,
                 ChangedBy = createdByUserId,
-                Reason = "Transport task created.",
+                Reason = "Transport task created and queued for dispatch.",
                 ChangedAt = now
             },
             cancellationToken);

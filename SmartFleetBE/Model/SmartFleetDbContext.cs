@@ -65,7 +65,7 @@ public partial class SmartFleetDbContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
-            optionsBuilder.UseSqlServer("Name=ConnectionStrings:DefaultConnection");
+            optionsBuilder.UseNpgsql("Name=ConnectionStrings:DefaultConnection");
     }
 
     public DbSet<RobotCommandOutbox> RobotCommandOutbox { get; set; }
@@ -92,7 +92,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.VerificationId).HasColumnName("VerificationID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.ExpectedQrPayload)
                 .HasMaxLength(150)
                 .IsUnicode(false);
@@ -128,7 +128,7 @@ public partial class SmartFleetDbContext : DbContext
 
             entity.HasIndex(e => e.WarehouseId, "UX_MapConfigurations_OneActivePerWarehouse")
                 .IsUnique()
-                .HasFilter("([IsActive]=(1))");
+                .HasFilter("\"IsActive\" = TRUE");
 
             entity.Property(e => e.MapId).HasColumnName("MapID");
             entity.Property(e => e.CoordinateSystem)
@@ -137,7 +137,7 @@ public partial class SmartFleetDbContext : DbContext
                 .HasDefaultValue("LOCAL_METRIC");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.MapImageUrl)
                 .HasMaxLength(500)
@@ -178,7 +178,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.AssignmentId).HasColumnName("AssignmentID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.EndExecutionTime).HasPrecision(3);
             entity.Property(e => e.FailureReason).HasMaxLength(500);
             entity.Property(e => e.LastProgressAt).HasPrecision(3);
@@ -207,7 +207,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.MissionStatusHistoryId).HasColumnName("MissionStatusHistoryID");
             entity.Property(e => e.ChangedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.MissionId).HasColumnName("MissionID");
             entity.Property(e => e.NewStatus)
                 .HasMaxLength(40)
@@ -267,7 +267,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.NotificationId).HasColumnName("NotificationID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.NotificationCategory)
                 .HasMaxLength(30)
                 .IsUnicode(false);
@@ -327,7 +327,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.RefreshTokenId).HasColumnName("RefreshTokenID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.ExpiresAt).HasPrecision(3);
             entity.Property(e => e.RevokedAt).HasPrecision(3);
             entity.Property(e => e.TokenHash).HasMaxLength(255);
@@ -351,6 +351,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.RobotId).HasColumnName("RobotID");
             entity.Property(e => e.BatteryPercent).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.BatteryVoltage).HasColumnType("decimal(6, 3)");
+            entity.Property(e => e.MaxPayloadWeightKg).HasColumnType("decimal(8, 2)").HasDefaultValue(50m);
             entity.Property(e => e.ConnectionStatus)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -361,7 +362,7 @@ public partial class SmartFleetDbContext : DbContext
                 .HasDefaultValue("NVIDIA_JETRACER_PYTHON");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.CurrentCoordX).HasColumnType("decimal(12, 4)");
             entity.Property(e => e.CurrentCoordY).HasColumnType("decimal(12, 4)");
             entity.Property(e => e.CurrentHeading).HasColumnType("decimal(10, 6)");
@@ -413,7 +414,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.IncidentType)
                 .HasMaxLength(50)
@@ -456,7 +457,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.CompletedAt).HasPrecision(3);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.MaintenanceStatus)
                 .HasMaxLength(20)
@@ -492,7 +493,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.RobotStatusHistoryId).HasColumnName("RobotStatusHistoryID");
             entity.Property(e => e.ChangedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.NewConnectionStatus)
                 .HasMaxLength(20)
                 .IsUnicode(false);
@@ -533,7 +534,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.PositionY).HasColumnType("decimal(12, 4)");
             entity.Property(e => e.RecordedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.RobotId).HasColumnName("RobotID");
             entity.Property(e => e.WifiSignalDbm).HasColumnType("decimal(6, 2)");
 
@@ -552,7 +553,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.RoleName).HasMaxLength(50);
         });
@@ -565,7 +566,7 @@ public partial class SmartFleetDbContext : DbContext
 
             entity.HasIndex(e => e.QrCodePayload, "UX_Stations_QrCodePayload")
                 .IsUnique()
-                .HasFilter("([QrCodePayload] IS NOT NULL)");
+                .HasFilter("\"QrCodePayload\" IS NOT NULL");
 
             entity.Property(e => e.StationId).HasColumnName("StationID");
             entity.Property(e => e.CoordX).HasColumnType("decimal(12, 4)");
@@ -573,7 +574,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.CoordZ).HasColumnType("decimal(12, 4)");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.QrCodePayload)
                 .HasMaxLength(150)
@@ -608,7 +609,7 @@ public partial class SmartFleetDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.EntityId)
                 .HasMaxLength(100)
@@ -635,16 +636,16 @@ public partial class SmartFleetDbContext : DbContext
 
             entity.HasIndex(e => e.RobotId, "UX_TaskAssignments_OneActivePerRobot")
                 .IsUnique()
-                .HasFilter("([AssignmentStatus]='ACTIVE')");
+                .HasFilter("\"AssignmentStatus\" = 'ACTIVE'");
 
             entity.HasIndex(e => e.TaskId, "UX_TaskAssignments_OneActivePerTask")
                 .IsUnique()
-                .HasFilter("([AssignmentStatus]='ACTIVE')");
+                .HasFilter("\"AssignmentStatus\" = 'ACTIVE'");
 
             entity.Property(e => e.AssignmentId).HasColumnName("AssignmentID");
             entity.Property(e => e.AssignedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.AssignmentReason).HasMaxLength(500);
             entity.Property(e => e.AssignmentStatus)
                 .HasMaxLength(20)
@@ -686,7 +687,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.TaskStatusHistoryId).HasColumnName("TaskStatusHistoryID");
             entity.Property(e => e.ChangedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.NewStatus)
                 .HasMaxLength(30)
                 .IsUnicode(false);
@@ -721,7 +722,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.CompletedAt).HasPrecision(3);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.DeliveryStationId).HasColumnName("DeliveryStationID");
             entity.Property(e => e.FailureReason).HasMaxLength(500);
             entity.Property(e => e.ItemDescription).HasMaxLength(500);
@@ -737,7 +738,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.TaskStatus)
                 .HasMaxLength(30)
                 .IsUnicode(false)
-                .HasDefaultValue("PENDING");
+                .HasDefaultValue("QUEUED");
             entity.Property(e => e.TaskTrackingCode)
                 .HasMaxLength(50)
                 .IsUnicode(false);
@@ -775,7 +776,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.Email)
                 .HasMaxLength(150)
                 .IsUnicode(false);
@@ -799,7 +800,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.RoleId).HasColumnName("RoleID");
             entity.Property(e => e.AssignedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(d => d.Role).WithMany(p => p.UserRoles)
                 .HasForeignKey(d => d.RoleId)
@@ -820,7 +821,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.Address).HasMaxLength(255);
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.UpdatedAt).HasPrecision(3);
             entity.Property(e => e.WarehouseCode)
@@ -840,7 +841,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.ZoneId).HasColumnName("ZoneID");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(3)
-                .HasDefaultValueSql("(sysutcdatetime())");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.SpeedLimit)
                 .HasDefaultValue(0.50m)

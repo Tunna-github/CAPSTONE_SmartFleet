@@ -17,14 +17,14 @@ public sealed class AuthRepository : IAuthRepository
         string usernameOrEmail,
         CancellationToken cancellationToken = default)
     {
-        var normalized = usernameOrEmail.Trim();
+        var normalized = usernameOrEmail.Trim().ToLowerInvariant();
 
         return _dbContext.Users
             .AsNoTracking()
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(
-                u => u.Username == normalized || u.Email == normalized,
+                u => u.Username.ToLower() == normalized || u.Email.ToLower() == normalized,
                 cancellationToken);
     }
 }

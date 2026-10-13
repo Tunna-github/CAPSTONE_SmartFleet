@@ -1,3 +1,5 @@
+
+using System;
 using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -11,33 +13,27 @@ using SmartFleetBE.Repositories.Interfaces;
 using SmartFleetBE.Services;
 using SmartFleetBE.Services.Interfaces;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-
 // =====================================================
-// Controllers
+// 1. CONTROLLERS AND CORS
 // =====================================================
 
 builder.Services.AddControllers();
-// =====================================================
-// CORS Configuration (CHÈN VÀO ĐÂY)
-// =====================================================
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:8443") // Cổng HTTPS của Frontend bên bạn
+        policy.WithOrigins("http://localhost:8443")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });
 });
 
-
 // =====================================================
-// Swagger / OpenAPI
+// 2. SWAGGER / OPENAPI
 // =====================================================
 
 builder.Services.AddEndpointsApiExplorer();
@@ -52,19 +48,16 @@ builder.Services.AddSwaggerGen(options =>
             "REST API for SmartFleet Autonomous Warehouse Fleet Management System"
     });
 
-    // -------------------------------------------------
-    // JWT Bearer Authentication for Swagger
-    // -------------------------------------------------
-
-    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
-    {
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-
-        Description =
-            "Enter the JWT access token returned by /api/v1/auth/login."
-    });
+    options.AddSecurityDefinition(
+        "bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description =
+                "Enter the JWT access token returned by /api/v1/auth/login."
+        });
 
     options.AddSecurityRequirement(document =>
         new OpenApiSecurityRequirement
@@ -76,22 +69,47 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
-
 // =====================================================
-// Database
+// 3. AIVEN POSTGRESQL DATABASE
 // =====================================================
 
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Missing ConnectionStrings:DefaultConnection. " +
+        "Set the Aiven PostgreSQL connection string.");
+}
+
+// Detect old SQL Server connection strings.
+if (
+    connectionString.Contains(
+        "Initial Catalog=",
+        StringComparison.OrdinalIgnoreCase)
+    ||
+    connectionString.Contains(
+        "Integrated Security=",
+        StringComparison.OrdinalIgnoreCase)
+    ||
+    connectionString.Contains(
+        "Trusted_Connection=",
+        StringComparison.OrdinalIgnoreCase)
+)
+{
+    throw new InvalidOperationException(
+        "An old SQL Server connection string is still active. " +
+        "Check User Secrets, appsettings.Development.json " +
+        "and environment variables.");
+}
+
+// IMPORTANT: PostgreSQL, not SQL Server.
 builder.Services.AddDbContext<SmartFleetDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString(
-            "DefaultConnection"
-        )
-    )
-);
-
+    options.UseNpgsql(connectionString));
 
 // =====================================================
-// Repositories
+// 4. REPOSITORIES
 // =====================================================
 
 builder.Services.AddScoped<
@@ -110,118 +128,115 @@ builder.Services.AddScoped<
     IMaintenanceRecordRepository,
     MaintenanceRecordRepository>();
 
+// =====================================================
+// 5. BUSINESS SERVICES
+// =====================================================
 
-// =====================================================
-// Services
-// =====================================================
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ITransportTaskService, TransportTaskService>();
-builder.Services.AddScoped<IMaintenanceRecordService, MaintenanceRecordService>();
-builder.Services.AddScoped<ITaskDispatchService, TaskDispatchService>();
-builder.Services.AddScoped<IMqttRobotService, MqttRobotService>();
-builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
+builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddScoped<
+    ITransportTaskService,
+    TransportTaskService>();
+
+builder.Services.AddScoped<
+    IMaintenanceRecordService,
+    MaintenanceRecordService>();
+
+builder.Services.AddScoped<
+    ITaskDispatchService,
+    TaskDispatchService>();
+
+builder.Services.AddScoped<
+    IMqttRobotService,
+    MqttRobotService>();
+
+builder.Services.AddSingleton<
+    IJwtTokenService,
+    JwtTokenService>();
 
 // =====================================================
-// MQTT
+// 6. MQTT SERVICES
 // =====================================================
 
 builder.Services.AddSingleton<MqttService>();
+
 builder.Services.AddScoped<MissionLifecycleService>();
-builder.Services.AddHostedService<MqttMissionStatusWorker>();
-builder.Services.AddHostedService<RobotCommandOutboxWorker>();
 
+// Keep workers disabled while testing Aiven.
+// Set Mqtt:EnableWorkers = true when ready.
+if (builder.Configuration.GetValue<bool>("Mqtt:EnableWorkers"))
+{
+    builder.Services.AddHostedService<MqttMissionStatusWorker>();
+    builder.Services.AddHostedService<RobotCommandOutboxWorker>();
+}
 
 // =====================================================
-// JWT Configuration
+// 7. JWT AUTHENTICATION
 // =====================================================
 
-var jwtKey =
-    builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException(
-        "Jwt:Key is missing from configuration."
-    );
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (
+    string.IsNullOrWhiteSpace(jwtKey)
+    ||
+    Encoding.UTF8.GetByteCount(jwtKey) < 32
+)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key must contain at least 32 UTF-8 bytes.");
+}
 
 var jwtIssuer =
     builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException(
-        "Jwt:Issuer is missing from configuration."
-    );
+        "Jwt:Issuer is missing.");
 
 var jwtAudience =
     builder.Configuration["Jwt:Audience"]
     ?? throw new InvalidOperationException(
-        "Jwt:Audience is missing from configuration."
-    );
-
-
-// =====================================================
-// Authentication
-// =====================================================
+        "Jwt:Audience is missing.");
 
 builder.Services
-    .AddAuthentication(
-        JwtBearerDefaults.AuthenticationScheme
-    )
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters =
             new TokenValidationParameters
             {
-                // --------------------------------------
-                // Validate token issuer
-                // --------------------------------------
-
                 ValidateIssuer = true,
                 ValidIssuer = jwtIssuer,
 
-                // --------------------------------------
-                // Validate token audience
-                // --------------------------------------
-
                 ValidateAudience = true,
                 ValidAudience = jwtAudience,
-
-                // --------------------------------------
-                // Validate JWT signature
-                // --------------------------------------
 
                 ValidateIssuerSigningKey = true,
 
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)
-                    ),
-
-                // --------------------------------------
-                // Validate token expiration
-                // --------------------------------------
+                        Encoding.UTF8.GetBytes(jwtKey)),
 
                 ValidateLifetime = true,
 
-                ClockSkew =
-                    TimeSpan.FromSeconds(30)
+                ClockSkew = TimeSpan.FromSeconds(30)
             };
     });
 
-
 // =====================================================
-// Authorization
+// 8. AUTHORIZATION
 // =====================================================
 
 builder.Services.AddAuthorization();
 
-
 // =====================================================
-// Build Application
+// 9. BUILD APPLICATION
 // =====================================================
 
 var app = builder.Build();
 
-
 // =====================================================
-// Swagger
+// 10. SWAGGER IN DEVELOPMENT
 // =====================================================
 
 if (app.Environment.IsDevelopment())
@@ -232,8 +247,7 @@ if (app.Environment.IsDevelopment())
     {
         options.SwaggerEndpoint(
             "/swagger/v1/swagger.json",
-            "SmartFleet API v1"
-        );
+            "SmartFleet API v1");
 
         options.RoutePrefix = "swagger";
 
@@ -242,30 +256,94 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-
 // =====================================================
-// Middleware
+// 11. MIDDLEWARE
 // =====================================================
 
 app.UseHttpsRedirection();
-// Kích hoạt CORS (BẮT BUỘC PHẢI ĐẶT TRƯỚC AUTHENTICATION)
+
 app.UseCors("AllowFrontend");
 
-// Authentication MUST come before Authorization
 app.UseAuthentication();
 
 app.UseAuthorization();
 
-
 // =====================================================
-// Controllers
+// 12. CONTROLLER ROUTES
 // =====================================================
 
 app.MapControllers();
 
+// =====================================================
+// 13. TEMPORARY AIVEN DATABASE CONNECTION CHECK
+// =====================================================
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/dev/db-check",
+        async (SmartFleetDbContext db) =>
+        {
+            var provider =
+                db.Database.ProviderName ?? "Unknown";
+
+            try
+            {
+                // Get actual connection details.
+                var connection =
+                    db.Database.GetDbConnection();
+
+                // Execute real SQL queries through EF Core.
+                var totalUsers =
+                    await db.Users.CountAsync();
+
+                var totalTasks =
+                    await db.TransportTasks.CountAsync();
+
+                return Results.Ok(new
+                {
+                    connected = true,
+
+                    provider = provider,
+
+                    server = connection.DataSource,
+
+                    database = connection.Database,
+
+                    totalUsers = totalUsers,
+
+                    totalTasks = totalTasks,
+
+                    message =
+                        "SmartFleet successfully queried Aiven PostgreSQL"
+                });
+            }
+            catch (Exception ex)
+            {
+                // Full error goes to backend logs,
+                // not to the browser response.
+                app.Logger.LogError(
+                    ex,
+                    "Aiven PostgreSQL database check failed");
+
+                return Results.Json(new
+                {
+                    connected = false,
+
+                    provider = provider,
+
+                    error = ex.GetType().Name,
+
+                    message =
+                        "Database check failed. " +
+                        "View Visual Studio Output for details."
+                },
+                statusCode: 503);
+            }
+        });
+}
 
 // =====================================================
-// Run
+// 14. START APPLICATION
 // =====================================================
 
 app.Run();

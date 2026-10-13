@@ -34,6 +34,8 @@ public partial class Robot
 
     public decimal? BatteryVoltage { get; set; }
 
+    public decimal MaxPayloadWeightKg { get; set; }
+
     public decimal? CurrentCoordX { get; set; }
 
     public decimal? CurrentCoordY { get; set; }

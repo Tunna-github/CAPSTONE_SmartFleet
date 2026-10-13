@@ -98,7 +98,7 @@ public sealed class TransportTasksController : ControllerBase
     // =====================================================
 
     /// <summary>
-    /// Creates a new PENDING transport task.
+    /// Creates a new QUEUED transport task.
     /// Creator is taken from JWT.
     /// </summary>
     [HttpPost]
