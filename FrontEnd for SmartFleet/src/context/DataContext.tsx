@@ -10,6 +10,7 @@ interface DataContextType {
     isTasksLoading: boolean;
     tasksError: string | null;
     addTask: (payload: CreateTransportTaskPayload) => Promise<Task>;
+    setTaskRobot: (taskId: number | string, robotDisplay: string) => void;
     deleteTask: (task: Task) => Promise<void>;
     refreshTasks: (showErrorToast?: boolean) => Promise<void>;
     updateTaskStatus: (id: string, status: Task["status"]) => void;
@@ -107,6 +108,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
     };
 
+    const setTaskRobot = (taskId: number | string, robotDisplay: string) => {
+        setTasks(prev => prev.map(task => task.taskId === taskId
+            ? { ...task, robotId: robotDisplay, status: task.status === "QUEUED" ? "ASSIGNED" : task.status }
+            : task));
+    };
+
     const deleteTask = async (task: Task): Promise<void> => {
         if (task.taskId === undefined || task.taskId === null || task.taskId === "") {
             throw new Error("This task has no backend ID. Reload the task list before deleting.");
@@ -118,7 +125,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const cancelTask = (id: string) => {
         setTasks(prev => prev.map(t => t.id === id ? { ...t, status: "CANCELLED", robotId: null } : t));
-        // Free up the robot
         setRobots(prev => prev.map(r => r.missionId === id ? { ...r, missionId: null, zone: "Idle — Zone B" } : r));
         addLog({ level: "WARN", robot: "SYSTEM", message: `Task ${id} cancelled. Robot reassigned.` });
     };
@@ -143,6 +149,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 isTasksLoading,
                 tasksError,
                 addTask,
+                setTaskRobot,
                 deleteTask,
                 refreshTasks,
                 updateTaskStatus,

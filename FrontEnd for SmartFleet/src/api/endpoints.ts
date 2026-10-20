@@ -20,6 +20,7 @@ export const ENDPOINTS = {
         delete: (taskId: number | string) => `${BASE}/transport-tasks/${encodeURIComponent(taskId)}`,
         detail: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}`,
         availableRobots: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}/available-robots`,
+        assign: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}/assign`,
     },
     accessTest: {
         authenticated: `${BASE}/access-test/authenticated`,

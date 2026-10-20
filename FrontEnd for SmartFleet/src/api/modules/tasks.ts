@@ -31,6 +31,8 @@ interface TransportTaskApiModel {
 }
 
 export interface AvailableRobot {
+    robotId: number | null;
+    operationalStatus: string | null;
     id: string;
     model: string;
     battery: number | null;
@@ -144,10 +146,12 @@ function normalizeTask(item: TransportTaskApiModel): Task {
 
 function normalizeAvailableRobot(item: Record<string, unknown>): AvailableRobot {
     return {
+        robotId: typeof item.robotId === "number" ? item.robotId : null,
+        operationalStatus: item.operationalStatus ? String(item.operationalStatus) : null,
         id: String(item.robotCode ?? item.robotId ?? item.id ?? ""),
         model: String(item.model ?? item.robotModel ?? item.name ?? ""),
-        battery: typeof item.battery === "number" ? item.battery : null,
-        mqtt: item.mqtt ? String(item.mqtt) : null,
+        battery: typeof item.batteryPercent === "number" ? item.batteryPercent : null,
+        mqtt: item.connectionStatus ? String(item.connectionStatus) : null,
         zone: item.zone ? String(item.zone) : null,
         raw: item,
     };
@@ -178,4 +182,22 @@ export async function getAvailableRobotsForTask(taskId: number | string): Promis
     const { data } = await apiClient.get<ApiResult<Record<string, unknown>[]>>(ENDPOINTS.transportTasks.availableRobots(taskId));
     const items = unwrapApiResponse(data);
     return items.map(normalizeAvailableRobot);
+}
+
+export interface ManualAssignTaskResponse {
+    taskId: number;
+    taskTrackingCode: string | null;
+    robotId: number;
+    robotCode: string | null;
+    taskStatus: string | null;
+    robotStatus: string | null;
+    missionId: number;
+    missionCode: string | null;
+    missionStatus: string | null;
+    message: string | null;
+}
+
+export async function assignRobotToTask(taskId: number | string, robotId: number): Promise<ManualAssignTaskResponse> {
+    const { data } = await apiClient.post<ApiResult<ManualAssignTaskResponse>>(ENDPOINTS.transportTasks.assign(taskId), { robotId });
+    return unwrapApiResponse(data);
 }

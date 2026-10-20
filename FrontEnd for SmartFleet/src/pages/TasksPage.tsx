@@ -1,5 +1,6 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { TaskCreateForm } from "./TaskCreationPage";
+import { getAvailableRobotsForTask, assignRobotToTask, type AvailableRobot, type ManualAssignTaskResponse } from "../api/modules/tasks";
 import { useData } from "../context/DataContext";
 import { Priority, Task } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
@@ -14,10 +15,11 @@ interface EditState { delivery: string; priority: Priority; }
 const PRIORITY_ORDER: Record<Priority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 
 export function TasksPage() {
-    const { tasks, robots, cancelTask, deleteTask, refreshTasks, isTasksLoading, tasksError } = useData();
+    const { tasks, robots, cancelTask, deleteTask, refreshTasks, isTasksLoading, tasksError, setTaskRobot } = useData();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [createOpen, setCreateOpen] = useState(false);
+    const [assignTarget, setAssignTarget] = useState<Task | null>(null);
     const [editTarget, setEditTarget] = useState<Task | null>(null);
     const [editState, setEditState] = useState<EditState>({ delivery: "", priority: "MEDIUM" });
     const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
@@ -27,17 +29,30 @@ export function TasksPage() {
     const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
 
     const [isCreating, setIsCreating] = useState(false);
+    const autoRefreshInFlight = useRef(false);
 
     useEffect(() => {
-        void refreshTasks().catch(() => {});
+        const refreshSafely = async () => {
+            if (autoRefreshInFlight.current) return;
+            autoRefreshInFlight.current = true;
+            try {
+                await refreshTasks();
+            } catch {
+                // ignore background refresh failures; UI shows tasksError if needed
+            } finally {
+                autoRefreshInFlight.current = false;
+            }
+        };
+
+        void refreshSafely();
 
         const handleWindowFocus = () => {
-            void refreshTasks().catch(() => {});
+            void refreshSafely();
         };
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === "visible") {
-                void refreshTasks().catch(() => {});
+                void refreshSafely();
             }
         };
 
@@ -314,6 +329,8 @@ export function TasksPage() {
                                                 <span className="flex items-center gap-1.5 font-mono text-[12px]" style={{ color: "var(--text-secondary)" }}>
                                                     <Icon d={IC.robots} size={12} /> {task.robotId}
                                                 </span>
+                                            ) : task.status === "ASSIGNED" || task.status === "EXECUTING" ? (
+                                                <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>Assigned (no details)</span>
                                             ) : (
                                                 <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>—</span>
                                             )}
@@ -321,6 +338,12 @@ export function TasksPage() {
                                         <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1.5">
+                                                {task.status === "QUEUED" && task.taskId != null && !task.robotId && (
+                                                    <button type="button" onClick={() => setAssignTarget(task)} aria-label={`Assign robot to task ${task.id}`}
+                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-cyan-400/10 text-cyan-600 dark:text-cyan-300">
+                                                        ASSIGN
+                                                    </button>
+                                                )}
                                                 {canEdit(task.status) && (
                                                     <button
                                                         onClick={() => openEdit(task)}
@@ -525,6 +548,14 @@ export function TasksPage() {
                 </ModalShell>
             )}
 
+            {assignTarget && (
+                <TaskAssignmentModal task={assignTarget} onClose={() => setAssignTarget(null)} onAssigned={async (result) => {
+                    const display = result.robotCode || `R${result.robotId}`;
+                    setTaskRobot(result.taskId, display);
+                    setAssignTarget(null);
+                    setToast({ msg: `Assigned ${display} successfully.`, type: "success" });
+                }} />
+            )}
             {/* ══ Toast ══ */}
             {toast && <ToastEl msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
         </div>
@@ -532,6 +563,87 @@ export function TasksPage() {
 }
 
 // ─── Reusable theme-aware form components ────────────────────────────────────
+
+function TaskAssignmentModal({ task, onClose, onAssigned }: {
+    task: Task; onClose: () => void; onAssigned: (result: ManualAssignTaskResponse) => Promise<void>;
+}) {
+    const [robots, setRobots] = useState<AvailableRobot[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const inFlight = useRef(false);
+    const [error, setError] = useState("");
+    const [selected, setSelected] = useState("");
+    const [retry, setRetry] = useState(0);
+    const id = useId();
+    useEffect(() => {
+        let active = true;
+        setLoading(true);
+        setError("");
+        setSelected("");
+        if (task.taskId == null) {
+            setError("Missing backend task ID. Reload the task list.");
+            setLoading(false);
+            return;
+        }
+        getAvailableRobotsForTask(task.taskId).then(items => {
+            if (active) setRobots(items);
+        }).catch(err => {
+            if (active) setError(err?.message || "Unable to load available robots.");
+        }).finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
+    }, [task.taskId, retry]);
+
+    return (
+        <ModalShell title={`Assign Robot / ${task.id}`} sub={`${task.pickup} to ${task.delivery}`} onClose={onClose} busy={busy} width={540}>
+            <form className="p-6 space-y-4" aria-busy={loading || busy} onSubmit={async event => {
+                event.preventDefault();
+                const robotId = Number(selected);
+                if (inFlight.current || task.taskId == null || !robots.some(robot => robot.robotId === robotId)) return;
+                inFlight.current = true;
+                setBusy(true);
+                setError("");
+                try {
+                    const result = await assignRobotToTask(task.taskId, robotId);
+                    inFlight.current = false;
+                    setBusy(false);
+                    await onAssigned(result);
+                    return;
+                } catch (err) {
+                    setError((err as { message?: string })?.message || "Assignment failed. Reload available robots and try again.");
+                    inFlight.current = false;
+                    setBusy(false);
+                    return;
+                }
+            }}>
+                <p className="text-[12px]" style={{ color: "var(--text-faint)" }}>Only robots eligible for this task are shown. Confirming sends an assignment to the backend.</p>
+                {error && <p role="alert" className="text-[12px] text-red-400">{error}</p>}
+                {loading ? <p role="status">Loading available robots...</p> : (
+                    <div>
+                        <label htmlFor={id} className="block text-[12px] mb-2">Available Robot</label>
+                        <select id={id} autoFocus required value={selected} disabled={busy} onChange={event => setSelected(event.target.value)}
+                            className="w-full rounded-lg p-3 text-[13px] focus-visible:outline-2 focus-visible:outline-cyan-400"
+                            style={{ background: "var(--surface-3)", color: "var(--text-primary)", border: "1px solid var(--border-medium)" }}>
+                            <option value="">Select a robot</option>
+                            {robots.filter(robot => robot.robotId != null).map(robot => (
+                                <option key={robot.robotId} value={robot.robotId!}>
+                                    {robot.id} | Battery: {robot.battery == null ? "N/A" : `${robot.battery}%`} | {robot.mqtt || "Unknown connection"} | {robot.operationalStatus || "Unknown status"}
+                                </option>
+                            ))}
+                        </select>
+                        {!error && !robots.length && <p className="mt-2 text-[12px]">No available robots for this task.</p>}
+                    </div>
+                )}
+                <div className="flex flex-wrap gap-3">
+                    <button type="button" disabled={busy || loading} onClick={() => setRetry(value => value + 1)} className="rounded-lg border px-3 py-2 disabled:opacity-50">Reload Robots</button>
+                    <button type="button" disabled={busy} onClick={onClose} className="rounded-lg border px-3 py-2 disabled:opacity-50">Cancel</button>
+                    <button type="submit" disabled={busy || loading || !selected} className="rounded-lg bg-cyan-400 text-slate-950 font-bold px-3 py-2 disabled:opacity-50">
+                        {busy ? "Assigning..." : "Confirm Assignment"}
+                    </button>
+                </div>
+            </form>
+        </ModalShell>
+    );
+}
 
 function ModalShell({
     title, sub, onClose, children, width = 480, open = true, busy = false,
