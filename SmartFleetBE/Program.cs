@@ -74,7 +74,8 @@ builder.Services.AddSwaggerGen(options =>
 // =====================================================
 
 var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Configuration.GetConnectionString(
+        "DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -104,9 +105,9 @@ if (
         "and environment variables.");
 }
 
-// IMPORTANT: PostgreSQL, not SQL Server.
-builder.Services.AddDbContext<SmartFleetDbContext>(options =>
-    options.UseNpgsql(connectionString));
+// PostgreSQL with Npgsql
+builder.Services.AddDbContext<SmartFleetDbContext>(
+    options => options.UseNpgsql(connectionString));
 
 // =====================================================
 // 4. REPOSITORIES
@@ -148,6 +149,13 @@ builder.Services.AddScoped<
     ITaskDispatchService,
     TaskDispatchService>();
 
+// =====================================================
+// 5.1 AUTO DISPATCH SERVICE
+// =====================================================
+
+// NEW: Automatically select a suitable robot.
+builder.Services.AddScoped<AutoDispatchService>();
+
 builder.Services.AddScoped<
     IMqttRobotService,
     MqttRobotService>();
@@ -160,16 +168,20 @@ builder.Services.AddSingleton<
 // 6. MQTT SERVICES
 // =====================================================
 
+// Existing MQTT service with Fast ACK
 builder.Services.AddSingleton<MqttService>();
 
 builder.Services.AddScoped<MissionLifecycleService>();
 
-// Keep workers disabled while testing Aiven.
-// Set Mqtt:EnableWorkers = true when ready.
-if (builder.Configuration.GetValue<bool>("Mqtt:EnableWorkers"))
+// Enable workers when ready to communicate with robots.
+if (builder.Configuration.GetValue<bool>(
+        "Mqtt:EnableWorkers"))
 {
-    builder.Services.AddHostedService<MqttMissionStatusWorker>();
-    builder.Services.AddHostedService<RobotCommandOutboxWorker>();
+    builder.Services
+        .AddHostedService<MqttMissionStatusWorker>();
+
+    builder.Services
+        .AddHostedService<RobotCommandOutboxWorker>();
 }
 
 // =====================================================
@@ -199,7 +211,8 @@ var jwtAudience =
         "Jwt:Audience is missing.");
 
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(
+        JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters =
@@ -275,12 +288,13 @@ app.UseAuthorization();
 app.MapControllers();
 
 // =====================================================
-// 13. TEMPORARY AIVEN DATABASE CONNECTION CHECK
+// 13. AIVEN DATABASE CONNECTION CHECK
 // =====================================================
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapGet("/dev/db-check",
+    app.MapGet(
+        "/dev/db-check",
         async (SmartFleetDbContext db) =>
         {
             var provider =
@@ -288,11 +302,9 @@ if (app.Environment.IsDevelopment())
 
             try
             {
-                // Get actual connection details.
                 var connection =
                     db.Database.GetDbConnection();
 
-                // Execute real SQL queries through EF Core.
                 var totalUsers =
                     await db.Users.CountAsync();
 
@@ -314,30 +326,30 @@ if (app.Environment.IsDevelopment())
                     totalTasks = totalTasks,
 
                     message =
-                        "SmartFleet successfully queried Aiven PostgreSQL"
+                        "SmartFleet successfully queried " +
+                        "Aiven PostgreSQL"
                 });
             }
             catch (Exception ex)
             {
-                // Full error goes to backend logs,
-                // not to the browser response.
                 app.Logger.LogError(
                     ex,
                     "Aiven PostgreSQL database check failed");
 
-                return Results.Json(new
-                {
-                    connected = false,
+                return Results.Json(
+                    new
+                    {
+                        connected = false,
 
-                    provider = provider,
+                        provider = provider,
 
-                    error = ex.GetType().Name,
+                        error = ex.GetType().Name,
 
-                    message =
-                        "Database check failed. " +
-                        "View Visual Studio Output for details."
-                },
-                statusCode: 503);
+                        message =
+                            "Database check failed. " +
+                            "View backend logs for details."
+                    },
+                    statusCode: 503);
             }
         });
 }
