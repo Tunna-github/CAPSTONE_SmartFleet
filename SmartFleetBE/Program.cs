@@ -45,7 +45,8 @@ builder.Services.AddSwaggerGen(options =>
         Title = "SmartFleet API",
         Version = "v1",
         Description =
-            "REST API for SmartFleet Autonomous Warehouse Fleet Management System"
+            "REST API for SmartFleet Autonomous " +
+            "Warehouse Fleet Management System"
     });
 
     options.AddSecurityDefinition(
@@ -56,7 +57,8 @@ builder.Services.AddSwaggerGen(options =>
             Scheme = "bearer",
             BearerFormat = "JWT",
             Description =
-                "Enter the JWT access token returned by /api/v1/auth/login."
+                "Enter the JWT access token returned by " +
+                "/api/v1/auth/login."
         });
 
     options.AddSecurityRequirement(document =>
@@ -84,7 +86,6 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "Set the Aiven PostgreSQL connection string.");
 }
 
-// Detect old SQL Server connection strings.
 if (
     connectionString.Contains(
         "Initial Catalog=",
@@ -105,7 +106,6 @@ if (
         "and environment variables.");
 }
 
-// PostgreSQL with Npgsql
 builder.Services.AddDbContext<SmartFleetDbContext>(
     options => options.UseNpgsql(connectionString));
 
@@ -133,9 +133,13 @@ builder.Services.AddScoped<
 // 5. BUSINESS SERVICES
 // =====================================================
 
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<
+    IAuthService,
+    AuthService>();
 
-builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<
+    IUserService,
+    UserService>();
 
 builder.Services.AddScoped<
     ITransportTaskService,
@@ -149,11 +153,7 @@ builder.Services.AddScoped<
     ITaskDispatchService,
     TaskDispatchService>();
 
-// =====================================================
-// 5.1 AUTO DISPATCH SERVICE
-// =====================================================
-
-// NEW: Automatically select a suitable robot.
+// Existing automatic robot selector.
 builder.Services.AddScoped<AutoDispatchService>();
 
 builder.Services.AddScoped<
@@ -165,23 +165,43 @@ builder.Services.AddSingleton<
     JwtTokenService>();
 
 // =====================================================
-// 6. MQTT SERVICES
+// 6. MQTT AND SCHEDULED DISPATCH WORKERS
 // =====================================================
 
-// Existing MQTT service with Fast ACK
+// Keep the existing Fast ACK implementation unchanged.
 builder.Services.AddSingleton<MqttService>();
 
 builder.Services.AddScoped<MissionLifecycleService>();
 
-// Enable workers when ready to communicate with robots.
-if (builder.Configuration.GetValue<bool>(
-        "Mqtt:EnableWorkers"))
+bool enableMqttWorkers =
+    builder.Configuration.GetValue<bool>(
+        "Mqtt:EnableWorkers");
+
+bool enableAutoDispatch =
+    builder.Configuration.GetValue<bool>(
+        "AutoDispatch:EnableOnCreate");
+
+if (enableMqttWorkers)
 {
+    // Existing worker: receives mission status
+    // and sends ACK to the robot.
     builder.Services
         .AddHostedService<MqttMissionStatusWorker>();
 
+    // Existing worker: sends committed commands
+    // from RobotCommandOutbox through MQTT.
     builder.Services
         .AddHostedService<RobotCommandOutboxWorker>();
+
+    // NEW:
+    // Periodically checks scheduled AUTO tasks.
+    // Only registered when both MQTT and AUTO
+    // dispatch are enabled.
+    if (enableAutoDispatch)
+    {
+        builder.Services
+            .AddHostedService<ScheduledAutoDispatchWorker>();
+    }
 }
 
 // =====================================================
@@ -243,13 +263,13 @@ builder.Services
 builder.Services.AddAuthorization();
 
 // =====================================================
-// 9. BUILD APPLICATION
+// 9. BUILD
 // =====================================================
 
 var app = builder.Build();
 
 // =====================================================
-// 10. SWAGGER IN DEVELOPMENT
+// 10. SWAGGER
 // =====================================================
 
 if (app.Environment.IsDevelopment())
@@ -282,13 +302,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // =====================================================
-// 12. CONTROLLER ROUTES
+// 12. CONTROLLERS
 // =====================================================
 
 app.MapControllers();
 
 // =====================================================
-// 13. AIVEN DATABASE CONNECTION CHECK
+// 13. DEVELOPMENT DATABASE CHECK
 // =====================================================
 
 if (app.Environment.IsDevelopment())
@@ -315,15 +335,13 @@ if (app.Environment.IsDevelopment())
                 {
                     connected = true,
 
-                    provider = provider,
+                    provider,
 
                     server = connection.DataSource,
-
                     database = connection.Database,
 
-                    totalUsers = totalUsers,
-
-                    totalTasks = totalTasks,
+                    totalUsers,
+                    totalTasks,
 
                     message =
                         "SmartFleet successfully queried " +
@@ -340,11 +358,8 @@ if (app.Environment.IsDevelopment())
                     new
                     {
                         connected = false,
-
-                        provider = provider,
-
+                        provider,
                         error = ex.GetType().Name,
-
                         message =
                             "Database check failed. " +
                             "View backend logs for details."
@@ -355,7 +370,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // =====================================================
-// 14. START APPLICATION
+// 14. START BACKEND
 // =====================================================
 
 app.Run();
