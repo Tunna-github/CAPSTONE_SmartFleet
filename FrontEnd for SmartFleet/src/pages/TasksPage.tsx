@@ -172,7 +172,7 @@ export function TasksPage() {
                 <button
                     onClick={handleReload}
                     disabled={isTasksLoading}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-all hover:scale-[1.02] hover:brightness-110 active:scale-95 duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:brightness-100"
                     style={{
                         background: "var(--surface-3)",
                         color: "var(--text-primary)",
@@ -182,9 +182,11 @@ export function TasksPage() {
                     <Icon d={IC.refresh} size={15} />
                     {isTasksLoading ? "Refreshing..." : "Reload"}
                 </button>
-                <PrimaryBtn onClick={() => setCreateOpen(true)}>
-                    <Icon d={IC.plus} size={15} /> Create Transport Task
-                </PrimaryBtn>
+                <div className="transition-all hover:scale-[1.02] hover:brightness-110 active:scale-95 duration-200">
+                    <PrimaryBtn onClick={() => setCreateOpen(true)}>
+                        <Icon d={IC.plus} size={15} /> Create Transport Task
+                    </PrimaryBtn>
+                </div>
             </PageHeader>
 
             {/* Stat strip */}
@@ -200,7 +202,7 @@ export function TasksPage() {
                 ].map((s) => (
                     <div
                         key={s.label}
-                        className="rounded-xl px-4 py-2.5 flex items-center gap-3 transition-colors"
+                        className="rounded-xl px-4 py-2.5 flex items-center gap-3 transition-colors hover:brightness-110 duration-200"
                         style={{ background: "var(--surface-2)", border: "1px solid var(--border-subtle)" }}
                     >
                         <span className="font-mono text-[22px] font-bold" style={{ color: s.color }}>{s.value}</span>
@@ -242,7 +244,7 @@ export function TasksPage() {
                             type="button"
                             aria-pressed={statusFilter === s}
                             onClick={() => setStatusFilter(s)}
-                            className="font-mono text-[10px] font-bold px-2.5 py-1 rounded-md transition-all"
+                            className="font-mono text-[10px] font-bold px-2.5 py-1 rounded-md transition-all hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-95 duration-200"
                             style={{
                                 background: statusFilter === s ? "rgba(34,211,238,0.15)" : "transparent",
                                 color: statusFilter === s ? "#22d3ee" : "var(--text-faint)",
@@ -273,225 +275,226 @@ export function TasksPage() {
             {/* Separate queue and completed history, sharing the same task table. */}
             <div className="flex-1 min-h-0 overflow-auto px-6 pb-6 pt-3 space-y-5">
                 {sections.map((section) => (
-                <section
-                    key={section.id}
-                    aria-labelledby={`${section.id}-heading`}
-                    aria-busy={isTasksLoading}
-                    className="rounded-2xl overflow-hidden flex flex-col transition-colors"
-                    style={{ background: "var(--surface-2)", border: `1px solid ${section.color}40` }}
-                >
-                    <div className="flex items-center gap-3 px-4 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                        <div className="flex-1">
-                            <h2 id={`${section.id}-heading`} className="text-[14px] font-bold flex items-center gap-2">
-                                {section.id === "completed" && <Icon d={IC.check} size={15} />}
-                                {section.title}
-                            </h2>
-                            <p className="mt-1 text-[11px]" style={{ color: "var(--text-faint)" }}>{section.description}</p>
-                        </div>
-                        <span className="rounded-lg px-3 py-1 font-mono text-[13px] font-bold" style={{ background: `${section.color}15`, color: section.color }}>
-                            {section.items.length}
-                        </span>
-                    </div>
-                    <div className="overflow-auto max-h-[480px]">
-                        <table className="w-full border-collapse" style={{ minWidth: 1000 }}>
-                            <thead className="sticky top-0 z-10">
-                                <tr style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
-                                    {["Task ID", "Pickup", "Delivery", "Package", "Priority", "Assigned Robot", "Status", "Actions"].map((h) => (
-                                        <th
-                                            key={h}
-                                            className="text-left px-4 py-3 font-mono text-[10px] font-semibold tracking-wider whitespace-nowrap"
-                                            style={{ color: "var(--text-faint)" }}
-                                        >
-                                            {h}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {section.items.map((task) => (
-                                    <tr
-                                        key={task.id}
-                                        style={{
-                                            borderBottom: "1px solid var(--border-subtle)",
-                                            background: task.status === "CANCELLED" ? "rgba(239,68,68,0.04)" : "transparent",
-                                        }}
-                                    >
-                                        <td className="px-4 py-3">
-                                            <div className="font-mono text-[12px] font-bold" style={{ color: "#22d3ee" }}>{task.id}</div>
-                                            <div className="font-mono text-[10px]" style={{ color: "var(--text-dimmest)" }}>{task.created}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-secondary)" }}>{task.pickup}</td>
-                                        <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-secondary)" }}>{task.delivery}</td>
-                                        <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-muted)" }}>{task.packageInfo}</td>
-                                        <td className="px-4 py-3"><PriorityBadge priority={task.priority} /></td>
-                                        <td className="px-4 py-3">
-                                            {task.robotId ? (
-                                                <span className="flex items-center gap-1.5 font-mono text-[12px]" style={{ color: "var(--text-secondary)" }}>
-                                                    <Icon d={IC.robots} size={12} /> {task.robotId}
-                                                </span>
-                                            ) : task.status === "ASSIGNED" || task.status === "EXECUTING" ? (
-                                                <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>Assigned (no details)</span>
-                                            ) : (
-                                                <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>—</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1.5">
-                                                {task.status === "QUEUED" && task.taskId != null && !task.robotId && (
-                                                    <button type="button" onClick={() => setAssignTarget(task)} aria-label={`Assign robot to task ${task.id}`}
-                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-cyan-400/10 text-cyan-600 dark:text-cyan-300">
-                                                        ASSIGN
-                                                    </button>
-                                                )}
-                                                {canEdit(task.status) && (
-                                                    <button
-                                                        onClick={() => openEdit(task)}
-                                                        aria-label={`Edit task ${task.id}`}
-                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors"
-                                                        style={{
-                                                            background: "rgba(99,102,241,0.1)",
-                                                            color: "#818cf8",
-                                                            border: "1px solid rgba(99,102,241,0.3)",
-                                                        }}
-                                                    >
-                                                        EDIT
-                                                    </button>
-                                                )}
-                                                {canCancel(task.status) && (
-                                                    <button
-                                                        onClick={() => handleCancel(task)}
-                                                        aria-label={`Cancel task ${task.id}`}
-                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors"
-                                                        style={{
-                                                            background: "rgba(239,68,68,0.1)",
-                                                            color: "#f87171",
-                                                            border: "1px solid rgba(239,68,68,0.3)",
-                                                        }}
-                                                    >
-                                                        CANCEL
-                                                    </button>
-                                                )}
-                                                {(task.status === "COMPLETED" || task.status === "CANCELLED") && (
-                                                    <button
-                                                        onClick={() => handleDelete(task)}
-                                                        aria-label={`Delete task ${task.id}`}
-                                                        className="w-7 h-7 rounded-md flex items-center justify-center transition-colors"
-                                                        style={{
-                                                            background: "rgba(239,68,68,0.1)",
-                                                            color: "#f87171",
-                                                            border: "1px solid rgba(239,68,68,0.3)",
-                                                        }}
-                                                    >
-                                                        <Icon d={IC.trash} size={12} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {section.items.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={8}
-                                            className="text-center py-12 text-[13px]"
-                                            style={{ color: "var(--text-dimmest)" }}
-                                        >
-                                            {isTasksLoading ? "Loading tasks..." : section.empty}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div
-                        className="flex justify-between px-4 py-2.5 shrink-0"
-                        style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}
+                    <section
+                        key={section.id}
+                        aria-labelledby={`${section.id}-heading`}
+                        aria-busy={isTasksLoading}
+                        className="rounded-2xl overflow-hidden flex flex-col transition-colors"
+                        style={{ background: "var(--surface-2)", border: `1px solid ${section.color}40` }}
                     >
-                        <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>
-                            Showing {section.items.length} of {section.total} {section.id === "completed" ? "completed" : "queue"} tasks
-                        </span>
-                        <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>
-                            {robots.filter((r) => r.mqtt === "ONLINE").length} robots online
-                        </span>
-                    </div>
-                </section>
+                        <div className="flex items-center gap-3 px-4 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                            <div className="flex-1">
+                                <h2 id={`${section.id}-heading`} className="text-[14px] font-bold flex items-center gap-2">
+                                    {section.id === "completed" && <Icon d={IC.check} size={15} />}
+                                    {section.title}
+                                </h2>
+                                <p className="mt-1 text-[11px]" style={{ color: "var(--text-faint)" }}>{section.description}</p>
+                            </div>
+                            <span className="rounded-lg px-3 py-1 font-mono text-[13px] font-bold" style={{ background: `${section.color}15`, color: section.color }}>
+                                {section.items.length}
+                            </span>
+                        </div>
+                        <div className="overflow-auto max-h-[480px]">
+                            <table className="w-full border-collapse" style={{ minWidth: 1000 }}>
+                                <thead className="sticky top-0 z-10">
+                                    <tr style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
+                                        {["Task ID", "Pickup", "Delivery", "Package", "Priority", "Assigned Robot", "Status", "Actions"].map((h) => (
+                                            <th
+                                                key={h}
+                                                className="text-left px-4 py-3 font-mono text-[10px] font-semibold tracking-wider whitespace-nowrap"
+                                                style={{ color: "var(--text-faint)" }}
+                                            >
+                                                {h}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {section.items.map((task) => (
+                                        <tr
+                                            key={task.id}
+                                            className="transition-colors hover:bg-white/[0.02] duration-150"
+                                            style={{
+                                                borderBottom: "1px solid var(--border-subtle)",
+                                                background: task.status === "CANCELLED" ? "rgba(239,68,68,0.04)" : "transparent",
+                                            }}
+                                        >
+                                            <td className="px-4 py-3">
+                                                <div className="font-mono text-[12px] font-bold" style={{ color: "#22d3ee" }}>{task.id}</div>
+                                                <div className="font-mono text-[10px]" style={{ color: "var(--text-dimmest)" }}>{task.created}</div>
+                                            </td>
+                                            <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-secondary)" }}>{task.pickup}</td>
+                                            <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-secondary)" }}>{task.delivery}</td>
+                                            <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-muted)" }}>{task.packageInfo}</td>
+                                            <td className="px-4 py-3"><PriorityBadge priority={task.priority} /></td>
+                                            <td className="px-4 py-3">
+                                                {task.robotId ? (
+                                                    <span className="flex items-center gap-1.5 font-mono text-[12px]" style={{ color: "var(--text-secondary)" }}>
+                                                        <Icon d={IC.robots} size={12} /> {task.robotId}
+                                                    </span>
+                                                ) : task.status === "ASSIGNED" || task.status === "EXECUTING" ? (
+                                                    <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>Assigned (no details)</span>
+                                                ) : (
+                                                    <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-1.5">
+                                                    {task.status === "QUEUED" && task.taskId != null && !task.robotId && (
+                                                        <button type="button" onClick={() => setAssignTarget(task)} aria-label={`Assign robot to task ${task.id}`}
+                                                            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-cyan-400/10 text-cyan-600 dark:text-cyan-300 transition-all hover:-translate-y-0.5 hover:brightness-125 hover:shadow-md active:translate-y-0 active:scale-95 duration-200">
+                                                            ASSIGN
+                                                        </button>
+                                                    )}
+                                                    {canEdit(task.status) && (
+                                                        <button
+                                                            onClick={() => openEdit(task)}
+                                                            aria-label={`Edit task ${task.id}`}
+                                                            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-all hover:-translate-y-0.5 hover:brightness-125 hover:shadow-md active:translate-y-0 active:scale-95 duration-200"
+                                                            style={{
+                                                                background: "rgba(99,102,241,0.1)",
+                                                                color: "#818cf8",
+                                                                border: "1px solid rgba(99,102,241,0.3)",
+                                                            }}
+                                                        >
+                                                            EDIT
+                                                        </button>
+                                                    )}
+                                                    {canCancel(task.status) && (
+                                                        <button
+                                                            onClick={() => handleCancel(task)}
+                                                            aria-label={`Cancel task ${task.id}`}
+                                                            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-all hover:-translate-y-0.5 hover:brightness-125 hover:shadow-md active:translate-y-0 active:scale-95 duration-200"
+                                                            style={{
+                                                                background: "rgba(239,68,68,0.1)",
+                                                                color: "#f87171",
+                                                                border: "1px solid rgba(239,68,68,0.3)",
+                                                            }}
+                                                        >
+                                                            CANCEL
+                                                        </button>
+                                                    )}
+                                                    {(task.status === "COMPLETED" || task.status === "CANCELLED") && (
+                                                        <button
+                                                            onClick={() => handleDelete(task)}
+                                                            aria-label={`Delete task ${task.id}`}
+                                                            className="w-7 h-7 rounded-md flex items-center justify-center transition-all hover:-translate-y-0.5 hover:brightness-125 hover:shadow-md active:translate-y-0 active:scale-95 duration-200"
+                                                            style={{
+                                                                background: "rgba(239,68,68,0.1)",
+                                                                color: "#f87171",
+                                                                border: "1px solid rgba(239,68,68,0.3)",
+                                                            }}
+                                                        >
+                                                            <Icon d={IC.trash} size={12} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {section.items.length === 0 && (
+                                        <tr>
+                                            <td
+                                                colSpan={8}
+                                                className="text-center py-12 text-[13px]"
+                                                style={{ color: "var(--text-dimmest)" }}
+                                            >
+                                                {isTasksLoading ? "Loading tasks..." : section.empty}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div
+                            className="flex justify-between px-4 py-2.5 shrink-0"
+                            style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}
+                        >
+                            <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>
+                                Showing {section.items.length} of {section.total} {section.id === "completed" ? "completed" : "queue"} tasks
+                            </span>
+                            <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>
+                                {robots.filter((r) => r.mqtt === "ONLINE").length} robots online
+                            </span>
+                        </div>
+                    </section>
                 ))}
             </div>
 
             {/* ══ Create Task Modal ══ */}
             <ModalShell title="Create Transport Task" sub="Set the route, package details and scheduling preferences." open={createOpen} busy={isCreating} onClose={() => setCreateOpen(false)} width={680}>
-                    <TaskCreateForm onBusyChange={setIsCreating} onCancel={() => setCreateOpen(false)} onCreated={(task) => {
-                        setCreateOpen(false);
-                        setToast({ msg: `Task ${task.id} created successfully.`, type: "success" });
-                    }} />
-                </ModalShell>
+                <TaskCreateForm onBusyChange={setIsCreating} onCancel={() => setCreateOpen(false)} onCreated={(task) => {
+                    setCreateOpen(false);
+                    setToast({ msg: `Task ${task.id} created successfully.`, type: "success" });
+                }} />
+            </ModalShell>
 
             {/* ══ Edit Task Modal ══ */}
             {editTarget && (
                 <ModalShell title="Edit Transport Task" sub={`Modifying ${editTarget.id}`} onClose={() => setEditTarget(null)} width={500}>
                     <form onSubmit={(event) => { event.preventDefault(); confirmEdit(); }}>
-                    <div
-                        className="px-6 py-3 flex gap-6"
-                        style={{ background: "rgba(99,102,241,0.06)", borderBottom: "1px solid rgba(99,102,241,0.15)" }}
-                    >
-                        {[
-                            ["Task ID", editTarget.id, "#22d3ee"],
-                            ["Status", editTarget.status, "#c084fc"],
-                            ["Robot", editTarget.robotId || "Unassigned", "#94a3b8"],
-                        ].map(([l, v, c]) => (
-                            <div key={l}>
-                                <div className="font-mono text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>{l}</div>
-                                <div className="font-mono text-[12px] font-bold mt-0.5" style={{ color: c }}>{v}</div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="p-6 space-y-5">
-                        <div className="grid grid-cols-2 gap-4">
-                            <ReadOnlyField label="Pickup Location" value={editTarget.pickup} />
-                            <ReadOnlyField label="Package Info" value={editTarget.packageInfo} />
+                        <div
+                            className="px-6 py-3 flex gap-6"
+                            style={{ background: "rgba(99,102,241,0.06)", borderBottom: "1px solid rgba(99,102,241,0.15)" }}
+                        >
+                            {[
+                                ["Task ID", editTarget.id, "#22d3ee"],
+                                ["Status", editTarget.status, "#c084fc"],
+                                ["Robot", editTarget.robotId || "Unassigned", "#94a3b8"],
+                            ].map(([l, v, c]) => (
+                                <div key={l}>
+                                    <div className="font-mono text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>{l}</div>
+                                    <div className="font-mono text-[12px] font-bold mt-0.5" style={{ color: c }}>{v}</div>
+                                </div>
+                            ))}
                         </div>
-                        <InputField
-                            autoFocus
-                            label="Delivery Station / Destination"
-                            value={editState.delivery}
-                            onChange={(v) => setEditState((s) => ({ ...s, delivery: v }))}
-                            placeholder="e.g. Delivery Station D1"
-                        />
-                        <PriorityPicker
-                            value={editState.priority}
-                            onChange={(p) => setEditState((s) => ({ ...s, priority: p }))}
-                            label="Priority Level ✎"
-                        />
-                    </div>
-                    <div
-                        className="flex gap-3 px-6 py-4"
-                        style={{ borderTop: "1px solid var(--border-subtle)" }}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => setEditTarget(null)}
-                            className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold"
-                            style={{
-                                background: "var(--surface-3)",
-                                color: "var(--text-muted)",
-                                border: "1px solid var(--border-medium)",
-                            }}
+                        <div className="p-6 space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <ReadOnlyField label="Pickup Location" value={editTarget.pickup} />
+                                <ReadOnlyField label="Package Info" value={editTarget.packageInfo} />
+                            </div>
+                            <InputField
+                                autoFocus
+                                label="Delivery Station / Destination"
+                                value={editState.delivery}
+                                onChange={(v) => setEditState((s) => ({ ...s, delivery: v }))}
+                                placeholder="e.g. Delivery Station D1"
+                            />
+                            <PriorityPicker
+                                value={editState.priority}
+                                onChange={(p) => setEditState((s) => ({ ...s, priority: p }))}
+                                label="Priority Level ✎"
+                            />
+                        </div>
+                        <div
+                            className="flex gap-3 px-6 py-4"
+                            style={{ borderTop: "1px solid var(--border-subtle)" }}
                         >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="flex-[2] py-2.5 rounded-lg text-[13px] font-bold"
-                            style={{
-                                background: "linear-gradient(135deg,#22d3ee,#3b82f6)",
-                                color: "#ffffff",
-                                boxShadow: "0 4px 16px rgba(34,211,238,0.3)",
-                            }}
-                        >
-                            ✓ Confirm Update
-                        </button>
-                    </div>
+                            <button
+                                type="button"
+                                onClick={() => setEditTarget(null)}
+                                className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md hover:brightness-110 active:scale-95 active:translate-y-0 duration-200"
+                                style={{
+                                    background: "var(--surface-3)",
+                                    color: "var(--text-muted)",
+                                    border: "1px solid var(--border-medium)",
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="flex-[2] py-2.5 rounded-lg text-[13px] font-bold transition-all hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110 active:scale-95 active:translate-y-0 duration-200"
+                                style={{
+                                    background: "linear-gradient(135deg,#22d3ee,#3b82f6)",
+                                    color: "#ffffff",
+                                    boxShadow: "0 4px 16px rgba(34,211,238,0.3)",
+                                }}
+                            >
+                                ✓ Confirm Update
+                            </button>
+                        </div>
                     </form>
                 </ModalShell>
             )}
@@ -521,7 +524,7 @@ export function TasksPage() {
                                 type="button"
                                 disabled={isDeleting}
                                 onClick={() => { setDeleteTarget(null); setDeleteError(""); }}
-                                className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold"
+                                className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all hover:-translate-y-0.5 hover:shadow-md hover:brightness-110 active:scale-95 active:translate-y-0 duration-200 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none"
                                 style={{
                                     background: "var(--surface-3)",
                                     color: "var(--text-muted)",
@@ -534,7 +537,7 @@ export function TasksPage() {
                                 type="button"
                                 disabled={isDeleting}
                                 onClick={confirmDelete}
-                                className="flex-1 py-2.5 rounded-lg text-[13px] font-bold"
+                                className="flex-1 py-2.5 rounded-lg text-[13px] font-bold transition-all hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110 active:scale-95 active:translate-y-0 duration-200 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none"
                                 style={{
                                     background: "rgba(239,68,68,0.15)",
                                     color: "#f87171",
@@ -575,6 +578,7 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
     const [selected, setSelected] = useState("");
     const [retry, setRetry] = useState(0);
     const id = useId();
+
     useEffect(() => {
         let active = true;
         setLoading(true);
@@ -634,9 +638,9 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
                     </div>
                 )}
                 <div className="flex flex-wrap gap-3">
-                    <button type="button" disabled={busy || loading} onClick={() => setRetry(value => value + 1)} className="rounded-lg border px-3 py-2 disabled:opacity-50">Reload Robots</button>
-                    <button type="button" disabled={busy} onClick={onClose} className="rounded-lg border px-3 py-2 disabled:opacity-50">Cancel</button>
-                    <button type="submit" disabled={busy || loading || !selected} className="rounded-lg bg-cyan-400 text-slate-950 font-bold px-3 py-2 disabled:opacity-50">
+                    <button type="button" disabled={busy || loading} onClick={() => setRetry(value => value + 1)} className="rounded-lg border px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-md hover:brightness-110 active:scale-95 active:translate-y-0 duration-200 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none">Reload Robots</button>
+                    <button type="button" disabled={busy} onClick={onClose} className="rounded-lg border px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-md hover:brightness-110 active:scale-95 active:translate-y-0 duration-200 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none">Cancel</button>
+                    <button type="submit" disabled={busy || loading || !selected} className="rounded-lg bg-cyan-400 text-slate-950 font-bold px-3 py-2 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110 active:scale-95 active:translate-y-0 duration-200 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none">
                         {busy ? "Assigning..." : "Confirm Assignment"}
                     </button>
                 </div>
@@ -645,6 +649,8 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
     );
 }
 
+// ─── Modal Shell with CSS Animation State ────────────────────────────────────
+
 function ModalShell({
     title, sub, onClose, children, width = 480, open = true, busy = false,
 }: { title: string; sub?: string; onClose: () => void; children: React.ReactNode; width?: number; open?: boolean; busy?: boolean }) {
@@ -652,17 +658,30 @@ function ModalShell({
     const titleId = useId();
     const descriptionId = useId();
 
+    // Manage animation state independent of actual DOM mounting
+    const [show, setShow] = useState(false);
+
     useEffect(() => {
         const dialog = dialogRef.current;
-        if (!dialog || !open) return;
+        if (!dialog) return;
         const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        // Native modal dialogs trap focus and make the rest of the page inert.
-        dialog.showModal();
-        dialog.querySelector<HTMLElement>("[autofocus]")?.focus();
-        return () => {
-            dialog.close();
-            if (trigger?.isConnected) trigger.focus();
-        };
+
+        if (open) {
+            dialog.showModal();
+            dialog.querySelector<HTMLElement>("[autofocus]")?.focus();
+            // Double rAF ensures the display block applies before transitioning scale/opacity
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => setShow(true));
+            });
+        } else {
+            setShow(false);
+            // Wait for transition to complete before actually closing the native dialog
+            const timer = setTimeout(() => {
+                dialog.close();
+                if (trigger?.isConnected) trigger.focus();
+            }, 200);
+            return () => clearTimeout(timer);
+        }
     }, [open]);
 
     return (
@@ -673,16 +692,17 @@ function ModalShell({
             aria-labelledby={titleId}
             aria-describedby={sub ? descriptionId : undefined}
             onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}
-            className="m-auto rounded-2xl p-0 max-h-[90vh] overflow-auto backdrop:bg-black/75 backdrop:backdrop-blur-sm"
-            style={{ width: `min(${width}px, calc(100vw - 32px))`, color: "var(--text-primary)", background: "var(--surface-2)", border: "1px solid var(--border-medium)" }}
+            className="m-auto p-0 bg-transparent backdrop:bg-black/75 backdrop:backdrop-blur-sm outline-none"
+            style={{ width: `min(${width}px, calc(100vw - 32px))` }}
         >
             <div
-                className="w-full rounded-2xl overflow-hidden"
+                className="w-full rounded-2xl overflow-hidden transition-all duration-200 ease-out"
                 style={{
-                    maxWidth: width,
                     background: "var(--surface-2)",
                     border: "1px solid var(--border-medium)",
                     boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
+                    opacity: show ? 1 : 0,
+                    transform: show ? "scale(1) translateY(0)" : "scale(0.95) translateY(10px)",
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -699,7 +719,7 @@ function ModalShell({
                         aria-label="Close"
                         disabled={busy}
                         onClick={onClose}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110 hover:brightness-125 active:scale-95 duration-200 disabled:opacity-50"
                         style={{
                             background: "var(--surface-3)",
                             color: "var(--text-muted)",
@@ -789,7 +809,7 @@ function PriorityPicker({
                     return (
                         <label
                             key={p}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer"
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer hover:brightness-110 active:scale-95 duration-200"
                             style={{
                                 background: selected ? `${color}20` : "var(--surface-3)",
                                 border: `2px solid ${selected ? color : "var(--border-medium)"}`,
@@ -824,7 +844,7 @@ function ToastEl({
 
     return (
         <div
-            className="fixed bottom-6 right-6 z-[200] flex items-center gap-2.5 px-4 py-3 rounded-xl transition-all"
+            className="fixed bottom-6 right-6 z-[200] flex items-center gap-2.5 px-4 py-3 rounded-xl transition-all duration-300"
             style={{
                 background: "var(--surface-2)",
                 border: `1px solid ${c.border}`,

@@ -57,9 +57,9 @@ export function Sidebar({
                 className="px-5 pt-5 pb-4"
                 style={{ borderBottom: "1px solid var(--border-subtle)" }}
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 transition-all hover:scale-105 duration-300 cursor-default">
                     <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden"
+                        className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden shadow-md"
                         style={{ background: "linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%)" }}
                     >
                         <svg
@@ -109,7 +109,7 @@ export function Sidebar({
                         <button
                             key={id}
                             onClick={() => navigate(path)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all text-left relative"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all text-left relative hover:translate-x-1 hover:brightness-125 active:scale-[0.98] duration-200"
                             style={{
                                 background: active ? "rgba(6,182,212,0.1)" : "transparent",
                                 color: active ? "#22d3ee" : "var(--text-faint)",
@@ -135,7 +135,7 @@ export function Sidebar({
 
             {/* Broker widget */}
             <div
-                className="mx-3 mb-3 rounded-xl p-3"
+                className="mx-3 mb-3 rounded-xl p-3 transition-all hover:-translate-y-0.5 hover:shadow-md duration-300"
                 style={{ background: "var(--surface-2)", border: "1px solid var(--border-subtle)" }}
             >
                 <div className="flex items-center justify-between mb-2.5">
@@ -178,33 +178,33 @@ export function Sidebar({
                 <button
                     onClick={() => navigate("/profile")}
                     aria-current={location.pathname === "/profile" ? "page" : undefined}
-                    className="w-full rounded-lg p-1 text-left transition-colors hover:bg-white/5"
+                    className="w-full rounded-lg p-1 text-left transition-all hover:scale-[1.02] hover:brightness-125 active:scale-95 duration-200"
                 >
-                <div className="flex items-center gap-2.5">
-                    <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                        style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
-                    >
-                        {userInitials}
-                    </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5">
                         <div
-                            className="text-[12px] font-semibold truncate"
-                            style={{ color: "var(--text-primary)" }}
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm"
+                            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}
                         >
-                            {userName}
+                            {userInitials}
                         </div>
-                        <div className="font-mono text-[9px]" style={{ color: "var(--text-faint)" }}>
-                            {roleLabel}
+                        <div className="min-w-0 flex-1">
+                            <div
+                                className="text-[12px] font-semibold truncate"
+                                style={{ color: "var(--text-primary)" }}
+                            >
+                                {userName}
+                            </div>
+                            <div className="font-mono text-[9px]" style={{ color: "var(--text-faint)" }}>
+                                {roleLabel}
+                            </div>
                         </div>
                     </div>
-                </div>
                 </button>
 
                 {/* Theme toggle */}
                 <button
                     onClick={toggleTheme}
-                    className="mt-3 w-full py-2 rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center gap-2"
+                    className="mt-3 w-full py-2 rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-sm active:translate-y-0 active:scale-95 duration-200"
                     style={{
                         background: "var(--surface-3)",
                         color: "var(--text-secondary)",
@@ -225,7 +225,7 @@ export function Sidebar({
                 {/* Sign Out */}
                 <button
                     onClick={onLogout}
-                    className="mt-2 w-full py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                    className="mt-2 w-full py-1.5 rounded-lg text-[11px] font-semibold transition-all hover:-translate-y-0.5 hover:brightness-110 hover:shadow-sm active:translate-y-0 active:scale-95 duration-200"
                     style={{
                         background: "rgba(239,68,68,0.1)",
                         color: "#f87171",
