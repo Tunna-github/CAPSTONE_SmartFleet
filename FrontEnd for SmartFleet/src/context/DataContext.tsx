@@ -17,6 +17,7 @@ interface DataContextType {
     cancelTask: (id: string) => void;
     toggleMaintenance: (id: string) => void;
     addLog: (log: Omit<LogEntry, "id" | "time">) => void;
+    completeTask: (task: Task) => Promise<void>; // ADDED
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -129,6 +130,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
         addLog({ level: "WARN", robot: "SYSTEM", message: `Task ${id} cancelled. Robot reassigned.` });
     };
 
+    // ADDED: completeTask Implementation
+    const completeTask = async (task: Task) => {
+        // If you later add an API endpoint for completing tasks, you would await it here:
+        // await apiCompleteTask(task.taskId);
+
+        // Update task status to COMPLETED
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: "COMPLETED" } : t));
+
+        // Free up the robot that was assigned to this mission
+        setRobots(prev => prev.map(r => r.missionId === task.id ? { ...r, missionId: null, zone: "Idle — Dock" } : r));
+
+        // Push a success log to the dashboard
+        addLog({ level: "SUCCESS", robot: task.robotId || "SYSTEM", message: `Task ${task.id} marked as completed.` });
+    };
+
     const toggleMaintenance = (id: string) => {
         setRobots(prev => prev.map(r => {
             if (r.id === id) {
@@ -156,6 +172,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 cancelTask,
                 toggleMaintenance,
                 addLog,
+                completeTask, // ADDED
             }}
         >
             {children}
