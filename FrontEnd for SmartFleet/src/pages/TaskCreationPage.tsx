@@ -379,7 +379,7 @@ style = {{
     <legend
                         className="px-2 text-[13px] font-bold"
     >
-                        03 / Priority & amp; Schedule
+                        03 / Priority Level
     </legend>
 
     < fieldset >

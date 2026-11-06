@@ -1,6 +1,6 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { TaskCreateForm } from "./TaskCreationPage";
-import { getAvailableRobotsForTask, assignRobotToTask, type AvailableRobot, type ManualAssignTaskResponse } from "../api/modules/tasks";
+import { getAvailableRobotsForTask, assignRobotToTask, getTransportTaskDetailsById, updateTransportTask, type AvailableRobot, type ManualAssignTaskResponse, type TransportTaskDetails } from "../api/modules/tasks";
 import { useData } from "../context/DataContext";
 import { Priority, Task } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
@@ -10,7 +10,53 @@ import { PageHeader, PrimaryBtn, PriorityBadge, StatusBadge } from "../component
 // Tasks Page — Full lifecycle management (list + create + edit + cancel + delete)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-interface EditState { delivery: string; priority: Priority; }
+function errorMessage(error: unknown): string {
+    if (error && typeof error === "object" && "message" in error && typeof (error as any).message === "string") {
+        return (error as any).message as string;
+    }
+    if (error instanceof Error) return error.message;
+    return "Something went wrong";
+}
+
+function formatPriorityLevel(value: unknown): string {
+    if (value == null) return "—";
+    const n = typeof value === "number" ? value : Number.parseInt(String(value), 10);
+    if (Number.isFinite(n)) {
+        if (n <= 1) return "HIGH";
+        if (n === 2) return "MEDIUM";
+        return "LOW";
+    }
+    const s = String(value).toUpperCase();
+    if (s === "HIGH" || s === "MEDIUM" || s === "LOW") return s;
+    return String(value);
+}
+
+function toLocalDateTimeValue(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromLocalDateTimeValue(local: string): string | null {
+    const v = local.trim();
+    if (!v) return null;
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString();
+}
+
+interface EditState {
+    warehouseId: string;
+    pickupStationId: string;
+    deliveryStationId: string;
+    priority: Priority;
+    packageCode: string;
+    itemDescription: string;
+    payloadWeightKg: string;
+    scheduledTime: string;
+}
 
 const PRIORITY_ORDER: Record<Priority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 
@@ -21,7 +67,24 @@ export function TasksPage() {
     const [createOpen, setCreateOpen] = useState(false);
     const [assignTarget, setAssignTarget] = useState<Task | null>(null);
     const [editTarget, setEditTarget] = useState<Task | null>(null);
-    const [editState, setEditState] = useState<EditState>({ delivery: "", priority: "MEDIUM" });
+    const [editState, setEditState] = useState<EditState>({
+        warehouseId: "",
+        pickupStationId: "",
+        deliveryStationId: "",
+        priority: "MEDIUM",
+        packageCode: "",
+        itemDescription: "",
+        payloadWeightKg: "",
+        scheduledTime: "",
+    });
+    const [editDetails, setEditDetails] = useState<TransportTaskDetails | null>(null);
+    const [editError, setEditError] = useState("");
+    const [editLoading, setEditLoading] = useState(false);
+    const [editBusy, setEditBusy] = useState(false);
+    const [detailsTarget, setDetailsTarget] = useState<Task | null>(null);
+    const [details, setDetails] = useState<TransportTaskDetails | null>(null);
+    const [detailsError, setDetailsError] = useState("");
+    const [detailsLoading, setDetailsLoading] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const deleteInFlight = useRef(false);
@@ -112,12 +175,94 @@ export function TasksPage() {
     // ── Actions ──
     const openEdit = (task: Task) => {
         setEditTarget(task);
-        setEditState({ delivery: task.delivery, priority: task.priority });
+        setEditState({
+            warehouseId: "",
+            pickupStationId: "",
+            deliveryStationId: "",
+            priority: task.priority,
+            packageCode: "",
+            itemDescription: "",
+            payloadWeightKg: "",
+            scheduledTime: "",
+        });
+        setEditDetails(null);
+        setEditError("");
+        setEditLoading(false);
+        if (task.taskId == null) {
+            setEditError("Missing backend task ID. Reload the task list before editing.");
+            return;
+        }
+        setEditLoading(true);
+        getTransportTaskDetailsById(task.taskId).then((payload) => {
+            setEditDetails(payload);
+            setEditState((s) => ({
+                ...s,
+                warehouseId: payload.warehouseId != null ? String(payload.warehouseId) : "",
+                pickupStationId: payload.pickupStationId != null ? String(payload.pickupStationId) : "",
+                deliveryStationId: payload.deliveryStationId != null ? String(payload.deliveryStationId) : "",
+                priority: task.priority,
+                packageCode: payload.packageCode ? String(payload.packageCode) : "",
+                itemDescription: payload.itemDescription ? String(payload.itemDescription) : "",
+                payloadWeightKg: payload.payloadWeightKg != null ? String(payload.payloadWeightKg) : "",
+                scheduledTime: toLocalDateTimeValue(payload.scheduledTime),
+            }));
+        }).catch((error) => {
+            setEditError(errorMessage(error));
+        }).finally(() => {
+            setEditLoading(false);
+        });
     };
 
-    const confirmEdit = () => {
-        if (!editTarget) return;
-        setToast({ msg: "Editing is not connected to the backend yet. No changes were saved.", type: "info" });
+    const confirmEdit = async () => {
+        if (!editTarget || editBusy) return;
+        if (editTarget.taskId == null) {
+            setEditError("Missing backend task ID. Reload the task list before editing.");
+            return;
+        }
+        const warehouseId = Number.parseInt(editState.warehouseId, 10);
+        const pickupStationId = Number.parseInt(editState.pickupStationId, 10);
+        const deliveryStationId = Number.parseInt(editState.deliveryStationId, 10);
+        if (!Number.isFinite(warehouseId) || warehouseId <= 0) {
+            setEditError("Warehouse ID is required.");
+            return;
+        }
+        if (!Number.isFinite(pickupStationId) || pickupStationId <= 0) {
+            setEditError("Pickup Station ID is required.");
+            return;
+        }
+        if (!Number.isFinite(deliveryStationId) || deliveryStationId <= 0) {
+            setEditError("Delivery Station ID is required.");
+            return;
+        }
+        setEditBusy(true);
+        setEditError("");
+        try {
+            const priorityLevel = editState.priority === "HIGH" ? 1 : editState.priority === "MEDIUM" ? 2 : 3;
+            const payloadWeightKg = editState.payloadWeightKg.trim() ? Number.parseFloat(editState.payloadWeightKg) : null;
+            if (payloadWeightKg != null && !Number.isFinite(payloadWeightKg)) {
+                setEditError("Payload weight must be a number.");
+                setEditBusy(false);
+                return;
+            }
+            const scheduledTime = fromLocalDateTimeValue(editState.scheduledTime);
+            await updateTransportTask(editTarget.taskId, {
+                warehouseId,
+                pickupStationId,
+                deliveryStationId,
+                priorityLevel,
+                packageCode: editState.packageCode.trim() ? editState.packageCode.trim() : null,
+                itemDescription: editState.itemDescription.trim() ? editState.itemDescription.trim() : null,
+                payloadWeightKg,
+                scheduledTime,
+            });
+            await refreshTasks(true);
+            setEditTarget(null);
+            setToast({ msg: `Task ${editTarget.id} updated successfully.`, type: "success" });
+        } catch (error) {
+            setEditError(errorMessage(error));
+        } finally {
+            setEditBusy(false);
+        }
     };
 
     const handleCancel = (task: Task) => {
@@ -158,6 +303,32 @@ export function TasksPage() {
 
     const canEdit = (s: string) => s === "PENDING" || s === "QUEUED";
     const canCancel = (s: string) => s === "PENDING" || s === "QUEUED" || s === "ASSIGNED";
+
+    useEffect(() => {
+        if (!detailsTarget) return;
+        setDetails(null);
+        setDetailsError("");
+        if (detailsTarget.taskId == null) {
+            setDetailsError("Missing backend task ID. Reload the task list before viewing details.");
+            setDetailsLoading(false);
+            return;
+        }
+        let active = true;
+        setDetailsLoading(true);
+        getTransportTaskDetailsById(detailsTarget.taskId).then((payload) => {
+            if (!active) return;
+            setDetails(payload);
+        }).catch((error) => {
+            if (!active) return;
+            setDetailsError(errorMessage(error));
+        }).finally(() => {
+            if (!active) return;
+            setDetailsLoading(false);
+        });
+        return () => {
+            active = false;
+        };
+    }, [detailsTarget]);
 
     return (
         <div
@@ -338,9 +509,19 @@ export function TasksPage() {
                                         <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1.5">
+                                                {task.taskId != null && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDetailsTarget(task)}
+                                                        aria-label={`View details for task ${task.id}`}
+                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-400/10 text-slate-600 dark:text-slate-300 border border-slate-400/30 transition-all hover:bg-slate-400/20 hover:text-slate-700 dark:hover:text-slate-200 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-slate-400 focus-visible:outline-offset-2"
+                                                    >
+                                                        DETAILS
+                                                    </button>
+                                                )}
                                                 {task.status === "QUEUED" && task.taskId != null && !task.robotId && (
                                                     <button type="button" onClick={() => setAssignTarget(task)} aria-label={`Assign robot to task ${task.id}`}
-                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-cyan-400/10 text-cyan-600 dark:text-cyan-300">
+                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-cyan-400/10 text-cyan-600 dark:text-cyan-300 border border-cyan-400/30 transition-all hover:bg-cyan-400/20 hover:text-cyan-700 dark:hover:text-cyan-200 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-cyan-400 focus-visible:outline-offset-2">
                                                         ASSIGN
                                                     </button>
                                                 )}
@@ -348,12 +529,7 @@ export function TasksPage() {
                                                     <button
                                                         onClick={() => openEdit(task)}
                                                         aria-label={`Edit task ${task.id}`}
-                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors"
-                                                        style={{
-                                                            background: "rgba(99,102,241,0.1)",
-                                                            color: "#818cf8",
-                                                            border: "1px solid rgba(99,102,241,0.3)",
-                                                        }}
+                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-indigo-400/10 text-indigo-600 dark:text-indigo-300 border border-indigo-400/30 transition-all hover:bg-indigo-400/20 hover:text-indigo-700 dark:hover:text-indigo-200 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-indigo-400 focus-visible:outline-offset-2"
                                                     >
                                                         EDIT
                                                     </button>
@@ -362,12 +538,7 @@ export function TasksPage() {
                                                     <button
                                                         onClick={() => handleCancel(task)}
                                                         aria-label={`Cancel task ${task.id}`}
-                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors"
-                                                        style={{
-                                                            background: "rgba(239,68,68,0.1)",
-                                                            color: "#f87171",
-                                                            border: "1px solid rgba(239,68,68,0.3)",
-                                                        }}
+                                                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-red-400/10 text-red-600 dark:text-red-300 border border-red-400/30 transition-all hover:bg-red-400/20 hover:text-red-700 dark:hover:text-red-200 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-red-400 focus-visible:outline-offset-2"
                                                     >
                                                         CANCEL
                                                     </button>
@@ -447,16 +618,68 @@ export function TasksPage() {
                         ))}
                     </div>
                     <div className="p-6 space-y-5">
+                        {editError && (
+                            <div role="alert" className="rounded-lg px-3 py-2 text-[12px] bg-red-500/10 text-red-300 border border-red-500/20">
+                                {editError}
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-4">
                             <ReadOnlyField label="Pickup Location" value={editTarget.pickup} />
                             <ReadOnlyField label="Package Info" value={editTarget.packageInfo} />
                         </div>
+                        {editDetails?.deliveryStationName && (
+                            <ReadOnlyField label="Current Delivery Name" value={editDetails.deliveryStationName} />
+                        )}
+                        <div className="grid grid-cols-3 gap-4">
+                            <InputField
+                                autoFocus
+                                label="Warehouse ID"
+                                value={editState.warehouseId}
+                                onChange={(v) => setEditState((s) => ({ ...s, warehouseId: v.replace(/[^\d]/g, "") }))}
+                                placeholder={editLoading ? "Loading..." : "e.g. 1"}
+                                inputMode="numeric"
+                            />
+                            <InputField
+                                label="Pickup Station ID"
+                                value={editState.pickupStationId}
+                                onChange={(v) => setEditState((s) => ({ ...s, pickupStationId: v.replace(/[^\d]/g, "") }))}
+                                placeholder={editLoading ? "Loading..." : "e.g. 2"}
+                                inputMode="numeric"
+                            />
+                            <InputField
+                                label="Delivery Station ID"
+                                value={editState.deliveryStationId}
+                                onChange={(v) => setEditState((s) => ({ ...s, deliveryStationId: v.replace(/[^\d]/g, "") }))}
+                                placeholder={editLoading ? "Loading..." : "e.g. 4"}
+                                inputMode="numeric"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <InputField
+                                label="Package Code"
+                                value={editState.packageCode}
+                                onChange={(v) => setEditState((s) => ({ ...s, packageCode: v }))}
+                                placeholder="e.g. PKG-001"
+                            />
+                            <InputField
+                                label="Payload Weight (kg)"
+                                value={editState.payloadWeightKg}
+                                onChange={(v) => setEditState((s) => ({ ...s, payloadWeightKg: v.replace(/[^\d.]/g, "") }))}
+                                placeholder="e.g. 12.5"
+                                inputMode="decimal"
+                            />
+                        </div>
+                        <TextAreaField
+                            label="Item Description"
+                            value={editState.itemDescription}
+                            onChange={(v) => setEditState((s) => ({ ...s, itemDescription: v }))}
+                            placeholder="Describe the item..."
+                        />
                         <InputField
-                            autoFocus
-                            label="Delivery Station / Destination"
-                            value={editState.delivery}
-                            onChange={(v) => setEditState((s) => ({ ...s, delivery: v }))}
-                            placeholder="e.g. Delivery Station D1"
+                            label="Scheduled Time"
+                            value={editState.scheduledTime}
+                            onChange={(v) => setEditState((s) => ({ ...s, scheduledTime: v }))}
+                            type="datetime-local"
                         />
                         <PriorityPicker
                             value={editState.priority}
@@ -471,6 +694,7 @@ export function TasksPage() {
                         <button
                             type="button"
                             onClick={() => setEditTarget(null)}
+                            disabled={editBusy}
                             className="flex-1 py-2.5 rounded-lg text-[13px] font-semibold"
                             style={{
                                 background: "var(--surface-3)",
@@ -482,6 +706,7 @@ export function TasksPage() {
                         </button>
                         <button
                             type="submit"
+                            disabled={editBusy || editLoading}
                             className="flex-[2] py-2.5 rounded-lg text-[13px] font-bold"
                             style={{
                                 background: "linear-gradient(135deg,#22d3ee,#3b82f6)",
@@ -489,10 +714,60 @@ export function TasksPage() {
                                 boxShadow: "0 4px 16px rgba(34,211,238,0.3)",
                             }}
                         >
-                            ✓ Confirm Update
+                            {editBusy ? "Updating..." : editLoading ? "Loading..." : "✓ Confirm Update"}
                         </button>
                     </div>
                     </form>
+                </ModalShell>
+            )}
+
+            {detailsTarget && (
+                <ModalShell title="Task Details" sub={`Details for ${detailsTarget.id}`} onClose={() => { setDetailsTarget(null); setDetails(null); setDetailsError(""); }} width={640}>
+                    <div className="p-6 space-y-4">
+                        {detailsLoading && (
+                            <div className="text-[13px]" style={{ color: "var(--text-muted)" }}>
+                                Loading task details...
+                            </div>
+                        )}
+                        {detailsError && (
+                            <div role="alert" className="rounded-lg px-3 py-2 text-[12px] bg-red-500/10 text-red-300 border border-red-500/20">
+                                {detailsError}
+                            </div>
+                        )}
+                        {details && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <ReadOnlyField label="Backend Task ID" value={details.taskId != null ? String(details.taskId) : "—"} />
+                                <ReadOnlyField label="Tracking Code" value={details.taskTrackingCode ? String(details.taskTrackingCode) : "—"} />
+                                <ReadOnlyField label="Warehouse ID" value={details.warehouseId != null ? String(details.warehouseId) : "—"} />
+                                <ReadOnlyField label="Priority Level" value={formatPriorityLevel(details.priorityLevel)} />
+                                <ReadOnlyField label="Pickup Station ID" value={details.pickupStationId != null ? String(details.pickupStationId) : "—"} />
+                                <ReadOnlyField label="Delivery Station ID" value={details.deliveryStationId != null ? String(details.deliveryStationId) : "—"} />
+                                <ReadOnlyField label="Pickup Name" value={details.pickupStationName ? String(details.pickupStationName) : "—"} />
+                                <ReadOnlyField label="Delivery Name" value={details.deliveryStationName ? String(details.deliveryStationName) : "—"} />
+                                <ReadOnlyField label="Package Code" value={details.packageCode ? String(details.packageCode) : "—"} />
+                                <ReadOnlyField label="Item Description" value={details.itemDescription ? String(details.itemDescription) : "—"} />
+                                <ReadOnlyField label="Payload (kg)" value={details.payloadWeightKg != null ? String(details.payloadWeightKg) : "—"} />
+                                <ReadOnlyField label="Scheduled Time" value={details.scheduledTime ? String(details.scheduledTime) : "—"} />
+                                <ReadOnlyField label="Created At" value={details.createdAt ? String(details.createdAt) : "—"} />
+                                <ReadOnlyField label="Assigned Robot ID" value={details.assignedRobotId ? String(details.assignedRobotId) : details.robotId ? String(details.robotId) : "—"} />
+                                <ReadOnlyField label="Task Status" value={details.taskStatus ? String(details.taskStatus) : "—"} />
+                            </div>
+                        )}
+                    </div>
+                    <div className="px-6 py-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                        <button
+                            type="button"
+                            onClick={() => { setDetailsTarget(null); setDetails(null); setDetailsError(""); }}
+                            className="w-full py-2.5 rounded-lg text-[13px] font-semibold"
+                            style={{
+                                background: "var(--surface-3)",
+                                color: "var(--text-muted)",
+                                border: "1px solid var(--border-medium)",
+                            }}
+                        >
+                            Close
+                        </button>
+                    </div>
                 </ModalShell>
             )}
 
@@ -575,6 +850,7 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
     const [selected, setSelected] = useState("");
     const [retry, setRetry] = useState(0);
     const id = useId();
+    const eligibilityError = error.toLowerCase().includes("payload safety limit") || error.toLowerCase().includes("limit has not been configured");
     useEffect(() => {
         let active = true;
         setLoading(true);
@@ -616,8 +892,22 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
                 }
             }}>
                 <p className="text-[12px]" style={{ color: "var(--text-faint)" }}>Only robots eligible for this task are shown. Confirming sends an assignment to the backend.</p>
-                {error && <p role="alert" className="text-[12px] text-red-400">{error}</p>}
-                {loading ? <p role="status">Loading available robots...</p> : (
+                {error && (
+                    <div
+                        role="alert"
+                        className="rounded-lg px-3 py-2 text-[12px]"
+                        style={{
+                            background: "rgba(239,68,68,0.12)",
+                            border: "1px solid rgba(239,68,68,0.35)",
+                            color: "#f87171",
+                        }}
+                    >
+                        {eligibilityError
+                            ? "Task không thể assign: vượt quá giới hạn tải trọng an toàn đã xác minh hoặc hệ thống chưa cấu hình giới hạn. Hãy kiểm tra payload/setting robot."
+                            : error}
+                    </div>
+                )}
+                {loading ? <p role="status">Loading available robots...</p> : !error ? (
                     <div>
                         <label htmlFor={id} className="block text-[12px] mb-2">Available Robot</label>
                         <select id={id} autoFocus required value={selected} disabled={busy} onChange={event => setSelected(event.target.value)}
@@ -630,13 +920,13 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
                                 </option>
                             ))}
                         </select>
-                        {!error && !robots.length && <p className="mt-2 text-[12px]">No available robots for this task.</p>}
+                        {!robots.length && <p className="mt-2 text-[12px]">No available robots for this task.</p>}
                     </div>
-                )}
+                ) : null}
                 <div className="flex flex-wrap gap-3">
                     <button type="button" disabled={busy || loading} onClick={() => setRetry(value => value + 1)} className="rounded-lg border px-3 py-2 disabled:opacity-50">Reload Robots</button>
                     <button type="button" disabled={busy} onClick={onClose} className="rounded-lg border px-3 py-2 disabled:opacity-50">Cancel</button>
-                    <button type="submit" disabled={busy || loading || !selected} className="rounded-lg bg-cyan-400 text-slate-950 font-bold px-3 py-2 disabled:opacity-50">
+                    <button type="submit" disabled={busy || loading || !!error || !selected} className="rounded-lg bg-cyan-400 text-slate-950 font-bold px-3 py-2 disabled:opacity-50">
                         {busy ? "Assigning..." : "Confirm Assignment"}
                     </button>
                 </div>
@@ -716,8 +1006,8 @@ function ModalShell({
 }
 
 function InputField({
-    label, value, onChange, placeholder, autoFocus = false,
-}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; autoFocus?: boolean }) {
+    label, value, onChange, placeholder, autoFocus = false, type = "text", inputMode,
+}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; autoFocus?: boolean; type?: React.HTMLInputTypeAttribute; inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"] }) {
     const id = useId();
     return (
         <div>
@@ -731,11 +1021,42 @@ function InputField({
             <input
                 id={id}
                 autoFocus={autoFocus}
-                type="text"
+                type={type}
+                inputMode={inputMode}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
                 className="w-full px-3 py-2.5 rounded-lg text-[13px] focus-visible:outline-2 focus-visible:outline-cyan-400 transition-colors"
+                style={{
+                    background: "var(--surface-3)",
+                    border: "1px solid var(--border-medium)",
+                    color: "var(--text-primary)",
+                }}
+            />
+        </div>
+    );
+}
+
+function TextAreaField({
+    label, value, onChange, placeholder,
+}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+    const id = useId();
+    return (
+        <div>
+            <label
+                htmlFor={id}
+                className="block font-mono text-[10px] font-bold uppercase tracking-wider mb-1.5"
+                style={{ color: "var(--text-faint)" }}
+            >
+                {label}
+            </label>
+            <textarea
+                id={id}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                rows={3}
+                className="w-full px-3 py-2.5 rounded-lg text-[13px] focus-visible:outline-2 focus-visible:outline-cyan-400 transition-colors resize-none"
                 style={{
                     background: "var(--surface-3)",
                     border: "1px solid var(--border-medium)",
