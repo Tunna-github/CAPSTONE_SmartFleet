@@ -10,8 +10,8 @@ namespace SmartFleetBE.Services;
 
 public sealed class TransportTaskService : ITransportTaskService
 {
-    private readonly ITransportTaskRepository _transportTaskRepository;
-    private readonly AutoDispatchService _autoDispatchService;
+    private readonly ITransportTaskRepository _repository;
+    private readonly AutoDispatchService _autoDispatch;
     private readonly IConfiguration _configuration;
     private readonly ILogger<TransportTaskService> _logger;
 
@@ -21,8 +21,8 @@ public sealed class TransportTaskService : ITransportTaskService
         IConfiguration configuration,
         ILogger<TransportTaskService> logger)
     {
-        _transportTaskRepository = transportTaskRepository;
-        _autoDispatchService = autoDispatchService;
+        _repository = transportTaskRepository;
+        _autoDispatch = autoDispatchService;
         _configuration = configuration;
         _logger = logger;
     }
@@ -32,10 +32,10 @@ public sealed class TransportTaskService : ITransportTaskService
     // =====================================================
 
     public async Task<IReadOnlyCollection<TransportTaskResponse>>
-        GetAllAsync(CancellationToken cancellationToken = default)
+        GetAllAsync(
+            CancellationToken cancellationToken = default)
     {
-        var tasks = await _transportTaskRepository
-            .GetAllAsync(cancellationToken);
+        var tasks = await _repository.GetAllAsync(cancellationToken);
 
         return tasks.Select(MapToResponse).ToArray();
     }
@@ -48,14 +48,14 @@ public sealed class TransportTaskService : ITransportTaskService
         long taskId,
         CancellationToken cancellationToken = default)
     {
-        var task = await _transportTaskRepository
-            .GetByIdAsync(taskId, cancellationToken);
+        var task = await _repository.GetByIdAsync(
+            taskId, cancellationToken);
 
         return task is null ? null : MapToResponse(task);
     }
 
     // =====================================================
-    // CREATE TASK WITH SELECTED DISPATCH MODE
+    // CREATE TASK WITH AUTO / MANUAL / SCHEDULED MODE
     // =====================================================
 
     public async Task<
@@ -84,6 +84,8 @@ public sealed class TransportTaskService : ITransportTaskService
                     "DispatchMode must be AUTO or MANUAL.");
         }
 
+        // STEP 2: VALIDATE WEIGHT
+
         if (request.PayloadWeightKg is not > 0m)
         {
             return TransportTaskServiceResult<TransportTaskResponse>
@@ -91,10 +93,7 @@ public sealed class TransportTaskService : ITransportTaskService
                     "PayloadWeightKg must be greater than zero.");
         }
 
-        // STEP 2: CHECK AUTO GLOBAL SAFETY SETTINGS
-        //
-        // Global EnableOnCreate is NOT used to override
-        // MANUAL. It only allows or disables AUTO requests.
+        // STEP 3: CHECK AUTO DISPATCH SETTINGS
 
         if (isAuto)
         {
@@ -103,7 +102,7 @@ public sealed class TransportTaskService : ITransportTaskService
             {
                 return TransportTaskServiceResult<TransportTaskResponse>
                     .ValidationFailed(
-                        "AUTO dispatch is disabled in backend configuration.");
+                        "AUTO dispatch is disabled.");
             }
 
             if (!_configuration.GetValue<bool>(
@@ -111,21 +110,22 @@ public sealed class TransportTaskService : ITransportTaskService
             {
                 return TransportTaskServiceResult<TransportTaskResponse>
                     .ValidationFailed(
-                        "AUTO dispatch requires Mqtt:EnableWorkers=true.");
+                        "AUTO requires Mqtt:EnableWorkers=true.");
             }
 
-            decimal safetyLimit = _configuration.GetValue<decimal>(
-                "AutoDispatch:VerifiedPayloadLimitKg");
+            var verifiedLimitKg =
+                _configuration.GetValue<decimal>(
+                    "AutoDispatch:VerifiedPayloadLimitKg");
 
-            if (safetyLimit <= 0m)
+            if (verifiedLimitKg <= 0m)
             {
                 return TransportTaskServiceResult<TransportTaskResponse>
                     .ValidationFailed(
-                        "Configure a physically verified AutoDispatch:VerifiedPayloadLimitKg.");
+                        "Configure the verified robot payload limit.");
             }
         }
 
-        // STEP 3: VALIDATE WAREHOUSE AND STATIONS
+        // STEP 4: VALIDATE WAREHOUSE AND STATIONS
 
         var validationError = await ValidateLocationAsync(
             request.WarehouseId,
@@ -139,100 +139,155 @@ public sealed class TransportTaskService : ITransportTaskService
                 .ValidationFailed(validationError);
         }
 
-        // STEP 4: CREATE TASK IN QUEUED STATE
+        // STEP 5: CREATE TASK
 
         var now = DateTime.UtcNow;
 
         var task = new TransportTask
         {
             TaskTrackingCode = GenerateTrackingCode(),
+
             WarehouseId = request.WarehouseId,
             PickupStationId = request.PickupStationId,
             DeliveryStationId = request.DeliveryStationId,
+
             PriorityLevel = request.PriorityLevel,
+
             TaskStatus = TransportTaskStatuses.Queued,
+
+            // NEW: persisted to the database.
+            DispatchMode = request.DispatchMode,
+
             QueuedAt = now,
-            PackageCode = NormalizeOptional(request.PackageCode),
-            ItemDescription = NormalizeOptional(request.ItemDescription),
+
+            PackageCode =
+                NormalizeOptional(request.PackageCode),
+
+            ItemDescription =
+                NormalizeOptional(request.ItemDescription),
+
             PayloadWeightKg = request.PayloadWeightKg,
+
             CreatedBy = createdByUserId,
             CreatedAt = now,
+
+            // Frontend already sends UTC ISO 8601.
             ScheduledTime = request.ScheduledTime
         };
 
-        await _transportTaskRepository.AddAsync(
+        await _repository.AddAsync(
             task, cancellationToken);
 
-        // STEP 5: SAVE INITIAL TASK HISTORY
+        // STEP 6: CREATE STATUS HISTORY
 
-        await _transportTaskRepository.AddStatusHistoryAsync(
+        await _repository.AddStatusHistoryAsync(
             new TaskStatusHistory
             {
                 Task = task,
+
                 PreviousStatus = null,
                 NewStatus = TransportTaskStatuses.Queued,
+
                 ChangedBy = createdByUserId,
+
                 Reason = isAuto
-                    ? "Transport task created with AUTO dispatch requested."
-                    : "Transport task created for MANUAL assignment.",
+                    ? "Task created with AUTO dispatch mode."
+                    : "Task created with MANUAL dispatch mode.",
+
                 ChangedAt = now
             },
             cancellationToken);
 
-        // Save task before attempting assignment.
-        await _transportTaskRepository.SaveChangesAsync(
+        // STEP 7: COMMIT TASK FIRST
+        //
+        // Even if no robot is eligible, the Task must
+        // remain in the database as QUEUED.
+
+        await _repository.SaveChangesAsync(
             cancellationToken);
 
-        // STEP 6: EXECUTE THE SELECTED MODE
+        _logger.LogInformation(
+            "Task {TaskId} created: Mode={Mode}, " +
+            "ScheduledTime={ScheduledTime}.",
+            task.TaskId,
+            task.DispatchMode,
+            task.ScheduledTime);
+
+        // STEP 8: DISPATCH DECISION
 
         if (isAuto)
         {
-            try
+            var currentUtc = DateTime.UtcNow;
+
+            bool scheduledForFuture =
+                task.ScheduledTime.HasValue &&
+                task.ScheduledTime.Value > currentUtc;
+
+            if (scheduledForFuture)
             {
-                bool assigned =
-                    await _autoDispatchService.TryAssignAsync(
-                        task.TaskId,
-                        cancellationToken);
+                // The worker will automatically pick
+                // this Task up when ScheduledTime arrives.
 
                 _logger.LogInformation(
-                    "Task {TaskId}: AUTO dispatch result = {Result}.",
+                    "Task {TaskId} is scheduled for {ScheduledTime}. " +
+                    "Waiting for ScheduledAutoDispatchWorker.",
                     task.TaskId,
-                    assigned ? "ASSIGNED" : "QUEUED");
+                    task.ScheduledTime);
             }
-            catch (OperationCanceledException)
-                when (cancellationToken.IsCancellationRequested)
+            else
             {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                // Task creation is already committed.
-                // Assignment uses a separate transaction.
-                // Inspect DB after an uncertain commit error.
-                _logger.LogError(
-                    exception,
-                    "AUTO dispatch failed for Task {TaskId}; inspect database state.",
-                    task.TaskId);
+                // No future schedule: try immediately.
+                // If no robot is eligible, worker will
+                // retry while the Task remains QUEUED.
+
+                try
+                {
+                    bool assigned =
+                        await _autoDispatch.TryAssignAsync(
+                            task.TaskId,
+                            cancellationToken);
+
+                    _logger.LogInformation(
+                        "Immediate AUTO dispatch Task {TaskId}: {Result}.",
+                        task.TaskId,
+                        assigned ? "ASSIGNED" : "QUEUED");
+                }
+                catch (OperationCanceledException)
+                    when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Immediate AUTO dispatch failed for " +
+                        "Task {TaskId}. Worker can retry.",
+                        task.TaskId);
+                }
             }
         }
         else
         {
+            // MANUAL Tasks are never automatically assigned.
+
             _logger.LogInformation(
-                "Task {TaskId} created in MANUAL mode; waiting for operator.",
+                "Task {TaskId} created as MANUAL. " +
+                "Waiting for Warehouse Operator.",
                 task.TaskId);
         }
 
-        // STEP 7: RETURN CURRENT TASK STATUS
+        // STEP 9: RETURN LATEST TASK STATUS
 
-        var createdTask = await _transportTaskRepository
-            .GetByIdAsync(task.TaskId, cancellationToken);
+        var createdTask = await _repository.GetByIdAsync(
+            task.TaskId, cancellationToken);
 
         return TransportTaskServiceResult<TransportTaskResponse>
             .Success(MapToResponse(createdTask ?? task));
     }
 
     // =====================================================
-    // UPDATE TASK - PRESERVE EXISTING MAIN BEHAVIOR
+    // UPDATE TASK: KEEP THE CURRENT CRUD POLICY
     // =====================================================
 
     public async Task<
@@ -242,8 +297,8 @@ public sealed class TransportTaskService : ITransportTaskService
             UpdateTransportTaskRequest request,
             CancellationToken cancellationToken = default)
     {
-        var task = await _transportTaskRepository
-            .GetByIdForUpdateAsync(taskId, cancellationToken);
+        var task = await _repository.GetByIdForUpdateAsync(
+            taskId, cancellationToken);
 
         if (task is null)
         {
@@ -260,9 +315,8 @@ public sealed class TransportTaskService : ITransportTaskService
             return TransportTaskServiceResult<TransportTaskResponse>
                 .Conflict(
                     "Only a PENDING task can be edited. " +
-                    "Once it enters the dispatch lifecycle, " +
-                    "its route and package data must not be " +
-                    "changed through CRUD.");
+                    "Tasks in the dispatch lifecycle require " +
+                    "the appropriate status workflow.");
         }
 
         var validationError = await ValidateLocationAsync(
@@ -281,23 +335,27 @@ public sealed class TransportTaskService : ITransportTaskService
         task.PickupStationId = request.PickupStationId;
         task.DeliveryStationId = request.DeliveryStationId;
         task.PriorityLevel = request.PriorityLevel;
-        task.PackageCode = NormalizeOptional(request.PackageCode);
-        task.ItemDescription = NormalizeOptional(request.ItemDescription);
+
+        task.PackageCode =
+            NormalizeOptional(request.PackageCode);
+
+        task.ItemDescription =
+            NormalizeOptional(request.ItemDescription);
+
         task.PayloadWeightKg = request.PayloadWeightKg;
         task.ScheduledTime = request.ScheduledTime;
 
-        await _transportTaskRepository.SaveChangesAsync(
-            cancellationToken);
+        await _repository.SaveChangesAsync(cancellationToken);
 
-        var updatedTask = await _transportTaskRepository
-            .GetByIdAsync(taskId, cancellationToken);
+        var updated = await _repository.GetByIdAsync(
+            taskId, cancellationToken);
 
         return TransportTaskServiceResult<TransportTaskResponse>
-            .Success(MapToResponse(updatedTask ?? task));
+            .Success(MapToResponse(updated ?? task));
     }
 
     // =====================================================
-    // DELETE TASK - PRESERVE EXISTING MAIN BEHAVIOR
+    // DELETE TASK: KEEP THE CURRENT CRUD POLICY
     // =====================================================
 
     public async Task<TransportTaskServiceResult<bool>>
@@ -305,8 +363,8 @@ public sealed class TransportTaskService : ITransportTaskService
             long taskId,
             CancellationToken cancellationToken = default)
     {
-        var task = await _transportTaskRepository
-            .GetByIdForUpdateAsync(taskId, cancellationToken);
+        var task = await _repository.GetByIdForUpdateAsync(
+            taskId, cancellationToken);
 
         if (task is null)
         {
@@ -323,31 +381,31 @@ public sealed class TransportTaskService : ITransportTaskService
             return TransportTaskServiceResult<bool>
                 .Conflict(
                     "Only a PENDING task can be deleted. " +
-                    "Tasks that entered the dispatch lifecycle " +
-                    "must be cancelled through the task-status workflow.");
+                    "Tasks in the dispatch lifecycle must be " +
+                    "cancelled through the status workflow.");
         }
 
-        if (await _transportTaskRepository
-                .HasOperationalDependenciesAsync(
-                    taskId, cancellationToken))
+        if (await _repository.HasOperationalDependenciesAsync(
+                taskId, cancellationToken))
         {
             return TransportTaskServiceResult<bool>
                 .Conflict(
                     "This task has operational records " +
-                    "and cannot be safely deleted.");
+                    "and cannot be deleted safely.");
         }
 
-        await _transportTaskRepository.DeleteAsync(
+        await _repository.DeleteAsync(
             task, cancellationToken);
 
-        await _transportTaskRepository.SaveChangesAsync(
+        await _repository.SaveChangesAsync(
             cancellationToken);
 
-        return TransportTaskServiceResult<bool>.Success(true);
+        return TransportTaskServiceResult<bool>
+            .Success(true);
     }
 
     // =====================================================
-    // LOCATION VALIDATION
+    // WAREHOUSE AND STATION VALIDATION
     // =====================================================
 
     private async Task<string?> ValidateLocationAsync(
@@ -358,41 +416,38 @@ public sealed class TransportTaskService : ITransportTaskService
     {
         if (pickupStationId == deliveryStationId)
         {
-            return "Pickup station and delivery station must be different.";
+            return "Pickup station and delivery station " +
+                   "must be different.";
         }
 
-        if (!await _transportTaskRepository
-                .IsWarehouseActiveAsync(
-                    warehouseId, cancellationToken))
+        if (!await _repository.IsWarehouseActiveAsync(
+                warehouseId, cancellationToken))
         {
-            return $"Warehouse {warehouseId} does not exist or is inactive.";
+            return $"Warehouse {warehouseId} does not exist " +
+                   "or is inactive.";
         }
 
-        if (!await _transportTaskRepository
-                .IsStationActiveInWarehouseAsync(
-                    pickupStationId,
-                    warehouseId,
-                    cancellationToken))
+        if (!await _repository.IsStationActiveInWarehouseAsync(
+                pickupStationId, warehouseId, cancellationToken))
         {
-            return $"Pickup station {pickupStationId} does not exist, " +
-                   $"is inactive, or does not belong to warehouse {warehouseId}.";
+            return $"Pickup station {pickupStationId} does not " +
+                   $"exist, is inactive, or does not belong " +
+                   $"to warehouse {warehouseId}.";
         }
 
-        if (!await _transportTaskRepository
-                .IsStationActiveInWarehouseAsync(
-                    deliveryStationId,
-                    warehouseId,
-                    cancellationToken))
+        if (!await _repository.IsStationActiveInWarehouseAsync(
+                deliveryStationId, warehouseId, cancellationToken))
         {
-            return $"Delivery station {deliveryStationId} does not exist, " +
-                   $"is inactive, or does not belong to warehouse {warehouseId}.";
+            return $"Delivery station {deliveryStationId} does not " +
+                   $"exist, is inactive, or does not belong " +
+                   $"to warehouse {warehouseId}.";
         }
 
         return null;
     }
 
     // =====================================================
-    // RESPONSE MAPPING
+    // MAP TO RESPONSE
     // =====================================================
 
     private static TransportTaskResponse MapToResponse(
@@ -402,20 +457,26 @@ public sealed class TransportTaskService : ITransportTaskService
         {
             TaskId = task.TaskId,
             TaskTrackingCode = task.TaskTrackingCode,
+
             WarehouseId = task.WarehouseId,
             WarehouseName =
                 task.Warehouse?.WarehouseName ?? string.Empty,
+
             PickupStationId = task.PickupStationId,
             PickupStationName =
                 task.PickupStation?.StationName ?? string.Empty,
+
             DeliveryStationId = task.DeliveryStationId,
             DeliveryStationName =
                 task.DeliveryStation?.StationName ?? string.Empty,
+
             PriorityLevel = task.PriorityLevel,
             TaskStatus = task.TaskStatus,
+
             PackageCode = task.PackageCode,
             ItemDescription = task.ItemDescription,
             PayloadWeightKg = task.PayloadWeightKg,
+
             CreatedBy = task.CreatedBy,
             CreatedAt = task.CreatedAt,
             ScheduledTime = task.ScheduledTime,
@@ -424,6 +485,7 @@ public sealed class TransportTaskService : ITransportTaskService
             StartedAt = task.StartedAt,
             CompletedAt = task.CompletedAt,
             CancelledAt = task.CancelledAt,
+
             FailureReason = task.FailureReason,
             CancellationReason = task.CancellationReason
         };
@@ -431,8 +493,10 @@ public sealed class TransportTaskService : ITransportTaskService
 
     private static string GenerateTrackingCode()
     {
-        return $"TASK-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..36]
-            .ToUpperInvariant();
+        return (
+            $"TASK-{DateTime.UtcNow:yyyyMMddHHmmss}-" +
+            $"{Guid.NewGuid():N}"
+        )[..36].ToUpperInvariant();
     }
 
     private static string? NormalizeOptional(string? value)

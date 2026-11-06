@@ -1,5 +1,8 @@
+
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SmartFleetBE.Model;
 
@@ -19,6 +22,15 @@ public partial class TransportTask
 
     public string TaskStatus { get; set; } = null!;
 
+    // NEW:
+    // AUTO   -> automatic assignment (possibly scheduled)
+    // MANUAL -> operator assigns a robot manually
+    //
+    // The database also defaults existing records to MANUAL.
+    [Column("DispatchMode")]
+    [StringLength(10)]
+    public string DispatchMode { get; set; } = "MANUAL";
+
     public string? PackageCode { get; set; }
 
     public string? ItemDescription { get; set; }
@@ -27,14 +39,19 @@ public partial class TransportTask
 
     public int CreatedBy { get; set; }
 
+    // Actual time the Task was created.
     public DateTime CreatedAt { get; set; }
 
+    // Earliest time an AUTO task may be dispatched.
+    // Stored as UTC in PostgreSQL.
     public DateTime? ScheduledTime { get; set; }
 
     public DateTime? QueuedAt { get; set; }
 
+    // Actual time the Task was assigned to a robot.
     public DateTime? AssignedAt { get; set; }
 
+    // Actual time execution started.
     public DateTime? StartedAt { get; set; }
 
     public DateTime? CompletedAt { get; set; }
@@ -49,15 +66,19 @@ public partial class TransportTask
 
     public virtual Station DeliveryStation { get; set; } = null!;
 
-    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public virtual ICollection<Notification> Notifications
+    { get; set; } = new List<Notification>();
 
     public virtual Station PickupStation { get; set; } = null!;
 
-    public virtual ICollection<RobotIncident> RobotIncidents { get; set; } = new List<RobotIncident>();
+    public virtual ICollection<RobotIncident> RobotIncidents
+    { get; set; } = new List<RobotIncident>();
 
-    public virtual ICollection<TaskAssignment> TaskAssignments { get; set; } = new List<TaskAssignment>();
+    public virtual ICollection<TaskAssignment> TaskAssignments
+    { get; set; } = new List<TaskAssignment>();
 
-    public virtual ICollection<TaskStatusHistory> TaskStatusHistories { get; set; } = new List<TaskStatusHistory>();
+    public virtual ICollection<TaskStatusHistory> TaskStatusHistories
+    { get; set; } = new List<TaskStatusHistory>();
 
     public virtual Warehouse Warehouse { get; set; } = null!;
 }
