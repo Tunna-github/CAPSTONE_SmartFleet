@@ -34,6 +34,13 @@ public sealed class FleetRealtimePublisher(
         CancellationToken ct = default)
         => hub.Clients.All.SendAsync("RobotBatteryUpdated", battery, ct);
 
+    // Lightweight live LiDAR update: no database writes or mission ACK dependency.
+    public Task LidarUpdatedAsync(int robotId, string robotCode,
+        string status, decimal? distanceCm, DateTime receivedAt,
+        CancellationToken ct = default)
+        => hub.Clients.All.SendAsync("RobotLidarUpdated",
+            new { robotId, robotCode, status, distanceCm, receivedAt }, ct);
+
     public Task TelemetryUpdatedAsync(string robotCode,
         RobotTelemetryEvent telemetry, DateTime receivedAt,
         CancellationToken ct = default)

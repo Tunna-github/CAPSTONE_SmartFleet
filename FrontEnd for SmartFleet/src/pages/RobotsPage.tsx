@@ -1,6 +1,6 @@
 ﻿import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useFleetRealtime, type RobotBatteryUpdated, type RobotUpdated } from "../hooks/useFleetRealtime";
+import { useFleetRealtime, type RobotBatteryUpdated, type RobotUpdated, type RobotLidarUpdated } from "../hooks/useFleetRealtime";
 import {
     getRobots,
     changeRobotStatus,
@@ -40,6 +40,8 @@ export function RobotsPage() {
     const canManage = role === "maintenance" || role === "admin";
 
     const [robots, setRobots] = useState<RobotInfo[]>([]);
+    const [lidarByRobot, setLidarByRobot] = useState<Record<number, RobotLidarUpdated>>({});
+    const [nowMs, setNowMs] = useState(Date.now());
     const [loading, setLoading] = useState(true);
     const [pendingAction, setPendingAction] = useState<string | null>(null);
     const [error, setError] = useState("");
@@ -82,7 +84,17 @@ export function RobotsPage() {
         ));
     }, []);
 
-    const realtimeStatus = useFleetRealtime(onBattery, onRobot, loadRobots);
+    const onLidar = useCallback((event: RobotLidarUpdated) => {
+        setLidarByRobot(previous => ({ ...previous, [event.robotId]: event }));
+    }, []);
+
+    // Stale sensor data must not remain displayed as CLEAR indefinitely.
+    useEffect(() => {
+        const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
+
+    const realtimeStatus = useFleetRealtime(onBattery, onRobot, loadRobots, onLidar);
 
     useEffect(() => {
         let mounted = true;
@@ -239,6 +251,14 @@ export function RobotsPage() {
                             robot.operationalStatus === "CHARGING";
                         const disabled = blocked || pendingAction !== null;
                         const color = getStatusColor(robot.operationalStatus);
+                        const lidar = lidarByRobot[robotId];
+                        const lidarFresh = realtimeStatus === "CONNECTED" && lidar &&
+                            nowMs - new Date(lidar.receivedAt).getTime() <= 3500 &&
+                            nowMs >= new Date(lidar.receivedAt).getTime() - 1500;
+                        const lidarStatus = lidarFresh ? lidar.status : "NO DATA";
+                        const lidarColor = lidarStatus === "CRITICAL" ? "#ef4444"
+                            : lidarStatus === "DETECTED" ? "#f59e0b"
+                            : lidarStatus === "CLEAR" ? "#22c55e" : "#94a3b8";
 
                         return (
                             <section
@@ -283,6 +303,17 @@ export function RobotsPage() {
                                             </p>
                                         </div>
                                     ))}
+                                </div>
+
+                                <div className="px-5 py-3 flex items-center justify-between gap-3"
+                                    style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                                    <span className="text-[11px] font-mono font-semibold">Front LiDAR (100°)</span>
+                                    <span className="text-[12px] font-bold font-mono"
+                                        style={{ color: lidarColor }}>
+                                        {lidarStatus === "NO DATA" ? "NO DATA / STALE"
+                                            : `obstacle: ${lidarStatus}${lidarFresh && lidar.distanceCm !== null
+                                                ? ` | ${lidar.distanceCm.toFixed(1)} cm` : ""}`}
+                                    </span>
                                 </div>
 
                                 <div className="p-5 space-y-6 flex-1 flex flex-col">

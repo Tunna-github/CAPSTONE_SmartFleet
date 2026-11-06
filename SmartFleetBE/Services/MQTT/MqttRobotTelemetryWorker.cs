@@ -37,6 +37,9 @@ public sealed class MqttRobotTelemetryWorker(
                             .WithTopicFilter(f => f
                                 .WithTopic("smartfleet/robot/+/telemetry")
                                 .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce))
+                            .WithTopicFilter(f => f
+                                .WithTopic("smartfleet/robot/+/lidar")
+                                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce))
                             .Build(), stoppingToken);
                     if (result.Items.Any(i => (int)i.ResultCode >= 128))
                         throw new IOException("MQTT telemetry subscription rejected.");
@@ -74,6 +77,12 @@ public sealed class MqttRobotTelemetryWorker(
         try
         {
             var topic = args.ApplicationMessage.Topic.Split('/');
+            if (topic.Length == 4 && topic[0] == "smartfleet" &&
+                topic[1] == "robot" && topic[3] == "lidar")
+            {
+                await ReceiveLidarAsync(topic[2], args, ct);
+                return;
+            }
             if (topic.Length != 4 || topic[0] != "smartfleet" ||
                 topic[1] != "robot" || topic[3] != "telemetry" ||
                 string.IsNullOrWhiteSpace(topic[2]) ||
@@ -151,6 +160,54 @@ public sealed class MqttRobotTelemetryWorker(
         {
             logger.LogError(ex, "Telemetry processing failed.");
         }
+    }
+
+    private async Task ReceiveLidarAsync(string robotCode,
+        MqttApplicationMessageReceivedEventArgs args, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(robotCode) ||
+            args.ApplicationMessage.Payload.Length > 1024)
+            return;
+
+        RobotLidarEvent? lidar;
+        try
+        {
+            lidar = JsonSerializer.Deserialize<RobotLidarEvent>(
+                args.ApplicationMessage.ConvertPayloadToString(), JsonOptions);
+        }
+        catch (JsonException)
+        {
+            logger.LogWarning("Malformed LiDAR payload from {RobotCode}", robotCode);
+            return;
+        }
+
+        if (lidar == null) return;
+        var status = lidar.Status?.Trim().ToUpperInvariant();
+        if (status is not ("CLEAR" or "DETECTED" or "CRITICAL" or "NO_SCAN_DATA"))
+            return;
+
+        // Reject inconsistent thresholds, NaN/overflow and impossible measurements.
+        var distance = lidar.DistanceCm;
+        bool valid = status switch
+        {
+            "CLEAR" or "NO_SCAN_DATA" => distance == null,
+            "DETECTED" => distance is > 25m and <= 50m,
+            "CRITICAL" => distance is >= 0m and <= 25m,
+            _ => false
+        };
+        if (!valid) return;
+
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
+        var robot = await db.Robots.AsNoTracking()
+            .Where(r => r.RobotCode == robotCode && r.IsActive)
+            .Select(r => new { r.RobotId, r.RobotCode })
+            .SingleOrDefaultAsync(ct);
+        if (robot == null) return;
+
+        // Live sensor display only; does not mark robot online or touch DB rows.
+        await realtime.LidarUpdatedAsync(robot.RobotId, robot.RobotCode,
+            status, distance, DateTime.UtcNow, ct);
     }
 
     private static bool Range(decimal? v, decimal min, decimal max)

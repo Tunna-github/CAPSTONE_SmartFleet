@@ -28,6 +28,14 @@ export interface RobotUpdated {
     isActive?: boolean;
 }
 
+export interface RobotLidarUpdated {
+    robotId: number;
+    robotCode: string;
+    status: "CLEAR" | "DETECTED" | "CRITICAL" | "NO_SCAN_DATA";
+    distanceCm: number | null;
+    receivedAt: string;
+}
+
 export type FleetConnectionStatus =
     | "CONNECTING"
     | "CONNECTED"
@@ -39,6 +47,7 @@ export function useFleetRealtime(
     onBattery: (event: RobotBatteryUpdated) => void,
     onRobot: (event: RobotUpdated) => void,
     onReconnect: () => Promise<void>,
+    onLidar?: (event: RobotLidarUpdated) => void,
 ): FleetConnectionStatus {
     const [status, setStatus] = useState<FleetConnectionStatus>("CONNECTING");
 
@@ -60,6 +69,12 @@ export function useFleetRealtime(
         connection.on("RobotBatteryUpdated", (event: RobotBatteryUpdated) => {
             if (!disposed && event && typeof event.robotId === "number") {
                 onBattery(event);
+            }
+        });
+
+        connection.on("RobotLidarUpdated", (event: RobotLidarUpdated) => {
+            if (!disposed && event && typeof event.robotId === "number") {
+                onLidar?.(event);
             }
         });
 
@@ -113,7 +128,7 @@ export function useFleetRealtime(
             if (retryTimer !== undefined) clearTimeout(retryTimer);
             void connection.stop();
         };
-    }, [onBattery, onRobot, onReconnect]);
+    }, [onBattery, onRobot, onReconnect, onLidar]);
 
     return status;
 }
