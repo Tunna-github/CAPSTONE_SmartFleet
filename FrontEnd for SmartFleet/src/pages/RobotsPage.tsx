@@ -1,6 +1,7 @@
-﻿
+
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useFleetRealtime, type RobotBatteryUpdated, type RobotUpdated } from "../hooks/useFleetRealtime";
 import {
     getRobots,
     changeRobotStatus,
@@ -52,6 +53,37 @@ export function RobotsPage() {
         const data = await getRobots();
         setRobots(data);
     }, []);
+
+    // MQTT -> BE -> SignalR -> React state. No GET polling is required.
+    const onBattery = useCallback((battery: RobotBatteryUpdated) => {
+        setRobots(previous => previous.map(robot =>
+            robot.robotId === battery.robotId
+                ? {
+                    ...robot,
+                    batteryPercent: battery.batteryPercent,
+                    connectionStatus: battery.connectionStatus,
+                    operationalStatus: battery.operationalStatus as RobotInfo["operationalStatus"],
+                }
+                : robot
+        ));
+    }, []);
+
+    const onRobot = useCallback((updated: RobotUpdated) => {
+        setRobots(previous => previous.map(robot =>
+            robot.robotId === updated.robotId
+                ? {
+                    ...robot,
+                    batteryPercent: updated.batteryPercent !== undefined
+                        ? updated.batteryPercent : robot.batteryPercent,
+                    connectionStatus: updated.connectionStatus ?? robot.connectionStatus,
+                    operationalStatus: updated.operationalStatus ?? robot.operationalStatus,
+                    isActive: updated.isActive ?? robot.isActive,
+                }
+                : robot
+        ));
+    }, []);
+
+    const realtimeStatus = useFleetRealtime(onBattery, onRobot, loadRobots);
 
     useEffect(() => {
         let mounted = true;
@@ -152,6 +184,9 @@ export function RobotsPage() {
                     <h1 className="text-xl font-bold">Robot Fleet &amp; Maintenance</h1>
                     <p className="mt-1 text-xs" style={{ color: "var(--text-faint)" }}>
                         Robot status from SmartFleet Backend / Aiven PostgreSQL
+                    </p>
+                    <p className="mt-1 text-xs" style={{ color: realtimeStatus === "CONNECTED" ? "#22c55e" : "#f59e0b" }}>
+                        SignalR: {realtimeStatus} · Battery values update automatically
                     </p>
                 </div>
                 <button

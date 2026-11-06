@@ -16,13 +16,17 @@ public sealed class TaskDispatchService : ITaskDispatchService
 
     private readonly SmartFleetDbContext _db;
     private readonly IConfiguration _configuration;
+    private readonly FleetRealtimePublisher _realtime;
+    private readonly ILogger<TaskDispatchService> _logger;
 
     public TaskDispatchService(
         SmartFleetDbContext db,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<TaskDispatchService> logger)
     {
         _db = db;
         _configuration = configuration;
+        _logger = logger;
     }
 
     // =====================================================
@@ -83,6 +87,109 @@ public sealed class TaskDispatchService : ITaskDispatchService
                     "or the limit has not been configured.");
         }
 
+        _logger.LogInformation("Task {TaskId}: warehouseId={WarehouseId}, payloadKg={PayloadKg}", 
+            taskId, task.WarehouseId, weightKg);
+
+        // Get ALL robots first to see what's being filtered
+        var allRobots = await _db.Robots
+            .AsNoTracking()
+            .Where(r => r.WarehouseId == task.WarehouseId)
+            .ToListAsync(cancellationToken);
+
+        _logger.LogInformation("Task {TaskId}: Found {RobotCount} robots in warehouse", 
+            taskId, allRobots.Count);
+
+        foreach (var robot in allRobots)
+        {
+            string reason = "";
+            bool passes = true;
+
+            if (!robot.IsActive)
+            {
+                reason = "Not active";
+                passes = false;
+            }
+            else if (robot.RobotType != "PHYSICAL")
+            {
+                reason = $"Type={robot.RobotType} (not PHYSICAL)";
+                passes = false;
+            }
+            else if (robot.ConnectionStatus != "ONLINE")
+            {
+                reason = $"ConnectionStatus={robot.ConnectionStatus} (not ONLINE)";
+                passes = false;
+            }
+            else if (robot.OperationalStatus != "AVAILABLE")
+            {
+                reason = $"OperationalStatus={robot.OperationalStatus} (not AVAILABLE)";
+                passes = false;
+            }
+            else if (robot.BatteryPercent == null)
+            {
+                reason = "BatteryPercent is null";
+                passes = false;
+            }
+            else if (robot.BatteryPercent < MinimumBatteryPercent)
+            {
+                reason = $"Battery={robot.BatteryPercent}% (min {MinimumBatteryPercent}%)";
+                passes = false;
+            }
+            else if (robot.MaxPayloadWeightKg < weightKg)
+            {
+                reason = $"MaxPayload={robot.MaxPayloadWeightKg}kg (task needs {weightKg}kg)";
+                passes = false;
+            }
+
+            if (passes)
+            {
+                // Check for active assignments
+                var hasActiveAssignment = await _db.TaskAssignments.AnyAsync(a =>
+                    a.RobotId == robot.RobotId &&
+                    a.AssignmentStatus == "ACTIVE", cancellationToken);
+
+                if (hasActiveAssignment)
+                {
+                    reason = "Has ACTIVE assignment";
+                    passes = false;
+                }
+            }
+
+            if (passes)
+            {
+                // Check for maintenance
+                var hasMaintenance = await _db.RobotMaintenanceRecords.AnyAsync(m =>
+                    m.RobotId == robot.RobotId &&
+                    (m.MaintenanceStatus == "SCHEDULED" ||
+                     m.MaintenanceStatus == "IN_PROGRESS"), cancellationToken);
+
+                if (hasMaintenance)
+                {
+                    reason = "Has SCHEDULED or IN_PROGRESS maintenance";
+                    passes = false;
+                }
+            }
+
+            if (passes)
+            {
+                // Check for incidents
+                var hasIncident = await _db.RobotIncidents.AnyAsync(i =>
+                    i.RobotId == robot.RobotId &&
+                    !i.IsResolved &&
+                    (i.Severity == "HIGH" ||
+                     i.Severity == "CRITICAL"), cancellationToken);
+
+                if (hasIncident)
+                {
+                    reason = "Has unresolved HIGH/CRITICAL incident";
+                    passes = false;
+                }
+            }
+
+            var status = passes ? "✓ PASS" : "✗ FAIL";
+            _logger.LogInformation("Robot {RobotId} ({RobotCode}): {Status} - {Reason}", 
+                robot.RobotId, robot.RobotCode, status, reason);
+        }
+
         var robots = await _db.Robots
             .AsNoTracking()
             .Where(r =>
@@ -120,6 +227,9 @@ public sealed class TaskDispatchService : ITaskDispatchService
                 OperationalStatus = r.OperationalStatus
             })
             .ToListAsync(cancellationToken);
+
+        _logger.LogInformation("Task {TaskId}: Final result: {RobotCount} robots available", 
+            taskId, robots.Count);
 
         return TransportTaskServiceResult<
             IReadOnlyCollection<AvailableRobotResponse>>
