@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import { tokenStorage } from "../api/client";
 import type { RobotInfo } from "../api/modules/robots";
 
-/** Server event emitted after an MQTT battery sample has been saved in PostgreSQL. */
+/** Server event emitted after an MQTT battery sample is saved in PostgreSQL. */
 export interface RobotBatteryUpdated {
     robotId: number;
     robotCode: string;
@@ -17,7 +17,7 @@ export interface RobotBatteryUpdated {
     updatedAt: string | null;
 }
 
-/** Other robot changes (dispatch, maintenance, online/offline) from the same hub. */
+/** Robot changes (dispatch, maintenance, online/offline). */
 export interface RobotUpdated {
     robotId: number;
     robotCode: string;
@@ -28,6 +28,7 @@ export interface RobotUpdated {
     isActive?: boolean;
 }
 
+/** Front LiDAR scan result broadcast by the backend. */
 export interface RobotLidarUpdated {
     robotId: number;
     robotCode: string;
@@ -42,7 +43,13 @@ export type FleetConnectionStatus =
     | "RECONNECTING"
     | "DISCONNECTED";
 
-/** One SignalR connection while the component is mounted; no REST polling. */
+/**
+ * One SignalR connection per mounted component; no REST polling.
+ * - Receives battery, robot-status and front-LiDAR updates.
+ * - Retries initial connection and reconnects after disconnects.
+ * - Avoids stopping an in-progress negotiation during React StrictMode cleanup.
+ * - Uses the latest callbacks without restarting the connection each render.
+ */
 export function useFleetRealtime(
     onBattery: (event: RobotBatteryUpdated) => void,
     onRobot: (event: RobotUpdated) => void,
@@ -51,12 +58,17 @@ export function useFleetRealtime(
 ): FleetConnectionStatus {
     const [status, setStatus] = useState<FleetConnectionStatus>("CONNECTING");
 
+    const callbacksRef = useRef({ onBattery, onRobot, onReconnect, onLidar });
+    callbacksRef.current = { onBattery, onRobot, onReconnect, onLidar };
+
     useEffect(() => {
         let disposed = false;
         let retryTimer: ReturnType<typeof setTimeout> | undefined;
+        let startPromise: Promise<void> | null = null;
 
-        const baseUrl = (import.meta.env.VITE_API_URL || "https://localhost:7166")
-            .replace(/\/+$/, "");
+        const baseUrl = (
+            import.meta.env.VITE_API_URL || "https://localhost:7166"
+        ).replace(/\/+$/, "");
 
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(`${baseUrl}/hubs/robots`, {
@@ -68,21 +80,58 @@ export function useFleetRealtime(
 
         connection.on("RobotBatteryUpdated", (event: RobotBatteryUpdated) => {
             if (!disposed && event && typeof event.robotId === "number") {
-                onBattery(event);
-            }
-        });
-
-        connection.on("RobotLidarUpdated", (event: RobotLidarUpdated) => {
-            if (!disposed && event && typeof event.robotId === "number") {
-                onLidar?.(event);
+                callbacksRef.current.onBattery(event);
             }
         });
 
         connection.on("RobotUpdated", (event: RobotUpdated) => {
             if (!disposed && event && typeof event.robotId === "number") {
-                onRobot(event);
+                callbacksRef.current.onRobot(event);
             }
         });
+
+        // Important: retain LiDAR event handling when replacing the old hook.
+        connection.on("RobotLidarUpdated", (event: RobotLidarUpdated) => {
+            if (!disposed && event && typeof event.robotId === "number") {
+                callbacksRef.current.onLidar?.(event);
+            }
+        });
+
+        const scheduleRetry = () => {
+            if (disposed || retryTimer !== undefined) return;
+
+            retryTimer = setTimeout(() => {
+                retryTimer = undefined;
+                void start();
+            }, 5000);
+        };
+
+        async function start(): Promise<void> {
+            if (
+                disposed ||
+                startPromise !== null ||
+                connection.state !== signalR.HubConnectionState.Disconnected
+            ) {
+                return;
+            }
+
+            setStatus("CONNECTING");
+            const pending = connection.start();
+            startPromise = pending;
+
+            try {
+                await pending;
+                if (!disposed) setStatus("CONNECTED");
+            } catch (error: unknown) {
+                if (!disposed) {
+                    setStatus("DISCONNECTED");
+                    console.warn("SmartFleet SignalR unavailable; retrying", error);
+                    scheduleRetry();
+                }
+            } finally {
+                if (startPromise === pending) startPromise = null;
+            }
+        }
 
         connection.onreconnecting(() => {
             if (!disposed) setStatus("RECONNECTING");
@@ -91,44 +140,45 @@ export function useFleetRealtime(
         connection.onreconnected(() => {
             if (disposed) return;
             setStatus("CONNECTED");
-            // Catch up on changes missed while the socket was disconnected.
-            void onReconnect().catch((err: unknown) => {
-                console.warn("SmartFleet snapshot refresh failed after reconnect", err);
+
+            // Refresh once to recover updates missed during the interruption.
+            void callbacksRef.current.onReconnect().catch((error: unknown) => {
+                console.warn("SmartFleet snapshot refresh failed", error);
             });
         });
-
-        async function start(): Promise<void> {
-            if (disposed) return;
-            try {
-                await connection.start();
-                if (disposed) {
-                    await connection.stop();
-                    return;
-                }
-                setStatus("CONNECTED");
-            } catch (err) {
-                if (disposed) return;
-                setStatus("DISCONNECTED");
-                console.warn("SmartFleet SignalR unavailable; retrying", err);
-                retryTimer = setTimeout(() => void start(), 5000);
-            }
-        }
 
         connection.onclose(() => {
             if (disposed) return;
             setStatus("DISCONNECTED");
-            // The built-in reconnect retries are finite; retry again if all failed.
-            retryTimer = setTimeout(() => void start(), 5000);
+            scheduleRetry();
         });
 
+        console.info("[SmartFleet SignalR] Connecting to:", `${baseUrl}/hubs/robots`);
         void start();
 
         return () => {
             disposed = true;
             if (retryTimer !== undefined) clearTimeout(retryTimer);
-            void connection.stop();
+
+            // Wait for the pending start to settle before stopping. Calling
+            // stop() while negotiate is in flight creates the StrictMode race.
+            const pending = startPromise;
+            if (pending !== null) {
+                void pending
+                    .then(
+                        () => connection.stop(),
+                        () => connection.stop(),
+                    )
+                    .catch((error: unknown) => {
+                        console.debug("SmartFleet SignalR cleanup", error);
+                    });
+            } else {
+                void connection.stop().catch((error: unknown) => {
+                    console.debug("SmartFleet SignalR cleanup", error);
+                });
+            }
         };
-    }, [onBattery, onRobot, onReconnect, onLidar]);
+    }, []);
 
     return status;
 }
