@@ -1,4 +1,4 @@
-
+import { useState } from "react";
 import {
     BrowserRouter,
     Routes,
@@ -32,12 +32,10 @@ function roleHome(role: Role): string {
 }
 
 function ProtectedLayout() {
-    const {
-        isAuthenticated,
-        role,
-        logout,
-        isLoading,
-    } = useAuth();
+    const { isAuthenticated, role, logout, isLoading } = useAuth();
+
+    // State to track if the sidebar is collapsed
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     if (isLoading) {
         return <AuthScreen message="Checking current session..." />;
@@ -60,9 +58,26 @@ function ProtectedLayout() {
             <Sidebar
                 role={role ?? "operator"}
                 onLogout={handleLogout}
+                isCollapsed={isCollapsed}
+                toggleCollapse={() => setIsCollapsed(!isCollapsed)}
             />
 
-            <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+            <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
+                {/* Floating Hamburger Button (Shows only when sidebar is collapsed) */}
+                {isCollapsed && (
+                    <button
+                        onClick={() => setIsCollapsed(false)}
+                        className="absolute top-3 left-3 z-50 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border-medium)] text-[var(--text-primary)] shadow-md hover:scale-105 transition-all"
+                        title="Open Sidebar"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                )}
+
                 <Outlet />
             </div>
         </div>

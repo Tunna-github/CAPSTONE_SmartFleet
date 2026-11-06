@@ -69,20 +69,9 @@ export function LoginPage() {
                 }}
             >
                 <div className="flex flex-col items-center mb-8">
-                    <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                        style={{ background: "linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%)" }}
-                    >
-                        <Icon
-                            d={
-                                <>
-                                    <rect x="3" y="11" width="18" height="10" rx="2" />
-                                    <circle cx="12" cy="5" r="2" />
-                                    <line x1="12" y1="7" x2="12" y2="11" />
-                                </>
-                            }
-                            size={24}
-                        />
+                    <div className="w-12 h-12 flex items-center justify-center mb-4">
+                        {/* Replace 'logo.svg' with the path to your file */}
+                        <img src="./icon/icon3.svg" alt="SmartFleet Logo" className="w-full h-full object-cover rounded-xl shadow-sm" />
                     </div>
                     <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
                         SmartFleet WMS
