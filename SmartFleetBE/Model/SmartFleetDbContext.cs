@@ -20,6 +20,10 @@ public partial class SmartFleetDbContext : DbContext
 
     public virtual DbSet<MapConfiguration> MapConfigurations { get; set; }
 
+    public virtual DbSet<ArucoMarkerMap> ArucoMarkerMaps { get; set; }
+
+    public virtual DbSet<RobotArucoPosition> RobotArucoPositions { get; set; }
+
     public virtual DbSet<Mission> Missions { get; set; }
 
     public virtual DbSet<MissionStatusHistory> MissionStatusHistories { get; set; }
@@ -72,6 +76,27 @@ public partial class SmartFleetDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // ArUco -> grid cell configuration, independent of continuous ROS coordinates.
+        modelBuilder.Entity<ArucoMarkerMap>(entity =>
+        {
+            entity.ToTable("ArucoMarkerMaps");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.CellCode).HasMaxLength(16);
+            entity.HasIndex(e => new { e.WarehouseId, e.ArucoId }).IsUnique();
+            entity.HasIndex(e => new { e.WarehouseId, e.GridColumn, e.GridRow }).IsUnique();
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RobotArucoPosition>(entity =>
+        {
+            entity.ToTable("RobotArucoPositions");
+            entity.HasKey(e => e.RobotId);
+            entity.HasOne<Robot>().WithMany().HasForeignKey(e => e.RobotId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<RobotCommandOutbox>(entity =>
         {
             entity.ToTable("RobotCommandOutbox");

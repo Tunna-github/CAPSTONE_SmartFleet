@@ -800,6 +800,33 @@ def _fresh_camera_frame(last_sequence, last_status_at):
     return decode_camera_frame(jpeg), sequence, last_status_at
 
 
+# MQTT map fix: send a marker ID, NEVER guess A1/B2 on the robot.
+_last_sent_map_marker = None
+_last_sent_map_at = 0.0
+
+
+def report_map_marker_from_ids(ids):
+    global _last_sent_map_marker, _last_sent_map_at
+    if not ids or not mqtt_connected.is_set():
+        return
+    marker_id = int(ids[0])  # This scanner returns sorted IDs.
+    now = time.monotonic()
+    if marker_id == _last_sent_map_marker and now - _last_sent_map_at < 5.0:
+        return
+    payload = json.dumps({"arucoId": marker_id})
+    topic = "smartfleet/robot/{}/aruco".format(ROBOT_CODE)
+    try:
+        result = client.publish(topic, payload, qos=1, retain=False)
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            _last_sent_map_marker = marker_id
+            _last_sent_map_at = now
+            print("[MAP] ArUco {} -> backend position mapper".format(marker_id), flush=True)
+        else:
+            print("[MAP] MQTT publish failed rc={}".format(result.rc), flush=True)
+    except Exception as exc:
+        print("[MAP] Send failed: {}".format(exc), flush=True)
+
+
 def wait_for_aruco_id(target_id, timeout=None):
     """Scanner is active only during an accepted mission."""
     print("\n========================================", flush=True)
@@ -836,6 +863,7 @@ def wait_for_aruco_id(target_id, timeout=None):
         last_sequence = sequence
         next_process_at = now + min_interval
         ids = detect_aruco_ids_from_frame(frame)
+        report_map_marker_from_ids(ids)
 
         if ids != last_ids or now - last_status_at >= 1.0:
             print("[SCAN] IDs:", ids if ids else "none", flush=True)
@@ -893,6 +921,7 @@ def follow_black_line_until_aruco(stop_id, timeout=None):
 
             # Stop marker gets priority over motion calculation.
             ids = detect_aruco_ids_from_frame(frame)
+            report_map_marker_from_ids(ids)
             if stop_id in ids:
                 bridge.stop_motion()
                 print("\n*** STOP ARUCO ID {} FOUND ***".format(stop_id), flush=True)

@@ -13,6 +13,7 @@ import { OperatorDashboard } from "./pages/OperatorDashboard";
 import { TasksPage } from "./pages/TasksPage";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { RobotsPage } from "./pages/RobotsPage";
+import { WarehouseMapPage } from "./pages/WarehouseMapPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 
@@ -208,6 +209,10 @@ export default function App() {
                                         path="/dashboard/robots"
                                         element={<RobotsPage />}
                                     />
+                                    <Route
+                                        path="/dashboard/map"
+                                        element={<WarehouseMapPage />}
+                                    />
                                 </Route>
 
                                 <Route
@@ -249,11 +254,7 @@ export default function App() {
 
                                     <Route
                                         path="/admin/maps"
-                                        element={
-                                            <div className="p-6">
-                                                Admin Maps (Coming Soon)
-                                            </div>
-                                        }
+                                        element={<WarehouseMapPage />}
                                     />
                                 </Route>
                             </Route>

@@ -193,6 +193,9 @@ if (enableMqttWorkers)
 
     builder.Services.AddHostedService<MqttRobotTelemetryWorker>();
 
+    // Independent ArUco marker subscriber for the live warehouse map.
+    builder.Services.AddHostedService<MqttArucoPositionWorker>();
+
     // Existing worker: sends committed commands
     // from RobotCommandOutbox through MQTT.
     builder.Services

@@ -1,4 +1,4 @@
-﻿import { Icon, IC } from "./Icons";
+import { Icon, IC } from "./Icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth, type Role } from "../context/AuthContext";
@@ -32,12 +32,14 @@ export function Sidebar({
             : role === "maintenance"
                 ? [
                     { id: "robots", label: "Fleet Status", path: "/dashboard/robots", icon: IC.robots },
+                    { id: "map", label: "Live Map", path: "/dashboard/map", icon: IC.maps },
                     { id: "maintenance", label: "Maintenance", path: "/dashboard/maintenance", icon: IC.settings },
                 ]
                 : [
                     { id: "dashboard", label: "Dashboard", path: "/dashboard", icon: IC.dashboard },
                     { id: "tasks", label: "Tasks", path: "/dashboard/tasks", icon: IC.tasks },
                     { id: "robots", label: "Fleet Status", path: "/dashboard/robots", icon: IC.robots },
+                    { id: "map", label: "Live Map", path: "/dashboard/map", icon: IC.maps },
                     { id: "analytics", label: "Analytics", path: "/dashboard/analytics", icon: IC.analytics },
                 ];
 

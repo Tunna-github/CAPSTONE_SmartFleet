@@ -4,6 +4,8 @@ import platform
 import subprocess
 import signal
 import json
+import uuid
+import paho.mqtt.client as mqtt
 
 # Dat truoc khi nap NumPy/OpenCV. Chi ap dung ARMV8 tren ARM64.
 # Workaround cho loi OpenBLAS CPU detection da duoc bao cao tren Jetson.
@@ -437,6 +439,41 @@ detector = (aruco.ArucoDetector(dictionary, parameters)
             if hasattr(aruco, "ArucoDetector") else None)
 print("[OK] ArUco:", ARUCO_DICT_NAME, flush=True)
 
+# Map output uses a separate MQTT client; circle movement logic is unchanged.
+MAP_BROKER_IP = "192.168.137.1"
+MAP_BROKER_PORT = 1883
+MAP_ROBOT_CODE = "R01"
+_map_qr_client = None
+_last_qr_map_id = None
+_last_qr_map_at = 0.0
+try:
+    _map_qr_client = mqtt.Client(
+        client_id="smartfleet-qrmap-{}-{}".format(MAP_ROBOT_CODE.lower(), uuid.uuid4().hex[:8]))
+    _map_qr_client.connect(MAP_BROKER_IP, MAP_BROKER_PORT, 60)
+    _map_qr_client.loop_start()
+    print("[MAP] MQTT map publisher started", flush=True)
+except Exception as exc:
+    print("[MAP] MQTT unavailable; QR scanning still works: {}".format(exc), flush=True)
+    _map_qr_client = None
+
+
+def report_qr_map_markers(ids):
+    global _last_qr_map_id, _last_qr_map_at
+    if not ids or _map_qr_client is None or not _map_qr_client.is_connected():
+        return
+    marker_id = int(ids[0])
+    now = time.monotonic()
+    if marker_id == _last_qr_map_id and now - _last_qr_map_at < 5.0:
+        return
+    info = _map_qr_client.publish(
+        "smartfleet/robot/{}/aruco".format(MAP_ROBOT_CODE),
+        json.dumps({"arucoId": marker_id}), qos=1, retain=False)
+    if info.rc == mqtt.MQTT_ERR_SUCCESS:
+        _last_qr_map_id = marker_id
+        _last_qr_map_at = now
+        print("[MAP] Sent ArUco {} to BE".format(marker_id), flush=True)
+
+
 status_view = display(HTML("<pre>Dang chuan bi doc /stream...</pre>"), display_id=True)
 if status_view is None:
     raise RuntimeError("Hay chay cell nay trong Jupyter Notebook/JupyterLab.")
@@ -532,6 +569,7 @@ try:
             processed_count += 1
             processing_failures = 0
             detected_ids = current_ids
+            report_qr_map_markers(detected_ids)
 
             # ID 0 triggers exactly one circle per marker appearance.
             if TRIGGER_ARUCO_ID in detected_ids:
@@ -588,6 +626,12 @@ except KeyboardInterrupt:
 finally:
     # Important: interrupting/stopping the notebook also stops any active motion.
     cancel_circle_and_stop()
+    if _map_qr_client is not None:
+        try:
+            _map_qr_client.loop_stop()
+            _map_qr_client.disconnect()
+        except Exception:
+            pass
     reader_stopped = _aruco_mjpeg_reader.stop()
     if not reader_stopped:
         stop_reason += "\nReader van dang hoan tat viec dong ket noi."
