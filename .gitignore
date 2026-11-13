@@ -13,3 +13,4 @@ SmartFleetBE/appsettings.Local.json
 *.key
 .env
 .env.*
+SmartFleetBE/appsettings.json

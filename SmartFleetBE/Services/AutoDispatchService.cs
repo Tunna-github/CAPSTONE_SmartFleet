@@ -1,4 +1,4 @@
-﻿
+
 using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +13,7 @@ namespace SmartFleetBE.Services;
 public sealed class AutoDispatchService(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration,
+    FleetRealtimePublisher realtime,
     ILogger<AutoDispatchService> logger)
 {
     private const decimal MinimumBatteryPercent = 20m;
@@ -23,7 +24,7 @@ public sealed class AutoDispatchService(
         CancellationToken cancellationToken = default)
     {
         // DB payload limits may contain placeholder values.
-        // Require an additional verified physical safety limit.
+        // Require an additional verified physical safety limit.                     
         var verifiedPayloadLimitKg =
             configuration.GetValue<decimal>(
                 "AutoDispatch:VerifiedPayloadLimitKg");
@@ -398,6 +399,16 @@ public sealed class AutoDispatchService(
                     robot.BatteryPercent,
                     assignment.AssignmentId,
                     mission.MissionId);
+
+                try
+                {
+                    await realtime.MissionUpdatedAsync(assignment.AssignmentId, cancellationToken);
+                }
+                catch (Exception publishError) when (publishError is not OperationCanceledException)
+                {
+                    logger.LogWarning(publishError,
+                        "AUTO dispatch committed, SignalR broadcast failed.");
+                }
 
                 return true;
             }

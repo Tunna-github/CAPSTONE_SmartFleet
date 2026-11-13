@@ -12,6 +12,7 @@ public sealed class MqttMissionStatusWorker(
     IServiceScopeFactory scopes,
     IConfiguration configuration,
     MqttService publisher,
+    FleetRealtimePublisher realtime,
     ILogger<MqttMissionStatusWorker> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -224,6 +225,21 @@ public sealed class MqttMissionStatusWorker(
                     "Robot {RobotCode} sent a status event without a valid " +
                     "eventId; no application ACK can be correlated.",
                     topic[2]);
+            }
+
+            // MQTT ACK has already completed. SignalR is only a best-effort
+            // committed-state notification; do not retry the robot event if it fails.
+            if (result == MissionEventResult.Applied)
+            {
+                try
+                {
+                    await realtime.MissionUpdatedAsync(message.AssignmentId, _stoppingToken);
+                }
+                catch (Exception notificationError) when (notificationError is not OperationCanceledException)
+                {
+                    logger.LogWarning(notificationError,
+                        "Mission committed and ACK sent; SignalR update failed.");
+                }
             }
 
             // Measure the exact time spent by the backend.

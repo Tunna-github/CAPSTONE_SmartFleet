@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useData } from "../context/DataContext";
 import { getRobots, type RobotInfo } from "../api/modules/robots";
 import { LogEntry } from "../data/mockData";
@@ -168,18 +168,27 @@ export function OperatorDashboard() {
     ).length;
 
     // Map dbRobots to match WarehouseGrid format if needed, or fallback
-    const gridRobots = dbRobots.map((rb, idx) => ({
+    const stationPoints = [
+        { x: 9, y: 6 }, { x: 13, y: 6 }, { x: 17, y: 6 },
+        { x: 9, y: 9 }, { x: 13, y: 9 }, { x: 17, y: 9 },
+        { x: 9, y: 12 }, { x: 13, y: 12 }, { x: 17, y: 12 },
+    ];
+    const gridRobots = dbRobots.map((rb, idx) => {
+        const from = stationPoints[idx % stationPoints.length]!;
+        const to = stationPoints[(idx + 3) % stationPoints.length]!;
+        return {
         id: rb.robotCode,
-        x: 3 + (idx * 3) % 20,
-        y: 3 + (idx * 2) % 12,
-        tx: 6 + (idx * 3) % 20,
-        ty: 6 + (idx * 2) % 12,
+        x: from.x,
+        y: from.y,
+        tx: to.x,
+        ty: to.y,
         battery: rb.batteryPercent ?? 100,
         mqtt: rb.connectionStatus as "ONLINE" | "OFFLINE",
         missionId: rb.hasActiveAssignment ? `Task` : null,
         zone: "Sector 4B",
         color: rb.connectionStatus === "ONLINE" ? "#22d3ee" : "#ef4444"
-    }));
+        };
+    });
 
     return (
         <div className="flex flex-col h-full overflow-y-auto transition-colors" style={{ background: "var(--background)" }}>
@@ -221,7 +230,7 @@ export function OperatorDashboard() {
                             </span>
                         </div>
                         <div className="flex items-center gap-4 text-[10px] font-mono" style={{ color: "var(--text-dimmest)" }}>
-                            {[{ color: "#22d3ee", label: "Robot Active" }, { color: "#ef4444", label: "Robot Offline" }, { color: "#3b82f6", label: "Pickup" }, { color: "#22c55e", label: "Delivery" }, { color: "#f59e0b", label: "Charging" }, { color: "#8b5cf6", label: "Dock" }].map(({ color, label }) => (
+                            {[{ color: "#22d3ee", label: "Robot Active" }, { color: "#ef4444", label: "Robot Offline" }, { color: "#06b6d4", label: "Station (Pick/Drop)" }, { color: "#f59e0b", label: "Charging" }, { color: "#8b5cf6", label: "Dock" }].map(({ color, label }) => (
                                 <span key={label} className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: color }} />{label}</span>
                             ))}
                         </div>

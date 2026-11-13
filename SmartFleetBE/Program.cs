@@ -12,6 +12,7 @@ using SmartFleetBE.Repositories;
 using SmartFleetBE.Repositories.Interfaces;
 using SmartFleetBE.Services;
 using SmartFleetBE.Services.Interfaces;
+using SmartFleetBE.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,12 +21,14 @@ var builder = WebApplication.CreateBuilder(args);
 // =====================================================
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<FleetRealtimePublisher>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:8443")
+        policy.WithOrigins("http://localhost:8443", "http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -188,6 +191,8 @@ if (enableMqttWorkers)
     builder.Services
         .AddHostedService<MqttMissionStatusWorker>();
 
+    builder.Services.AddHostedService<MqttRobotTelemetryWorker>();
+
     // Existing worker: sends committed commands
     // from RobotCommandOutbox through MQTT.
     builder.Services
@@ -235,6 +240,19 @@ builder.Services
         JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/hubs/robots"))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
         options.TokenValidationParameters =
             new TokenValidationParameters
             {
@@ -306,6 +324,7 @@ app.UseAuthorization();
 // =====================================================
 
 app.MapControllers();
+app.MapHub<FleetHub>("/hubs/robots");
 
 // =====================================================
 // 13. DEVELOPMENT DATABASE CHECK
