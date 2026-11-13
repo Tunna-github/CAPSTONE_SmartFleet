@@ -19,6 +19,7 @@ export const ENDPOINTS = {
         create: `${BASE}/transport-tasks`,
         delete: (taskId: number | string) => `${BASE}/transport-tasks/${encodeURIComponent(taskId)}`,
         detail: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}`,
+        update: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}`,
         availableRobots: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}/available-robots`,
         assign: (taskId: number | string) => `${BASE}/transport-tasks/${taskId}/assign`,
     },

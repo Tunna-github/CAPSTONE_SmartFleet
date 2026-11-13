@@ -37,12 +37,36 @@ export interface CreateTransportTaskPayload {
 interface TransportTaskApiModel {
     taskId?: number | string;
     taskTrackingCode?: string;
+    warehouseId?: number;
+    pickupStationId?: number;
+    deliveryStationId?: number;
     pickupStationName?: string;
     deliveryStationName?: string;
     priorityLevel?: number | string;
     taskStatus?: string;
     packageCode?: string;
     itemDescription?: string;
+    payloadWeightKg?: number | null;
+    scheduledTime?: string | null;
+    createdAt?: string;
+    assignedRobotId?: string | null;
+    robotId?: string | null;
+}
+
+export interface TransportTaskDetails {
+    taskId?: number | string;
+    taskTrackingCode?: string;
+    warehouseId?: number;
+    pickupStationId?: number;
+    deliveryStationId?: number;
+    pickupStationName?: string;
+    deliveryStationName?: string;
+    priorityLevel?: number | string;
+    taskStatus?: string;
+    packageCode?: string | null;
+    itemDescription?: string | null;
+    payloadWeightKg?: number | null;
+    scheduledTime?: string | null;
     createdAt?: string;
     assignedRobotId?: string | null;
     robotId?: string | null;
@@ -98,6 +122,12 @@ function normalizePriority(value: unknown): Priority {
     }
 
     return "MEDIUM";
+}
+
+function priorityToLevel(priority: Priority): number {
+    if (priority === "HIGH") return 1;
+    if (priority === "LOW") return 3;
+    return 2;
 }
 
 function normalizeStatus(value: unknown): TaskStatus {
@@ -299,6 +329,43 @@ export async function getTransportTaskById(
     const { data } = await apiClient.get<
         ApiResult<TransportTaskApiModel>
     >(ENDPOINTS.transportTasks.detail(taskId));
+
+    return normalizeTask(
+        unwrapApiResponse(data)
+    );
+}
+
+export async function getTransportTaskDetailsById(
+    taskId: number | string
+): Promise<TransportTaskDetails> {
+    const { data } = await apiClient.get<
+        ApiResult<TransportTaskDetails>
+    >(ENDPOINTS.transportTasks.detail(taskId));
+
+    return unwrapApiResponse(data);
+}
+
+export interface UpdateTransportTaskPayload {
+    warehouseId: number;
+    pickupStationId: number;
+    deliveryStationId: number;
+    priorityLevel: number;
+    packageCode: string | null;
+    itemDescription: string | null;
+    payloadWeightKg: number | null;
+    scheduledTime: string | null;
+}
+
+export async function updateTransportTask(
+    taskId: number | string,
+    payload: UpdateTransportTaskPayload
+): Promise<Task> {
+    const { data } = await apiClient.put<
+        ApiResult<TransportTaskApiModel>
+    >(
+        ENDPOINTS.transportTasks.update(taskId),
+        payload
+    );
 
     return normalizeTask(
         unwrapApiResponse(data)
