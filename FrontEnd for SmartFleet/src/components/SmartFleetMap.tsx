@@ -14,7 +14,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-// Khởi tạo 9 node (Mã QR) theo dạng lưới 3x3 (Khoảng cách 200px tượng trưng cho 1m)
+// Create nine QR nodes on a 3x3 grid; 200 pixels represent one meter.
 const initialNodes: Node[] = [
   { id: 'qr-1', position: { x: 0, y: 0 }, data: { label: 'QR 1 (0,0)' } },
   { id: 'qr-2', position: { x: 200, y: 0 }, data: { label: 'QR 2 (1,0)' } },
@@ -27,7 +27,7 @@ const initialNodes: Node[] = [
   { id: 'qr-9', position: { x: 400, y: 400 }, data: { label: 'QR 9 (2,2)' } },
 ];
 
-// Khởi tạo một số tuyến đường (Route Segments)
+// Initial route segments
 const initialEdges: Edge[] = [
   { id: 'e1-2', source: 'qr-1', target: 'qr-2', animated: true, style: { stroke: '#e65100', strokeWidth: 2 } },
   { id: 'e2-3', source: 'qr-2', target: 'qr-3', animated: true, style: { stroke: '#e65100', strokeWidth: 2 } },
@@ -39,19 +39,19 @@ export default function SmartFleetMap() {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
 
-  // Xử lý sự kiện kéo thả node
+  // Handle node dragging.
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
     []
   );
 
-  // Xử lý sự kiện thay đổi cạnh (xóa, thêm)
+  // Handle edge additions and removals.
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
 
-  // Xử lý sự kiện người dùng kéo nối 2 node với nhau để tạo đường đi mới
+  // Connect two nodes to create a route segment.
   const onConnect = useCallback(
     (connection: Connection) => setEdges((eds) => addEdge({ ...connection, animated: true }, eds)),
     []
