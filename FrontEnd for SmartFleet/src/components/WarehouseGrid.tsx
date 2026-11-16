@@ -8,7 +8,7 @@ const GROWS = 18;
 const GW = CELL * GCOLS;
 const GH = CELL * GROWS;
 
-export type WarehouseCellType = "floor" | "wall" | "station";
+export type WarehouseCellType = "floor" | "wall" | "station" | "qr" | "charge";
 export interface WarehouseCell { type: WarehouseCellType; label?: string; color?: string; }
 export type WarehouseLayout = WarehouseCell[][];
 
@@ -22,6 +22,7 @@ export function createDefaultWarehouseLayout(): WarehouseLayout {
         { r: 9, c: 9, label: "S4" }, { r: 9, c: 13, label: "S5" }, { r: 9, c: 17, label: "S6" },
         { r: 12, c: 9, label: "S7" }, { r: 12, c: 13, label: "S8" }, { r: 12, c: 17, label: "S9" },
     ].forEach(({ r, c, label }) => { g[r][c] = { type: "station", label }; });
+    g[15][13] = { type: "charge", label: "CHG1" };
 
     return g;
 }
@@ -89,6 +90,9 @@ export function WarehouseGrid({
     scale = 1,
     onCellClick,
     onStationClick,
+    onPointClick,
+    selectedCell,
+    selectedPoint,
     animateRobots = true,
 }: {
     robots: RobotPos[];
@@ -97,29 +101,37 @@ export function WarehouseGrid({
     scale?: number;
     onCellClick?: (row: number, col: number) => void;
     onStationClick?: (label: string) => void;
+    onPointClick?: (label: string) => void;
+    selectedCell?: { row: number; col: number } | null;
+    selectedPoint?: string | null;
     animateRobots?: boolean;
 }) {
     const { theme } = useTheme();
     const isLight = theme === "light";
+    const handlePointClick = onPointClick ?? onStationClick;
 
-    const cellTypeStyles: Record<string, { fill: string; stroke: string }> = isLight
+    const cellTypeStyles = useMemo<Record<string, { fill: string; stroke: string }>>(() => isLight
         ? {
             floor: { fill: "#ffffff", stroke: "#e2e8f0" },
             wall: { fill: "#f1f5f9", stroke: "#cbd5e1" },
             station: { fill: "#cffafe", stroke: "#06b6d4" },
+            qr: { fill: "#ede9fe", stroke: "#8b5cf6" },
+            charge: { fill: "#fef3c7", stroke: "#f59e0b" },
         }
         : {
             floor: { fill: "#060d1f", stroke: "#0d1634" },
             wall: { fill: "#0a1128", stroke: "#151d35" },
             station: { fill: "#083344", stroke: "#06b6d4" },
-        };
+            qr: { fill: "#2d1a5e", stroke: "#c084fc" },
+            charge: { fill: "#3a2e00", stroke: "#f59e0b" },
+        }, [isLight]);
 
     const stations = useMemo(() => {
         const pts: Array<{ r: number; c: number; label: string }> = [];
         for (let r = 0; r < GROWS; r++) {
             for (let c = 0; c < GCOLS; c++) {
                 const cell = grid[r]?.[c];
-                if (cell?.type === "station" && cell.label) pts.push({ r, c, label: cell.label });
+                if ((cell?.type === "station" || cell?.type === "qr" || cell?.type === "charge") && cell.label) pts.push({ r, c, label: cell.label });
             }
         }
         pts.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
@@ -164,14 +176,40 @@ export function WarehouseGrid({
                 const c1 = Math.min(pa.c, pb.c);
                 const c2 = Math.max(pa.c, pb.c);
                 for (let c = c1; c <= c2; c++) {
-                    if (next[r]?.[c]?.type !== "station") next[r]![c] = { type: "floor" };
+                    if (next[r]?.[c]?.type !== "station" && next[r]?.[c]?.type !== "qr" && next[r]?.[c]?.type !== "charge") next[r]![c] = { type: "floor" };
                 }
             } else if (pa.c === pb.c) {
                 const c = pa.c;
                 const r1 = Math.min(pa.r, pb.r);
                 const r2 = Math.max(pa.r, pb.r);
                 for (let r = r1; r <= r2; r++) {
-                    if (next[r]?.[c]?.type !== "station") next[r]![c] = { type: "floor" };
+                    if (next[r]?.[c]?.type !== "station" && next[r]?.[c]?.type !== "qr" && next[r]?.[c]?.type !== "charge") next[r]![c] = { type: "floor" };
+                }
+            } else {
+                const pivot1 = { r: pa.r, c: pb.c };
+                const pivot2 = { r: pb.r, c: pa.c };
+                const pivots = [pivot1, pivot2];
+                for (const pv of pivots) {
+                    const carveRow = () => {
+                        const r = pa.r;
+                        const c1 = Math.min(pa.c, pv.c);
+                        const c2 = Math.max(pa.c, pv.c);
+                        for (let c = c1; c <= c2; c++) {
+                            if (next[r]?.[c]?.type !== "station" && next[r]?.[c]?.type !== "qr" && next[r]?.[c]?.type !== "charge") next[r]![c] = { type: "floor" };
+                        }
+                    };
+                    const carveCol = () => {
+                        const c = pv.c;
+                        const r1 = Math.min(pv.r, pb.r);
+                        const r2 = Math.max(pv.r, pb.r);
+                        for (let r = r1; r <= r2; r++) {
+                            if (next[r]?.[c]?.type !== "station" && next[r]?.[c]?.type !== "qr" && next[r]?.[c]?.type !== "charge") next[r]![c] = { type: "floor" };
+                        }
+                    };
+                    carveRow();
+                    if (next[pv.r]?.[pv.c]?.type !== "station" && next[pv.r]?.[pv.c]?.type !== "qr" && next[pv.r]?.[pv.c]?.type !== "charge") next[pv.r]![pv.c] = { type: "floor" };
+                    carveCol();
+                    break;
                 }
             }
         }
@@ -208,7 +246,7 @@ export function WarehouseGrid({
             if (!path || path.length < 2) continue;
             const pts = path.map((p) => ({ x: p.c * CELL + CELL / 2, y: p.r * CELL + CELL / 2 }));
             const total = (pts.length - 1) * CELL;
-            const key = `${sr},${sc}->${gr},${gc}`;
+            const key = path.map((p) => `${p.r},${p.c}`).join(";");
             const prev = anim.current.get(rb.id);
             const now = performance.now();
             if (prev && prev.key === key) {
@@ -218,7 +256,7 @@ export function WarehouseGrid({
             }
         }
         anim.current = next;
-    }, [robots, grid, animateRobots]);
+    }, [robots, gridWithRoads, animateRobots]);
 
     useEffect(() => {
         if (!animateRobots) return;
@@ -226,7 +264,7 @@ export function WarehouseGrid({
         const step = (now: number) => {
             const st = anim.current;
             for (const v of st.values()) {
-                const dt = Math.max(0, (now - v.last) / 1000);
+                const dt = Math.min(0.1, Math.max(0, (now - v.last) / 1000));
                 v.last = now;
                 v.dist += v.dir * speed * dt;
                 if (v.dist >= v.total) {
@@ -260,6 +298,24 @@ export function WarehouseGrid({
     const centerY = GH / 2;
     const transform = `translate(${centerX} ${centerY}) scale(${scale}) translate(${-centerX} ${-centerY})`;
 
+    // Selection changes do not need to rebuild the static map cells.
+    const mapCells = useMemo(() => gridWithRoads.map((row, ri) => row.map((cell, ci) => {
+        const style = cellTypeStyles[cell.type] || cellTypeStyles.floor;
+        const x = ci * CELL;
+        const y = ri * CELL;
+        return (
+            <g key={`${ri}-${ci}`} pointerEvents="none">
+                <rect x={x} y={y} width={CELL} height={CELL} fill={cell.type === "floor" ? "transparent" : style.fill} stroke={style.stroke} strokeWidth="0.5" />
+                {(cell.type === "station" || cell.type === "qr" || cell.type === "charge") && (
+                    <>
+                        <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
+                        <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize="8" fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.label}</text>
+                    </>
+                )}
+            </g>
+        );
+    })), [gridWithRoads, cellTypeStyles]);
+
     return (
         <svg width="100%" height="100%" viewBox={`0 0 ${GW} ${GH}`} style={{ background: isLight ? "#ffffff" : "#060d1f", display: "block", transition: "background 0.2s ease" }} preserveAspectRatio="xMidYMid meet">
             <defs>
@@ -278,7 +334,7 @@ export function WarehouseGrid({
                     <feGaussianBlur stdDeviation="2" result="blur" />
                     <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
-                <marker id="arrow" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto">
+                <marker id="arrow" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto-start-reverse">
                     <path d="M0,0 L4,2 L0,4 Z" fill="#22d3ee" opacity="0.5" />
                 </marker>
             </defs>
@@ -291,12 +347,10 @@ export function WarehouseGrid({
                     const pb = stations.find((s) => s.label === b);
                     if (!pa || !pb) return null;
                     return (
-                        <line
+                        <polyline
                             key={`${a}::${b}`}
-                            x1={pa.c * CELL + CELL / 2}
-                            y1={pa.r * CELL + CELL / 2}
-                            x2={pb.c * CELL + CELL / 2}
-                            y2={pb.r * CELL + CELL / 2}
+                            points={`${pa.c * CELL + CELL / 2},${pa.r * CELL + CELL / 2} ${pb.c * CELL + CELL / 2},${pa.r * CELL + CELL / 2} ${pb.c * CELL + CELL / 2},${pb.r * CELL + CELL / 2}`}
+                            fill="none"
                             stroke={isLight ? "rgba(6,182,212,0.35)" : "rgba(34,211,238,0.25)"}
                             strokeWidth="6"
                             strokeLinecap="round"
@@ -306,18 +360,25 @@ export function WarehouseGrid({
                     );
                 })}
 
-                {gridWithRoads.map((row, ri) => row.map((cell, ci) => {
-                    const style = cellTypeStyles[cell.type] || cellTypeStyles.floor;
+                {mapCells}
+                {(onCellClick || handlePointClick || selectedCell || selectedPoint) && gridWithRoads.map((row, ri) => row.map((cell, ci) => {
                     const x = ci * CELL; const y = ri * CELL;
-                    const isInteractive = !!onCellClick || !!onStationClick;
+                    const isInteractive = !!onCellClick || !!handlePointClick;
+                    const isPoint = cell.type === "station" || cell.type === "qr" || cell.type === "charge";
+                    const isSelected = (selectedCell?.row === ri && selectedCell.col === ci)
+                        || (!!selectedPoint && cell.label === selectedPoint);
+                    const selectCell = () => {
+                        if (isPoint && cell.label && handlePointClick) handlePointClick(cell.label);
+                        if (onCellClick) onCellClick(ri, ci);
+                    };
                     return (
                         <g key={`${ri}-${ci}`}>
-                            <rect x={x} y={y} width={CELL} height={CELL} fill={style.fill} stroke={style.stroke} strokeWidth="0.5" />
-                            {cell.type === "station" && (
-                                <>
-                                    <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
-                                    <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize="8" fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.label}</text>
-                                </>
+                            {isSelected && (
+                                <rect
+                                    x={x + 1} y={y + 1} width={CELL - 2} height={CELL - 2} rx="5"
+                                    fill="rgba(34,211,238,0.18)" stroke="#22d3ee" strokeWidth="2.5"
+                                    pointerEvents="none"
+                                />
                             )}
                             {isInteractive && (
                                 <rect
@@ -326,10 +387,18 @@ export function WarehouseGrid({
                                     width={CELL}
                                     height={CELL}
                                     fill="transparent"
-                                    onClick={() => {
-                                        if (cell.type === "station" && cell.label && onStationClick) onStationClick(cell.label);
-                                        if (onCellClick) onCellClick(ri, ci);
+                                    role={isPoint ? "button" : undefined}
+                                    tabIndex={isPoint ? 0 : undefined}
+                                    aria-label={isPoint ? `Select ${cell.type} ${cell.label ?? ""}` : undefined}
+                                    aria-pressed={isPoint ? isSelected : undefined}
+                                    onClick={selectCell}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter" || event.key === " ") {
+                                            event.preventDefault();
+                                            selectCell();
+                                        }
                                     }}
+                                    className="hover:fill-cyan-400/15 active:fill-cyan-400/25 focus-visible:stroke-cyan-400 focus-visible:stroke-2 focus-visible:outline-none transition-none"
                                     style={{ cursor: "pointer" }}
                                 />
                             )}
@@ -345,22 +414,7 @@ export function WarehouseGrid({
                     const gr = clampInt(rb.ty, 0, GROWS - 1);
                     const gc = clampInt(rb.tx, 0, GCOLS - 1);
                     const path = findPath(gridWithRoads, { r: sr, c: sc }, { r: gr, c: gc });
-                    if (!path || path.length < 2) {
-                        return (
-                            <line
-                                key={`path-${rb.id}`}
-                                x1={sc * CELL + CELL / 2}
-                                y1={sr * CELL + CELL / 2}
-                                x2={gc * CELL + CELL / 2}
-                                y2={gr * CELL + CELL / 2}
-                                stroke={rb.color}
-                                strokeWidth="1"
-                                strokeDasharray="4 3"
-                                opacity="0.25"
-                                markerEnd="url(#arrow)"
-                            />
-                        );
-                    }
+                    if (!path || path.length < 2) return null;
                     const points = path.map((p) => `${p.c * CELL + CELL / 2},${p.r * CELL + CELL / 2}`).join(" ");
                     return (
                         <polyline
