@@ -1,8 +1,9 @@
--- SMARTFLEET SAMPLE DATABASE: SCHEMA ONLY
--- Derived from 2026-11-05 PostgreSQL 18.6 dump.
+-- SMARTFLEET SAMPLE DATABASE: SCHEMA + ANONYMIZED TEST SNAPSHOT
+-- Derived from 2026-11-05 PostgreSQL 18.6 dump; not a live 2026-11-17 Aiven snapshot.
 -- Reference/test ONLY; never import into production.
+-- Sample users are disabled; credentials and identifying fields replaced.
+-- Robot network IDs replaced; outbound MQTT commands disabled and marked delivered.
 -- Aiven system monitoring schema and owner directives removed.
--- This revision intentionally excludes account and operational data.
 --
 -- PostgreSQL database dump
 --
@@ -1275,114 +1276,114 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: MissionStatusHistories; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO public."MissionStatusHistories" VALUES (2, 2, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-09-28 09:58:39.246+00');
+INSERT INTO public."MissionStatusHistories" VALUES (3, 2, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset before re-running manual assignment.', '2026-09-28 10:26:20.597+00');
+INSERT INTO public."MissionStatusHistories" VALUES (4, 3, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-09-30 05:00:01.694+00');
+INSERT INTO public."MissionStatusHistories" VALUES (5, 3, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-09-30 05:09:38.742+00');
+INSERT INTO public."MissionStatusHistories" VALUES (6, 4, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-09-30 05:57:42.809+00');
+INSERT INTO public."MissionStatusHistories" VALUES (7, 4, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-09-30 07:32:11.092+00');
+INSERT INTO public."MissionStatusHistories" VALUES (8, 5, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-09-30 07:35:49.939+00');
+INSERT INTO public."MissionStatusHistories" VALUES (9, 5, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-09-30 07:38:40.259+00');
+INSERT INTO public."MissionStatusHistories" VALUES (10, 6, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-09-30 07:51:15.992+00');
+INSERT INTO public."MissionStatusHistories" VALUES (11, 6, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-10-01 05:19:49.493+00');
+INSERT INTO public."MissionStatusHistories" VALUES (14, 9, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-06 06:55:28.743+00');
+INSERT INTO public."MissionStatusHistories" VALUES (15, 9, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-10-06 07:01:01.739+00');
+INSERT INTO public."MissionStatusHistories" VALUES (17, 11, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-06 07:11:50.426+00');
+INSERT INTO public."MissionStatusHistories" VALUES (18, 11, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-10-06 07:21:26.989+00');
+INSERT INTO public."MissionStatusHistories" VALUES (19, 12, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-06 07:21:41.321+00');
+INSERT INTO public."MissionStatusHistories" VALUES (20, 12, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-10-06 07:26:18.042+00');
+INSERT INTO public."MissionStatusHistories" VALUES (21, 13, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-06 07:26:29.896+00');
+INSERT INTO public."MissionStatusHistories" VALUES (22, 13, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Test reset.', '2026-10-06 07:28:55.734+00');
+INSERT INTO public."MissionStatusHistories" VALUES (23, 14, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-06 07:29:09.019+00');
+INSERT INTO public."MissionStatusHistories" VALUES (29, 14, 'INITIALIZING', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-06 07:49:55.605+00');
+INSERT INTO public."MissionStatusHistories" VALUES (30, 15, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-10-06 08:04:35.513+00');
+INSERT INTO public."MissionStatusHistories" VALUES (32, 15, 'INITIALIZING', 'FAILED', 'ROBOT_AGENT', NULL, 'Timeout waiting for BE ACK for eventId bae34a71-9a3c-48b4-8f68-9dfd7269a1fc', '2026-10-06 08:04:53.78+00');
+INSERT INTO public."MissionStatusHistories" VALUES (33, 16, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T003.', '2026-10-06 08:29:05.075+00');
+INSERT INTO public."MissionStatusHistories" VALUES (35, 16, 'INITIALIZING', 'FAILED', 'ROBOT_AGENT', NULL, 'Timeout waiting for BE ACK for eventId b6502b55-268a-412a-bf93-a0ab72ac89d3', '2026-10-06 08:29:26.561+00');
+INSERT INTO public."MissionStatusHistories" VALUES (36, 17, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-18 10:07:51.215+00');
+INSERT INTO public."MissionStatusHistories" VALUES (37, 17, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-18 10:14:00.025+00');
+INSERT INTO public."MissionStatusHistories" VALUES (38, 17, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-18 10:14:11.351+00');
+INSERT INTO public."MissionStatusHistories" VALUES (39, 18, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-10-19 16:35:39.435+00');
+INSERT INTO public."MissionStatusHistories" VALUES (40, 18, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-19 16:35:43.771+00');
+INSERT INTO public."MissionStatusHistories" VALUES (41, 19, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T003.', '2026-10-19 17:01:19.675+00');
+INSERT INTO public."MissionStatusHistories" VALUES (42, 19, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-19 17:01:24.204+00');
+INSERT INTO public."MissionStatusHistories" VALUES (43, 19, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-19 17:02:29.135+00');
+INSERT INTO public."MissionStatusHistories" VALUES (44, 20, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T004.', '2026-10-20 01:37:01.052+00');
+INSERT INTO public."MissionStatusHistories" VALUES (45, 21, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-20 01:52:00.962+00');
+INSERT INTO public."MissionStatusHistories" VALUES (46, 21, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 01:52:06.056+00');
+INSERT INTO public."MissionStatusHistories" VALUES (47, 21, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 01:52:43.672+00');
+INSERT INTO public."MissionStatusHistories" VALUES (48, 22, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-10-20 01:53:41.968+00');
+INSERT INTO public."MissionStatusHistories" VALUES (49, 22, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 01:53:46.156+00');
+INSERT INTO public."MissionStatusHistories" VALUES (50, 22, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 01:54:23.541+00');
+INSERT INTO public."MissionStatusHistories" VALUES (51, 23, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T003.', '2026-10-20 01:55:07.405+00');
+INSERT INTO public."MissionStatusHistories" VALUES (52, 23, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 01:55:12.481+00');
+INSERT INTO public."MissionStatusHistories" VALUES (53, 23, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 01:55:50.113+00');
+INSERT INTO public."MissionStatusHistories" VALUES (54, 24, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T004.', '2026-10-20 02:04:38.27+00');
+INSERT INTO public."MissionStatusHistories" VALUES (55, 24, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 02:04:43.437+00');
+INSERT INTO public."MissionStatusHistories" VALUES (56, 24, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 02:05:44.807+00');
+INSERT INTO public."MissionStatusHistories" VALUES (57, 25, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T005.', '2026-10-20 02:10:21.927+00');
+INSERT INTO public."MissionStatusHistories" VALUES (58, 25, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 02:10:45.011+00');
+INSERT INTO public."MissionStatusHistories" VALUES (59, 25, 'NAVIGATING_TO_PICKUP', 'FAILED', 'ROBOT_AGENT', NULL, 'Timeout waiting for BE ACK for eventId 1d9e2459-90c1-4004-90b8-74e72af4356c', '2026-10-20 02:11:02.439+00');
+INSERT INTO public."MissionStatusHistories" VALUES (60, 26, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-20 02:11:48.525+00');
+INSERT INTO public."MissionStatusHistories" VALUES (61, 26, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 02:11:52.703+00');
+INSERT INTO public."MissionStatusHistories" VALUES (62, 26, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 02:12:32.693+00');
+INSERT INTO public."MissionStatusHistories" VALUES (63, 27, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task TASK-20261020015124-EB95395056834246.', '2026-10-20 02:29:59.247+00');
+INSERT INTO public."MissionStatusHistories" VALUES (64, 27, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 02:30:02.18+00');
+INSERT INTO public."MissionStatusHistories" VALUES (65, 27, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 02:31:00.102+00');
+INSERT INTO public."MissionStatusHistories" VALUES (66, 28, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-10-20 03:16:59.757+00');
+INSERT INTO public."MissionStatusHistories" VALUES (67, 28, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 03:17:02.859+00');
+INSERT INTO public."MissionStatusHistories" VALUES (68, 28, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 03:17:45.655+00');
+INSERT INTO public."MissionStatusHistories" VALUES (69, 29, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T003.', '2026-10-20 03:49:27.17+00');
+INSERT INTO public."MissionStatusHistories" VALUES (70, 29, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 03:49:33.169+00');
+INSERT INTO public."MissionStatusHistories" VALUES (71, 30, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-20 03:55:45.406+00');
+INSERT INTO public."MissionStatusHistories" VALUES (72, 30, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 03:55:48.85+00');
+INSERT INTO public."MissionStatusHistories" VALUES (73, 30, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 03:56:04.35+00');
+INSERT INTO public."MissionStatusHistories" VALUES (74, 31, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-10-20 03:57:19.966+00');
+INSERT INTO public."MissionStatusHistories" VALUES (75, 31, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 03:57:22.034+00');
+INSERT INTO public."MissionStatusHistories" VALUES (76, 31, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 03:57:37.285+00');
+INSERT INTO public."MissionStatusHistories" VALUES (77, 32, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T003.', '2026-10-20 03:59:18.011+00');
+INSERT INTO public."MissionStatusHistories" VALUES (78, 32, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 03:59:23.183+00');
+INSERT INTO public."MissionStatusHistories" VALUES (79, 32, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 03:59:38.184+00');
+INSERT INTO public."MissionStatusHistories" VALUES (80, 33, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T004.', '2026-10-20 04:16:34.51+00');
+INSERT INTO public."MissionStatusHistories" VALUES (81, 33, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 04:16:36.666+00');
+INSERT INTO public."MissionStatusHistories" VALUES (82, 33, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 04:16:52.398+00');
+INSERT INTO public."MissionStatusHistories" VALUES (83, 34, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-10-20 04:30:16.81+00');
+INSERT INTO public."MissionStatusHistories" VALUES (84, 34, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 04:30:19.4+00');
+INSERT INTO public."MissionStatusHistories" VALUES (85, 34, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 04:30:35.379+00');
+INSERT INTO public."MissionStatusHistories" VALUES (86, 35, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task TASK-20261020015124-EB95395056834246.', '2026-10-20 04:32:45.945+00');
+INSERT INTO public."MissionStatusHistories" VALUES (87, 35, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 04:32:50.006+00');
+INSERT INTO public."MissionStatusHistories" VALUES (88, 35, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 04:33:06.834+00');
+INSERT INTO public."MissionStatusHistories" VALUES (89, 36, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T005.', '2026-10-20 04:56:24.439+00');
+INSERT INTO public."MissionStatusHistories" VALUES (90, 36, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 04:56:26.098+00');
+INSERT INTO public."MissionStatusHistories" VALUES (91, 36, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 04:56:41.245+00');
+INSERT INTO public."MissionStatusHistories" VALUES (92, 37, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-20 04:57:38.686+00');
+INSERT INTO public."MissionStatusHistories" VALUES (93, 37, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 04:57:40.504+00');
+INSERT INTO public."MissionStatusHistories" VALUES (94, 37, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 04:57:56.154+00');
+INSERT INTO public."MissionStatusHistories" VALUES (95, 38, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T001.', '2026-10-20 05:06:09.932+00');
+INSERT INTO public."MissionStatusHistories" VALUES (96, 38, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 05:06:13.219+00');
+INSERT INTO public."MissionStatusHistories" VALUES (97, 38, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 05:06:27.963+00');
+INSERT INTO public."MissionStatusHistories" VALUES (98, 39, NULL, 'INITIALIZING', 'OPERATOR', 2, 'Mission created from transport task T002.', '2026-10-20 05:17:14.876+00');
+INSERT INTO public."MissionStatusHistories" VALUES (99, 39, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-20 05:17:17.062+00');
+INSERT INTO public."MissionStatusHistories" VALUES (100, 39, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-20 05:17:31.825+00');
+INSERT INTO public."MissionStatusHistories" VALUES (101, 40, NULL, 'INITIALIZING', 'SYSTEM', NULL, 'Created by AUTO dispatch of TASK-20261030031949-333CFF4A27AD44EB.', '2026-10-30 03:19:50.815+00');
+INSERT INTO public."MissionStatusHistories" VALUES (102, 40, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-30 03:19:56.1+00');
+INSERT INTO public."MissionStatusHistories" VALUES (103, 40, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-30 03:24:07.968+00');
+INSERT INTO public."MissionStatusHistories" VALUES (104, 41, NULL, 'INITIALIZING', 'SYSTEM', NULL, 'Created by AUTO dispatch of TASK-20261030032435-98F7F9F4A61C473A.', '2026-10-30 03:24:36.477+00');
+INSERT INTO public."MissionStatusHistories" VALUES (105, 41, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-30 03:24:40.562+00');
+INSERT INTO public."MissionStatusHistories" VALUES (106, 41, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-30 03:27:00.698+00');
+INSERT INTO public."MissionStatusHistories" VALUES (107, 42, NULL, 'INITIALIZING', 'SYSTEM', NULL, 'Created by AUTO dispatch of TASK-20261030052750-FC56969C56A04992.', '2026-10-30 05:27:52.11+00');
+INSERT INTO public."MissionStatusHistories" VALUES (108, 42, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-30 05:27:57.513+00');
+INSERT INTO public."MissionStatusHistories" VALUES (109, 42, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-30 05:30:50.523+00');
+INSERT INTO public."MissionStatusHistories" VALUES (110, 43, NULL, 'INITIALIZING', 'SYSTEM', NULL, 'Created by AUTO dispatch of TASK-20261030053238-733A5BD50C504426.', '2026-10-30 05:34:02.057+00');
+INSERT INTO public."MissionStatusHistories" VALUES (111, 44, NULL, 'INITIALIZING', 'SYSTEM', NULL, 'Created by AUTO dispatch of TASK-20261030053353-AFE0BF085D03455D.', '2026-10-30 05:34:03.927+00');
+INSERT INTO public."MissionStatusHistories" VALUES (113, 43, 'INITIALIZING', 'FAILED', 'ROBOT_AGENT', NULL, 'Timeout waiting for BE ACK for eventId 3ab28786-e137-4abb-a511-a9140c4b93ad', '2026-10-30 05:34:21.382+00');
+INSERT INTO public."MissionStatusHistories" VALUES (114, 44, 'INITIALIZING', 'ABORTED', 'SYSTEM', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."MissionStatusHistories" VALUES (115, 45, NULL, 'INITIALIZING', 'SYSTEM', NULL, 'Created by AUTO dispatch of TASK-20261030055232-F5E9D4FF6DC5444B.', '2026-10-30 05:54:02+00');
+INSERT INTO public."MissionStatusHistories" VALUES (116, 45, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-30 05:54:04.604+00');
+INSERT INTO public."MissionStatusHistories" VALUES (117, 45, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-30 05:54:29.213+00');
+INSERT INTO public."MissionStatusHistories" VALUES (118, 46, NULL, 'INITIALIZING', 'SYSTEM', NULL, 'Created by AUTO dispatch of TASK-20261030060601-19B728D4EEE74E20.', '2026-10-30 06:07:02.339+00');
+INSERT INTO public."MissionStatusHistories" VALUES (119, 46, 'INITIALIZING', 'NAVIGATING_TO_PICKUP', 'ROBOT_AGENT', NULL, 'MISSION_STARTED', '2026-10-30 06:07:06.521+00');
+INSERT INTO public."MissionStatusHistories" VALUES (120, 46, 'NAVIGATING_TO_PICKUP', 'COMPLETED', 'ROBOT_AGENT', NULL, 'MISSION_COMPLETED', '2026-10-30 06:08:00.999+00');
 
 
 --
@@ -1399,48 +1400,48 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: Missions; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO public."Missions" VALUES (2, 'M002', 2, 'ABORTED', NULL, '2026-09-28 10:26:20.597+00', '2026-09-28 10:26:20.597+00', 0.00, 0, NULL, '2026-09-28 09:58:39.246+00');
+INSERT INTO public."Missions" VALUES (3, 'M003', 3, 'ABORTED', NULL, '2026-09-30 05:09:38.742+00', '2026-09-30 05:09:38.742+00', 0.00, 0, NULL, '2026-09-30 05:00:01.694+00');
+INSERT INTO public."Missions" VALUES (4, 'M004', 4, 'ABORTED', NULL, '2026-09-30 07:32:11.068+00', '2026-09-30 07:32:11.068+00', 0.00, 0, NULL, '2026-09-30 05:57:42.809+00');
+INSERT INTO public."Missions" VALUES (5, 'M005', 5, 'ABORTED', NULL, '2026-09-30 07:38:40.258+00', '2026-09-30 07:38:40.258+00', 0.00, 0, NULL, '2026-09-30 07:35:49.939+00');
+INSERT INTO public."Missions" VALUES (6, 'M006', 6, 'ABORTED', NULL, '2026-10-01 05:19:49.489+00', '2026-10-01 05:19:49.489+00', 0.00, 0, NULL, '2026-09-30 07:51:15.992+00');
+INSERT INTO public."Missions" VALUES (9, 'M009', 9, 'ABORTED', NULL, '2026-10-06 07:01:01.739+00', '2026-10-06 07:01:01.739+00', 0.00, 0, NULL, '2026-10-06 06:55:28.743+00');
+INSERT INTO public."Missions" VALUES (11, 'M011', 11, 'ABORTED', NULL, '2026-10-06 07:21:26.989+00', '2026-10-06 07:21:26.989+00', 0.00, 0, NULL, '2026-10-06 07:11:50.426+00');
+INSERT INTO public."Missions" VALUES (12, 'M012', 12, 'ABORTED', NULL, '2026-10-06 07:26:18.042+00', '2026-10-06 07:26:18.042+00', 0.00, 0, NULL, '2026-10-06 07:21:41.321+00');
+INSERT INTO public."Missions" VALUES (13, 'M013', 13, 'ABORTED', NULL, '2026-10-06 07:28:55.734+00', '2026-10-06 07:28:55.734+00', 0.00, 0, NULL, '2026-10-06 07:26:29.896+00');
+INSERT INTO public."Missions" VALUES (14, 'M014', 14, 'COMPLETED', NULL, '2026-10-06 07:49:55.605+00', '2026-10-06 07:49:55.605+00', 0.00, 0, NULL, '2026-10-06 07:29:09.019+00');
+INSERT INTO public."Missions" VALUES (15, 'M015', 15, 'FAILED', NULL, '2026-10-06 08:04:53.78+00', '2026-10-06 08:04:53.78+00', 0.00, 0, 'Timeout waiting for BE ACK for eventId bae34a71-9a3c-48b4-8f68-9dfd7269a1fc', '2026-10-06 08:04:35.513+00');
+INSERT INTO public."Missions" VALUES (16, 'M016', 16, 'FAILED', NULL, '2026-10-06 08:29:26.561+00', '2026-10-06 08:29:26.561+00', 0.00, 0, 'Timeout waiting for BE ACK for eventId b6502b55-268a-412a-bf93-a0ab72ac89d3', '2026-10-06 08:29:05.075+00');
+INSERT INTO public."Missions" VALUES (17, 'M017', 17, 'COMPLETED', '2026-10-18 10:14:00.025+00', '2026-10-18 10:14:11.351+00', '2026-10-18 10:14:11.351+00', 0.00, 11, NULL, '2026-10-18 10:07:51.215+00');
+INSERT INTO public."Missions" VALUES (36, 'M036', 36, 'COMPLETED', '2026-10-20 04:56:26.098+00', '2026-10-20 04:56:41.245+00', '2026-10-20 04:56:41.245+00', 0.00, 15, NULL, '2026-10-20 04:56:24.439+00');
+INSERT INTO public."Missions" VALUES (37, 'M037', 37, 'COMPLETED', '2026-10-20 04:57:40.504+00', '2026-10-20 04:57:56.154+00', '2026-10-20 04:57:56.154+00', 0.00, 15, NULL, '2026-10-20 04:57:38.686+00');
+INSERT INTO public."Missions" VALUES (19, 'M019', 19, 'COMPLETED', '2026-10-19 17:01:24.204+00', '2026-10-19 17:02:29.135+00', '2026-10-19 17:02:29.135+00', 0.00, 64, NULL, '2026-10-19 17:01:19.675+00');
+INSERT INTO public."Missions" VALUES (18, 'M018', 18, 'ABORTED', '2026-10-19 16:35:43.771+00', '2026-10-20 01:51:34.306+00', '2026-10-19 16:35:43.771+00', 0.00, 0, 'Reset for SmartFleet testing', '2026-10-19 16:35:39.435+00');
+INSERT INTO public."Missions" VALUES (20, 'M020', 20, 'ABORTED', NULL, '2026-10-20 01:51:34.306+00', NULL, 0.00, 0, 'Reset for SmartFleet testing', '2026-10-20 01:37:01.052+00');
+INSERT INTO public."Missions" VALUES (38, 'M038', 38, 'COMPLETED', '2026-10-20 05:06:13.219+00', '2026-10-20 05:06:27.963+00', '2026-10-20 05:06:27.963+00', 0.00, 14, NULL, '2026-10-20 05:06:09.932+00');
+INSERT INTO public."Missions" VALUES (21, 'M021', 21, 'COMPLETED', '2026-10-20 01:52:06.056+00', '2026-10-20 01:52:43.672+00', '2026-10-20 01:52:43.672+00', 0.00, 37, NULL, '2026-10-20 01:52:00.962+00');
+INSERT INTO public."Missions" VALUES (39, 'M039', 39, 'COMPLETED', '2026-10-20 05:17:17.062+00', '2026-10-20 05:17:31.825+00', '2026-10-20 05:17:31.825+00', 0.00, 14, NULL, '2026-10-20 05:17:14.876+00');
+INSERT INTO public."Missions" VALUES (22, 'M022', 22, 'COMPLETED', '2026-10-20 01:53:46.156+00', '2026-10-20 01:54:23.541+00', '2026-10-20 01:54:23.541+00', 0.00, 37, NULL, '2026-10-20 01:53:41.968+00');
+INSERT INTO public."Missions" VALUES (40, 'M040', 40, 'COMPLETED', '2026-10-30 03:19:56.1+00', '2026-10-30 03:24:07.968+00', '2026-10-30 03:24:07.968+00', 0.00, 251, NULL, '2026-10-30 03:19:50.815+00');
+INSERT INTO public."Missions" VALUES (23, 'M023', 23, 'COMPLETED', '2026-10-20 01:55:12.481+00', '2026-10-20 01:55:50.113+00', '2026-10-20 01:55:50.113+00', 0.00, 37, NULL, '2026-10-20 01:55:07.405+00');
+INSERT INTO public."Missions" VALUES (24, 'M024', 24, 'COMPLETED', '2026-10-20 02:04:43.437+00', '2026-10-20 02:05:44.807+00', '2026-10-20 02:05:44.807+00', 0.00, 61, NULL, '2026-10-20 02:04:38.27+00');
+INSERT INTO public."Missions" VALUES (41, 'M041', 41, 'COMPLETED', '2026-10-30 03:24:40.562+00', '2026-10-30 03:27:00.698+00', '2026-10-30 03:27:00.698+00', 0.00, 140, NULL, '2026-10-30 03:24:36.477+00');
+INSERT INTO public."Missions" VALUES (25, 'M025', 25, 'FAILED', '2026-10-20 02:10:45.011+00', '2026-10-20 02:11:02.439+00', '2026-10-20 02:11:02.439+00', 0.00, 17, 'Timeout waiting for BE ACK for eventId 1d9e2459-90c1-4004-90b8-74e72af4356c', '2026-10-20 02:10:21.927+00');
+INSERT INTO public."Missions" VALUES (42, 'M042', 42, 'COMPLETED', '2026-10-30 05:27:57.513+00', '2026-10-30 05:30:50.523+00', '2026-10-30 05:30:50.523+00', 0.00, 173, NULL, '2026-10-30 05:27:52.11+00');
+INSERT INTO public."Missions" VALUES (26, 'M026', 26, 'COMPLETED', '2026-10-20 02:11:52.703+00', '2026-10-20 02:12:32.693+00', '2026-10-20 02:12:32.693+00', 0.00, 39, NULL, '2026-10-20 02:11:48.525+00');
+INSERT INTO public."Missions" VALUES (27, 'M027', 27, 'COMPLETED', '2026-10-20 02:30:02.18+00', '2026-10-20 02:31:00.102+00', '2026-10-20 02:31:00.102+00', 0.00, 57, NULL, '2026-10-20 02:29:59.247+00');
+INSERT INTO public."Missions" VALUES (43, 'M043', 43, 'FAILED', NULL, '2026-10-30 05:34:21.382+00', '2026-10-30 05:34:21.382+00', 0.00, 0, 'Timeout waiting for BE ACK for eventId 3ab28786-e137-4abb-a511-a9140c4b93ad', '2026-10-30 05:34:02.057+00');
+INSERT INTO public."Missions" VALUES (44, 'M044', 44, 'ABORTED', NULL, '2026-10-30 05:51:11.317+00', NULL, 0.00, 0, 'Reset for SmartFleet testing', '2026-10-30 05:34:03.927+00');
+INSERT INTO public."Missions" VALUES (28, 'M028', 28, 'COMPLETED', '2026-10-20 03:17:02.859+00', '2026-10-20 03:17:45.655+00', '2026-10-20 03:17:45.655+00', 0.00, 42, NULL, '2026-10-20 03:16:59.757+00');
+INSERT INTO public."Missions" VALUES (45, 'M045', 45, 'COMPLETED', '2026-10-30 05:54:04.604+00', '2026-10-30 05:54:29.213+00', '2026-10-30 05:54:29.213+00', 0.00, 24, NULL, '2026-10-30 05:54:02+00');
+INSERT INTO public."Missions" VALUES (29, 'M029', 29, 'ABORTED', '2026-10-20 03:49:33.169+00', '2026-10-20 03:54:30.893+00', '2026-10-20 03:49:33.169+00', 0.00, 0, 'Reset for SmartFleet testing', '2026-10-20 03:49:27.17+00');
+INSERT INTO public."Missions" VALUES (30, 'M030', 30, 'COMPLETED', '2026-10-20 03:55:48.85+00', '2026-10-20 03:56:04.35+00', '2026-10-20 03:56:04.35+00', 0.00, 15, NULL, '2026-10-20 03:55:45.406+00');
+INSERT INTO public."Missions" VALUES (46, 'M046', 46, 'COMPLETED', '2026-10-30 06:07:06.521+00', '2026-10-30 06:08:00.999+00', '2026-10-30 06:08:00.999+00', 0.00, 54, NULL, '2026-10-30 06:07:02.339+00');
+INSERT INTO public."Missions" VALUES (31, 'M031', 31, 'COMPLETED', '2026-10-20 03:57:22.034+00', '2026-10-20 03:57:37.285+00', '2026-10-20 03:57:37.285+00', 0.00, 15, NULL, '2026-10-20 03:57:19.966+00');
+INSERT INTO public."Missions" VALUES (32, 'M032', 32, 'COMPLETED', '2026-10-20 03:59:23.183+00', '2026-10-20 03:59:38.184+00', '2026-10-20 03:59:38.184+00', 0.00, 15, NULL, '2026-10-20 03:59:18.011+00');
+INSERT INTO public."Missions" VALUES (33, 'M033', 33, 'COMPLETED', '2026-10-20 04:16:36.666+00', '2026-10-20 04:16:52.398+00', '2026-10-20 04:16:52.398+00', 0.00, 15, NULL, '2026-10-20 04:16:34.51+00');
+INSERT INTO public."Missions" VALUES (34, 'M034', 34, 'COMPLETED', '2026-10-20 04:30:19.4+00', '2026-10-20 04:30:35.379+00', '2026-10-20 04:30:35.379+00', 0.00, 15, NULL, '2026-10-20 04:30:16.81+00');
+INSERT INTO public."Missions" VALUES (35, 'M035', 35, 'COMPLETED', '2026-10-20 04:32:50.006+00', '2026-10-20 04:33:06.834+00', '2026-10-20 04:33:06.834+00', 0.00, 16, NULL, '2026-10-20 04:32:45.945+00');
 
 
 --
@@ -1489,42 +1490,42 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: RobotCommandOutbox; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO public."RobotCommandOutbox" VALUES (1, 11, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-06 07:11:50.426498+00', '2026-10-06 07:11:50.426498+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (2, 12, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-06 07:21:41.321678+00', '2026-10-06 07:21:41.321678+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (3, 13, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-06 07:26:29.896692+00', '2026-10-06 07:26:29.896692+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (4, 14, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-06 07:29:09.019449+00', '2026-10-06 07:29:09.019449+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (5, 15, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-06 08:04:35.513418+00', '2026-10-06 08:04:35.513418+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (6, 16, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-06 08:29:05.075438+00', '2026-10-06 08:29:05.075438+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (7, 17, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-18 10:07:51.215468+00', '2026-10-18 10:07:51.215468+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (8, 18, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-19 16:35:39.43476+00', '2026-10-19 16:35:39.43476+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (9, 19, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-19 17:01:19.675013+00', '2026-10-19 17:01:19.675013+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (10, 20, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 01:37:01.052068+00', '2026-10-20 01:37:01.052068+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (11, 21, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 01:52:00.962379+00', '2026-10-20 01:52:00.962379+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (12, 22, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 01:53:41.967836+00', '2026-10-20 01:53:41.967836+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (13, 23, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 01:55:07.405228+00', '2026-10-20 01:55:07.405228+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (14, 24, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 02:04:38.270206+00', '2026-10-20 02:04:38.270206+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (15, 25, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 02:10:21.926822+00', '2026-10-20 02:10:21.926822+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (16, 26, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 02:11:48.524704+00', '2026-10-20 02:11:48.524704+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (17, 27, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 02:29:59.247191+00', '2026-10-20 02:29:59.247191+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (18, 28, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 03:16:59.757129+00', '2026-10-20 03:16:59.757129+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (19, 29, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 03:49:27.170257+00', '2026-10-20 03:49:27.170257+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (20, 30, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 03:55:45.405624+00', '2026-10-20 03:55:45.405624+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (21, 31, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 03:57:19.965526+00', '2026-10-20 03:57:19.965526+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (22, 32, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 03:59:18.011398+00', '2026-10-20 03:59:18.011398+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (23, 33, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 04:16:34.510382+00', '2026-10-20 04:16:34.510382+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (24, 34, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 04:30:16.8103+00', '2026-10-20 04:30:16.8103+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (25, 35, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 04:32:45.945006+00', '2026-10-20 04:32:45.945006+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (26, 36, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 04:56:24.438923+00', '2026-10-20 04:56:24.438923+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (27, 37, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 04:57:38.685878+00', '2026-10-20 04:57:38.685878+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (28, 38, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 05:06:09.93168+00', '2026-10-20 05:06:09.93168+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (29, 39, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-20 05:17:14.876261+00', '2026-10-20 05:17:14.876261+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (30, 40, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-30 03:19:50.814515+00', '2026-10-30 03:19:50.814515+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (31, 41, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-30 03:24:36.477346+00', '2026-10-30 03:24:36.477346+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (32, 42, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-30 05:27:52.109653+00', '2026-10-30 05:27:52.109653+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (33, 43, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-30 05:34:02.056585+00', '2026-10-30 05:34:02.056585+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (34, 44, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-30 05:34:03.926746+00', '2026-10-30 05:34:03.926746+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (35, 45, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-30 05:54:02.000296+00', '2026-10-30 05:54:02.000296+00');
+INSERT INTO public."RobotCommandOutbox" VALUES (36, 46, 'smartfleet/sample/disabled', '{"sample":true}', '2026-10-30 06:07:02.338747+00', '2026-10-30 06:07:02.338747+00');
 
 
 --
@@ -1541,7 +1542,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: RobotMaintenanceRecords; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
+INSERT INTO public."RobotMaintenanceRecords" VALUES (1, 5, 'PREVENTIVE', 'Flow 2 test maintenance record.', 'IN_PROGRESS', '2026-09-28 07:07:34.508+00', '2026-09-28 07:17:34.508+00', NULL, NULL, NULL, '2026-09-28 07:37:34.508+00');
 
 
 --
@@ -1558,90 +1559,90 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: RobotStatusHistories; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO public."RobotStatusHistories" VALUES (2, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-09-28 09:58:39.246+00');
+INSERT INTO public."RobotStatusHistories" VALUES (3, 1, NULL, NULL, 'AVAILABLE', 'AVAILABLE', 'Test reset: robot returned to AVAILABLE.', '2026-09-28 10:26:20.598+00');
+INSERT INTO public."RobotStatusHistories" VALUES (4, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-09-30 05:00:01.694+00');
+INSERT INTO public."RobotStatusHistories" VALUES (5, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset - robot returned to AVAILABLE.', '2026-09-30 05:09:38.744+00');
+INSERT INTO public."RobotStatusHistories" VALUES (6, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-09-30 05:57:42.809+00');
+INSERT INTO public."RobotStatusHistories" VALUES (7, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset - robot returned to AVAILABLE.', '2026-09-30 07:08:19.91+00');
+INSERT INTO public."RobotStatusHistories" VALUES (8, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-09-30 07:35:49.939+00');
+INSERT INTO public."RobotStatusHistories" VALUES (9, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset.', '2026-09-30 07:38:40.259+00');
+INSERT INTO public."RobotStatusHistories" VALUES (10, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-09-30 07:51:15.992+00');
+INSERT INTO public."RobotStatusHistories" VALUES (11, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset.', '2026-10-01 05:19:49.528+00');
+INSERT INTO public."RobotStatusHistories" VALUES (14, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-06 06:55:28.743+00');
+INSERT INTO public."RobotStatusHistories" VALUES (15, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset.', '2026-10-06 07:01:01.74+00');
+INSERT INTO public."RobotStatusHistories" VALUES (17, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-06 07:11:50.426+00');
+INSERT INTO public."RobotStatusHistories" VALUES (18, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset.', '2026-10-06 07:21:26.994+00');
+INSERT INTO public."RobotStatusHistories" VALUES (19, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-06 07:21:41.321+00');
+INSERT INTO public."RobotStatusHistories" VALUES (20, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset.', '2026-10-06 07:26:18.043+00');
+INSERT INTO public."RobotStatusHistories" VALUES (21, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-06 07:26:29.896+00');
+INSERT INTO public."RobotStatusHistories" VALUES (22, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'Test reset.', '2026-10-06 07:28:55.734+00');
+INSERT INTO public."RobotStatusHistories" VALUES (23, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-06 07:29:09.019+00');
+INSERT INTO public."RobotStatusHistories" VALUES (26, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-06 07:49:55.605+00');
+INSERT INTO public."RobotStatusHistories" VALUES (27, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-10-06 08:04:35.513+00');
+INSERT INTO public."RobotStatusHistories" VALUES (28, 1, NULL, NULL, 'BUSY', 'ERROR', 'Timeout waiting for BE ACK for eventId bae34a71-9a3c-48b4-8f68-9dfd7269a1fc', '2026-10-06 08:04:53.78+00');
+INSERT INTO public."RobotStatusHistories" VALUES (29, 1, NULL, NULL, 'ERROR', 'AVAILABLE', 'Test reset.', '2026-10-06 08:10:47.85+00');
+INSERT INTO public."RobotStatusHistories" VALUES (30, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T003.', '2026-10-06 08:29:05.075+00');
+INSERT INTO public."RobotStatusHistories" VALUES (31, 1, NULL, NULL, 'BUSY', 'ERROR', 'Timeout waiting for BE ACK for eventId b6502b55-268a-412a-bf93-a0ab72ac89d3', '2026-10-06 08:29:26.561+00');
+INSERT INTO public."RobotStatusHistories" VALUES (32, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-18 10:07:51.215+00');
+INSERT INTO public."RobotStatusHistories" VALUES (33, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-18 10:14:11.351+00');
+INSERT INTO public."RobotStatusHistories" VALUES (34, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-10-19 16:35:39.435+00');
+INSERT INTO public."RobotStatusHistories" VALUES (35, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T003.', '2026-10-19 17:01:19.675+00');
+INSERT INTO public."RobotStatusHistories" VALUES (36, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-19 17:02:29.135+00');
+INSERT INTO public."RobotStatusHistories" VALUES (37, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T004.', '2026-10-20 01:37:01.052+00');
+INSERT INTO public."RobotStatusHistories" VALUES (38, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-20 01:52:00.962+00');
+INSERT INTO public."RobotStatusHistories" VALUES (39, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 01:52:43.672+00');
+INSERT INTO public."RobotStatusHistories" VALUES (40, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-10-20 01:53:41.968+00');
+INSERT INTO public."RobotStatusHistories" VALUES (41, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 01:54:23.541+00');
+INSERT INTO public."RobotStatusHistories" VALUES (42, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T003.', '2026-10-20 01:55:07.405+00');
+INSERT INTO public."RobotStatusHistories" VALUES (43, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 01:55:50.113+00');
+INSERT INTO public."RobotStatusHistories" VALUES (44, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T004.', '2026-10-20 02:04:38.27+00');
+INSERT INTO public."RobotStatusHistories" VALUES (45, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 02:05:44.807+00');
+INSERT INTO public."RobotStatusHistories" VALUES (46, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T005.', '2026-10-20 02:10:21.927+00');
+INSERT INTO public."RobotStatusHistories" VALUES (47, 1, NULL, NULL, 'BUSY', 'ERROR', 'Timeout waiting for BE ACK for eventId 1d9e2459-90c1-4004-90b8-74e72af4356c', '2026-10-20 02:11:02.439+00');
+INSERT INTO public."RobotStatusHistories" VALUES (48, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-20 02:11:48.525+00');
+INSERT INTO public."RobotStatusHistories" VALUES (49, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 02:12:32.693+00');
+INSERT INTO public."RobotStatusHistories" VALUES (50, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task TASK-20261020015124-EB95395056834246.', '2026-10-20 02:29:59.247+00');
+INSERT INTO public."RobotStatusHistories" VALUES (51, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 02:31:00.102+00');
+INSERT INTO public."RobotStatusHistories" VALUES (52, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-10-20 03:16:59.757+00');
+INSERT INTO public."RobotStatusHistories" VALUES (53, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 03:17:45.655+00');
+INSERT INTO public."RobotStatusHistories" VALUES (54, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T003.', '2026-10-20 03:49:27.17+00');
+INSERT INTO public."RobotStatusHistories" VALUES (55, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-20 03:55:45.406+00');
+INSERT INTO public."RobotStatusHistories" VALUES (56, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 03:56:04.35+00');
+INSERT INTO public."RobotStatusHistories" VALUES (57, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-10-20 03:57:19.966+00');
+INSERT INTO public."RobotStatusHistories" VALUES (58, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 03:57:37.285+00');
+INSERT INTO public."RobotStatusHistories" VALUES (59, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T003.', '2026-10-20 03:59:18.011+00');
+INSERT INTO public."RobotStatusHistories" VALUES (60, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 03:59:38.184+00');
+INSERT INTO public."RobotStatusHistories" VALUES (61, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T004.', '2026-10-20 04:16:34.51+00');
+INSERT INTO public."RobotStatusHistories" VALUES (62, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 04:16:52.398+00');
+INSERT INTO public."RobotStatusHistories" VALUES (63, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-10-20 04:30:16.81+00');
+INSERT INTO public."RobotStatusHistories" VALUES (64, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 04:30:35.379+00');
+INSERT INTO public."RobotStatusHistories" VALUES (65, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task TASK-20261020015124-EB95395056834246.', '2026-10-20 04:32:45.945+00');
+INSERT INTO public."RobotStatusHistories" VALUES (66, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 04:33:06.834+00');
+INSERT INTO public."RobotStatusHistories" VALUES (67, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T005.', '2026-10-20 04:56:24.439+00');
+INSERT INTO public."RobotStatusHistories" VALUES (68, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 04:56:41.245+00');
+INSERT INTO public."RobotStatusHistories" VALUES (69, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-20 04:57:38.686+00');
+INSERT INTO public."RobotStatusHistories" VALUES (70, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 04:57:56.154+00');
+INSERT INTO public."RobotStatusHistories" VALUES (71, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T001.', '2026-10-20 05:06:09.932+00');
+INSERT INTO public."RobotStatusHistories" VALUES (72, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 05:06:27.963+00');
+INSERT INTO public."RobotStatusHistories" VALUES (73, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'Assigned to task T002.', '2026-10-20 05:17:14.876+00');
+INSERT INTO public."RobotStatusHistories" VALUES (74, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-20 05:17:31.825+00');
+INSERT INTO public."RobotStatusHistories" VALUES (75, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'AUTO assignment to TASK-20261030031949-333CFF4A27AD44EB.', '2026-10-30 03:19:50.815+00');
+INSERT INTO public."RobotStatusHistories" VALUES (76, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-30 03:24:07.968+00');
+INSERT INTO public."RobotStatusHistories" VALUES (77, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'AUTO assignment to TASK-20261030032435-98F7F9F4A61C473A.', '2026-10-30 03:24:36.477+00');
+INSERT INTO public."RobotStatusHistories" VALUES (78, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-30 03:27:00.698+00');
+INSERT INTO public."RobotStatusHistories" VALUES (79, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'AUTO assignment to TASK-20261030052750-FC56969C56A04992.', '2026-10-30 05:27:52.11+00');
+INSERT INTO public."RobotStatusHistories" VALUES (80, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-30 05:30:50.523+00');
+INSERT INTO public."RobotStatusHistories" VALUES (81, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'AUTO assignment to TASK-20261030053238-733A5BD50C504426.', '2026-10-30 05:34:02.057+00');
+INSERT INTO public."RobotStatusHistories" VALUES (82, 2, NULL, NULL, 'AVAILABLE', 'BUSY', 'AUTO assignment to TASK-20261030053353-AFE0BF085D03455D.', '2026-10-30 05:34:03.927+00');
+INSERT INTO public."RobotStatusHistories" VALUES (83, 1, NULL, NULL, 'BUSY', 'ERROR', 'Timeout waiting for BE ACK for eventId 3ab28786-e137-4abb-a511-a9140c4b93ad', '2026-10-30 05:34:21.382+00');
+INSERT INTO public."RobotStatusHistories" VALUES (84, 2, NULL, NULL, 'BUSY', 'AVAILABLE', 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."RobotStatusHistories" VALUES (85, 1, NULL, NULL, 'ERROR', 'AVAILABLE', 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."RobotStatusHistories" VALUES (86, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'AUTO assignment to TASK-20261030055232-F5E9D4FF6DC5444B.', '2026-10-30 05:54:02+00');
+INSERT INTO public."RobotStatusHistories" VALUES (87, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-30 05:54:29.213+00');
+INSERT INTO public."RobotStatusHistories" VALUES (88, 1, NULL, NULL, 'AVAILABLE', 'BUSY', 'AUTO assignment to TASK-20261030060601-19B728D4EEE74E20.', '2026-10-30 06:07:02.339+00');
+INSERT INTO public."RobotStatusHistories" VALUES (89, 1, NULL, NULL, 'BUSY', 'AVAILABLE', 'MISSION_COMPLETED', '2026-10-30 06:08:00.999+00');
+INSERT INTO public."RobotStatusHistories" VALUES (90, 5, NULL, NULL, 'AVAILABLE', 'MAINTENANCE', 'Maintenance user 3: fffff', '2026-10-30 06:35:16.709+00');
 
 
 --
@@ -1658,11 +1659,11 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: Robots; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
+INSERT INTO public."Robots" VALUES (3, 1, 'R03', 'PHYSICAL', 'JetRacer', 'NVIDIA_JETRACER_PYTHON', NULL, NULL, NULL, 'smartfleet-sample-robot-3', 'ONLINE', 'AVAILABLE', 15.00, NULL, 8.0000, 10.0000, NULL, 0, '2026-09-28 07:37:34.507+00', NULL, true, '2026-09-28 07:37:34.507+00', '2026-10-20 05:05:41.709+00', 50.00);
+INSERT INTO public."Robots" VALUES (4, 1, 'R04', 'PHYSICAL', 'JetRacer', 'NVIDIA_JETRACER_PYTHON', NULL, NULL, NULL, 'smartfleet-sample-robot-4', 'OFFLINE', 'AVAILABLE', 95.00, NULL, 5.0000, 10.0000, NULL, 0, NULL, NULL, true, '2026-09-28 07:37:34.508+00', '2026-10-20 05:05:41.709+00', 50.00);
+INSERT INTO public."Robots" VALUES (2, 1, 'R02', 'PHYSICAL', 'JetRacer', 'NVIDIA_JETRACER_PYTHON', NULL, NULL, NULL, 'smartfleet-sample-robot-2', 'ONLINE', 'AVAILABLE', 75.00, 12.000, 30.0000, 10.0000, 0.000000, 0, '2026-09-28 07:37:34.507+00', '2026-09-28 07:37:34.507+00', true, '2026-09-28 07:37:34.507+00', '2026-10-30 05:51:11.317+00', 50.00);
+INSERT INTO public."Robots" VALUES (1, 1, 'R01', 'PHYSICAL', 'JetRacer', 'ROS1', NULL, NULL, NULL, 'smartfleet-sample-robot-1', 'ONLINE', 'AVAILABLE', 90.00, 12.300, 0.0000, 10.0000, 0.000000, 0, '2026-09-28 07:37:34.506+00', '2026-09-28 07:37:34.506+00', true, '2026-09-28 07:37:34.506+00', '2026-10-30 06:08:00.999+00', 50.00);
+INSERT INTO public."Robots" VALUES (5, 1, 'R05', 'PHYSICAL', 'JetRacer', 'NVIDIA_JETRACER_PYTHON', NULL, NULL, NULL, 'smartfleet-sample-robot-5', 'ONLINE', 'MAINTENANCE', 85.00, NULL, 6.0000, 10.0000, NULL, 0, '2026-09-28 07:37:34.508+00', NULL, true, '2026-09-28 07:37:34.508+00', '2026-10-30 06:35:16.709+00', 50.00);
 
 
 --
@@ -1671,9 +1672,9 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: Roles; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
+INSERT INTO public."Roles" VALUES (1, 'Administrator', 'Full system administration access', '2026-09-27 04:34:03.189+00');
+INSERT INTO public."Roles" VALUES (3, 'Warehouse Operator', 'Creates and manages transport tasks, dispatches robots, monitors missions, verifies delivery and handles operational alerts', '2026-09-27 04:34:03.34+00');
+INSERT INTO public."Roles" VALUES (4, 'Maintenance Technician', 'Monitors robot health and maintenance status, manages maintenance records and schedules, and handles maintenance alerts', '2026-09-27 04:44:51.969+00');
 
 
 --
@@ -1682,8 +1683,8 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: Stations; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
+INSERT INTO public."Stations" VALUES (1, 1, 'P1', 'Pickup Station P1', 'PICKUP', 10.0000, 10.0000, 0.0000, 0.000000, 'SMARTFLEET-P1', false, true, '2026-09-28 07:37:34.505+00', NULL);
+INSERT INTO public."Stations" VALUES (2, 2, 'D1', 'Delivery Station D1', 'DELIVERY', 40.0000, 10.0000, 0.0000, 0.000000, 'SMARTFLEET-D1', false, true, '2026-09-28 07:37:34.506+00', NULL);
 
 
 --
@@ -1700,48 +1701,48 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: TaskAssignments; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO public."TaskAssignments" VALUES (2, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset to allow T001 and R01 to be assigned again.', '2026-09-28 09:58:39.246+00', '2026-09-28 10:26:20.597+00');
+INSERT INTO public."TaskAssignments" VALUES (3, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset - task and robot released for another test.', '2026-09-30 05:00:01.694+00', '2026-09-30 05:09:38.742+00');
+INSERT INTO public."TaskAssignments" VALUES (4, 2, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', 'Test reset - release robot for another assignment.', '2026-09-30 05:57:42.809+00', '2026-09-30 07:32:11.092+00');
+INSERT INTO public."TaskAssignments" VALUES (5, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset - release robot for another assignment.', '2026-09-30 07:35:49.939+00', '2026-09-30 07:38:40.259+00');
+INSERT INTO public."TaskAssignments" VALUES (6, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset - release robot for another assignment.', '2026-09-30 07:51:15.992+00', '2026-10-01 05:19:49.501+00');
+INSERT INTO public."TaskAssignments" VALUES (9, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset - release robot for another assignment.', '2026-10-06 06:55:28.743+00', '2026-10-06 07:01:01.739+00');
+INSERT INTO public."TaskAssignments" VALUES (11, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset - release robot for another assignment.', '2026-10-06 07:11:50.426+00', '2026-10-06 07:21:26.993+00');
+INSERT INTO public."TaskAssignments" VALUES (12, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset - release robot for another assignment.', '2026-10-06 07:21:41.321+00', '2026-10-06 07:26:18.042+00');
+INSERT INTO public."TaskAssignments" VALUES (13, 1, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', 'Test reset - release robot for another assignment.', '2026-10-06 07:26:29.896+00', '2026-10-06 07:28:55.734+00');
+INSERT INTO public."TaskAssignments" VALUES (14, 1, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', NULL, '2026-10-06 07:29:09.019+00', '2026-10-06 07:49:55.605+00');
+INSERT INTO public."TaskAssignments" VALUES (15, 2, 1, 'MANUAL', 2, 'FAILED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', NULL, '2026-10-06 08:04:35.513+00', '2026-10-06 08:04:53.78+00');
+INSERT INTO public."TaskAssignments" VALUES (16, 3, 1, 'MANUAL', 2, 'FAILED', NULL, NULL, 90.00, 0, 'Manual assignment of T003 to R01.', NULL, '2026-10-06 08:29:05.075+00', '2026-10-06 08:29:26.561+00');
+INSERT INTO public."TaskAssignments" VALUES (17, 1, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', NULL, '2026-10-18 10:07:51.215+00', '2026-10-18 10:14:11.351+00');
+INSERT INTO public."TaskAssignments" VALUES (18, 2, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', NULL, '2026-10-19 16:35:39.435+00', NULL);
+INSERT INTO public."TaskAssignments" VALUES (19, 3, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T003 to R01.', NULL, '2026-10-19 17:01:19.675+00', '2026-10-19 17:02:29.135+00');
+INSERT INTO public."TaskAssignments" VALUES (20, 4, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T004 to R01.', 'Reset for SmartFleet testing', '2026-10-20 01:37:01.052+00', '2026-10-20 01:51:34.306+00');
+INSERT INTO public."TaskAssignments" VALUES (21, 1, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', NULL, '2026-10-20 01:52:00.962+00', '2026-10-20 01:52:43.672+00');
+INSERT INTO public."TaskAssignments" VALUES (22, 2, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', NULL, '2026-10-20 01:53:41.968+00', '2026-10-20 01:54:23.541+00');
+INSERT INTO public."TaskAssignments" VALUES (23, 3, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T003 to R01.', NULL, '2026-10-20 01:55:07.405+00', '2026-10-20 01:55:50.113+00');
+INSERT INTO public."TaskAssignments" VALUES (24, 4, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T004 to R01.', NULL, '2026-10-20 02:04:38.27+00', '2026-10-20 02:05:44.807+00');
+INSERT INTO public."TaskAssignments" VALUES (25, 5, 1, 'MANUAL', 2, 'FAILED', NULL, NULL, 90.00, 0, 'Manual assignment of T005 to R01.', NULL, '2026-10-20 02:10:21.927+00', '2026-10-20 02:11:02.439+00');
+INSERT INTO public."TaskAssignments" VALUES (26, 1, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', NULL, '2026-10-20 02:11:48.525+00', '2026-10-20 02:12:32.693+00');
+INSERT INTO public."TaskAssignments" VALUES (27, 7, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of TASK-20261020015124-EB95395056834246 to R01.', NULL, '2026-10-20 02:29:59.247+00', '2026-10-20 02:31:00.102+00');
+INSERT INTO public."TaskAssignments" VALUES (28, 2, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', NULL, '2026-10-20 03:16:59.757+00', '2026-10-20 03:17:45.655+00');
+INSERT INTO public."TaskAssignments" VALUES (29, 3, 1, 'MANUAL', 2, 'CANCELLED', NULL, NULL, 90.00, 0, 'Manual assignment of T003 to R01.', 'Reset for SmartFleet testing', '2026-10-20 03:49:27.17+00', '2026-10-20 03:54:30.893+00');
+INSERT INTO public."TaskAssignments" VALUES (30, 1, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', NULL, '2026-10-20 03:55:45.406+00', '2026-10-20 03:56:04.35+00');
+INSERT INTO public."TaskAssignments" VALUES (31, 2, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', NULL, '2026-10-20 03:57:19.966+00', '2026-10-20 03:57:37.285+00');
+INSERT INTO public."TaskAssignments" VALUES (32, 3, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T003 to R01.', NULL, '2026-10-20 03:59:18.011+00', '2026-10-20 03:59:38.184+00');
+INSERT INTO public."TaskAssignments" VALUES (33, 4, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T004 to R01.', NULL, '2026-10-20 04:16:34.51+00', '2026-10-20 04:16:52.398+00');
+INSERT INTO public."TaskAssignments" VALUES (34, 2, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', NULL, '2026-10-20 04:30:16.81+00', '2026-10-20 04:30:35.379+00');
+INSERT INTO public."TaskAssignments" VALUES (35, 7, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of TASK-20261020015124-EB95395056834246 to R01.', NULL, '2026-10-20 04:32:45.945+00', '2026-10-20 04:33:06.834+00');
+INSERT INTO public."TaskAssignments" VALUES (36, 5, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T005 to R01.', NULL, '2026-10-20 04:56:24.439+00', '2026-10-20 04:56:41.245+00');
+INSERT INTO public."TaskAssignments" VALUES (37, 1, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', NULL, '2026-10-20 04:57:38.686+00', '2026-10-20 04:57:56.154+00');
+INSERT INTO public."TaskAssignments" VALUES (38, 1, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T001 to R01.', NULL, '2026-10-20 05:06:09.932+00', '2026-10-20 05:06:27.963+00');
+INSERT INTO public."TaskAssignments" VALUES (39, 2, 1, 'MANUAL', 2, 'COMPLETED', NULL, NULL, 90.00, 0, 'Manual assignment of T002 to R01.', NULL, '2026-10-20 05:17:14.876+00', '2026-10-20 05:17:31.825+00');
+INSERT INTO public."TaskAssignments" VALUES (40, 9, 1, 'AUTO', NULL, 'COMPLETED', NULL, NULL, 90.00, 0, 'Automatically assigned TASK-20261030031949-333CFF4A27AD44EB to R01 (highest eligible battery).', NULL, '2026-10-30 03:19:50.815+00', '2026-10-30 03:24:07.968+00');
+INSERT INTO public."TaskAssignments" VALUES (41, 10, 1, 'AUTO', NULL, 'COMPLETED', NULL, NULL, 90.00, 0, 'Automatically assigned TASK-20261030032435-98F7F9F4A61C473A to R01 (highest eligible battery).', NULL, '2026-10-30 03:24:36.477+00', '2026-10-30 03:27:00.698+00');
+INSERT INTO public."TaskAssignments" VALUES (42, 12, 1, 'AUTO', NULL, 'COMPLETED', NULL, NULL, 90.00, 0, 'Automatically assigned TASK-20261030052750-FC56969C56A04992 to R01 (highest eligible battery).', NULL, '2026-10-30 05:27:52.11+00', '2026-10-30 05:30:50.523+00');
+INSERT INTO public."TaskAssignments" VALUES (43, 13, 1, 'AUTO', NULL, 'FAILED', NULL, NULL, 90.00, 0, 'Automatically assigned TASK-20261030053238-733A5BD50C504426 to R01 (highest eligible battery).', NULL, '2026-10-30 05:34:02.057+00', '2026-10-30 05:34:21.382+00');
+INSERT INTO public."TaskAssignments" VALUES (44, 14, 2, 'AUTO', NULL, 'CANCELLED', NULL, NULL, 75.00, 0, 'Automatically assigned TASK-20261030053353-AFE0BF085D03455D to R02 (highest eligible battery).', 'Reset for SmartFleet testing', '2026-10-30 05:34:03.927+00', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskAssignments" VALUES (45, 16, 1, 'AUTO', NULL, 'COMPLETED', NULL, NULL, 90.00, 0, 'Automatically assigned TASK-20261030055232-F5E9D4FF6DC5444B to R01 (highest eligible battery).', NULL, '2026-10-30 05:54:02+00', '2026-10-30 05:54:29.213+00');
+INSERT INTO public."TaskAssignments" VALUES (46, 17, 1, 'AUTO', NULL, 'COMPLETED', NULL, NULL, 90.00, 0, 'Automatically assigned TASK-20261030060601-19B728D4EEE74E20 to R01 (highest eligible battery).', NULL, '2026-10-30 06:07:02.339+00', '2026-10-30 06:08:00.999+00');
 
 
 --
@@ -1750,155 +1751,155 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: TaskStatusHistories; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO public."TaskStatusHistories" VALUES (1, 1, NULL, 'PENDING', 2, 'Flow 2 test task created.', '2026-09-28 07:34:34.51+00');
+INSERT INTO public."TaskStatusHistories" VALUES (2, 1, 'PENDING', 'QUEUED', 2, 'Task added to dispatch queue.', '2026-09-28 07:35:34.51+00');
+INSERT INTO public."TaskStatusHistories" VALUES (4, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-09-28 09:58:39.246+00');
+INSERT INTO public."TaskStatusHistories" VALUES (5, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset: T001 returned to dispatch queue.', '2026-09-28 10:26:20.597+00');
+INSERT INTO public."TaskStatusHistories" VALUES (6, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-09-30 05:00:01.694+00');
+INSERT INTO public."TaskStatusHistories" VALUES (7, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset - task returned to dispatch queue.', '2026-09-30 05:09:38.744+00');
+INSERT INTO public."TaskStatusHistories" VALUES (8, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-09-30 05:57:42.809+00');
+INSERT INTO public."TaskStatusHistories" VALUES (9, 2, 'ASSIGNED', 'QUEUED', NULL, 'Test reset.', '2026-09-30 07:32:11.098+00');
+INSERT INTO public."TaskStatusHistories" VALUES (10, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-09-30 07:35:49.939+00');
+INSERT INTO public."TaskStatusHistories" VALUES (11, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset.', '2026-09-30 07:38:40.259+00');
+INSERT INTO public."TaskStatusHistories" VALUES (12, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-09-30 07:51:15.992+00');
+INSERT INTO public."TaskStatusHistories" VALUES (13, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset.', '2026-10-01 05:19:49.513+00');
+INSERT INTO public."TaskStatusHistories" VALUES (16, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-06 06:55:28.743+00');
+INSERT INTO public."TaskStatusHistories" VALUES (17, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset.', '2026-10-06 07:01:01.74+00');
+INSERT INTO public."TaskStatusHistories" VALUES (19, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-06 07:11:50.426+00');
+INSERT INTO public."TaskStatusHistories" VALUES (20, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset.', '2026-10-06 07:21:26.994+00');
+INSERT INTO public."TaskStatusHistories" VALUES (21, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-06 07:21:41.321+00');
+INSERT INTO public."TaskStatusHistories" VALUES (22, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset.', '2026-10-06 07:26:18.042+00');
+INSERT INTO public."TaskStatusHistories" VALUES (23, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-06 07:26:29.896+00');
+INSERT INTO public."TaskStatusHistories" VALUES (24, 1, 'ASSIGNED', 'QUEUED', NULL, 'Test reset.', '2026-10-06 07:28:55.734+00');
+INSERT INTO public."TaskStatusHistories" VALUES (25, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-06 07:29:09.019+00');
+INSERT INTO public."TaskStatusHistories" VALUES (31, 1, 'ASSIGNED', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-06 07:49:55.605+00');
+INSERT INTO public."TaskStatusHistories" VALUES (32, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-06 08:04:35.513+00');
+INSERT INTO public."TaskStatusHistories" VALUES (34, 2, 'ASSIGNED', 'FAILED', NULL, 'Timeout waiting for BE ACK for eventId bae34a71-9a3c-48b4-8f68-9dfd7269a1fc', '2026-10-06 08:04:53.78+00');
+INSERT INTO public."TaskStatusHistories" VALUES (35, 3, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-06 08:29:05.075+00');
+INSERT INTO public."TaskStatusHistories" VALUES (37, 3, 'ASSIGNED', 'FAILED', NULL, 'Timeout waiting for BE ACK for eventId b6502b55-268a-412a-bf93-a0ab72ac89d3', '2026-10-06 08:29:26.561+00');
+INSERT INTO public."TaskStatusHistories" VALUES (38, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-18 10:07:51.215+00');
+INSERT INTO public."TaskStatusHistories" VALUES (39, 1, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-18 10:14:00.025+00');
+INSERT INTO public."TaskStatusHistories" VALUES (40, 1, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-18 10:14:11.351+00');
+INSERT INTO public."TaskStatusHistories" VALUES (41, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-19 16:35:39.435+00');
+INSERT INTO public."TaskStatusHistories" VALUES (42, 2, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-19 16:35:43.771+00');
+INSERT INTO public."TaskStatusHistories" VALUES (43, 3, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-19 17:01:19.675+00');
+INSERT INTO public."TaskStatusHistories" VALUES (44, 3, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-19 17:01:24.204+00');
+INSERT INTO public."TaskStatusHistories" VALUES (45, 3, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-19 17:02:29.135+00');
+INSERT INTO public."TaskStatusHistories" VALUES (46, 4, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 01:37:01.052+00');
+INSERT INTO public."TaskStatusHistories" VALUES (47, 7, NULL, 'QUEUED', 2, 'Transport task created and queued for dispatch.', '2026-10-20 01:51:24.565+00');
+INSERT INTO public."TaskStatusHistories" VALUES (48, 1, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 01:51:34.306+00');
+INSERT INTO public."TaskStatusHistories" VALUES (49, 2, 'EXECUTING', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 01:51:34.306+00');
+INSERT INTO public."TaskStatusHistories" VALUES (50, 3, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 01:51:34.306+00');
+INSERT INTO public."TaskStatusHistories" VALUES (51, 4, 'ASSIGNED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 01:51:34.306+00');
+INSERT INTO public."TaskStatusHistories" VALUES (52, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 01:52:00.962+00');
+INSERT INTO public."TaskStatusHistories" VALUES (53, 1, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 01:52:06.056+00');
+INSERT INTO public."TaskStatusHistories" VALUES (54, 1, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 01:52:43.672+00');
+INSERT INTO public."TaskStatusHistories" VALUES (55, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 01:53:41.968+00');
+INSERT INTO public."TaskStatusHistories" VALUES (56, 2, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 01:53:46.156+00');
+INSERT INTO public."TaskStatusHistories" VALUES (57, 2, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 01:54:23.541+00');
+INSERT INTO public."TaskStatusHistories" VALUES (58, 3, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 01:55:07.405+00');
+INSERT INTO public."TaskStatusHistories" VALUES (59, 3, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 01:55:12.481+00');
+INSERT INTO public."TaskStatusHistories" VALUES (60, 3, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 01:55:50.113+00');
+INSERT INTO public."TaskStatusHistories" VALUES (61, 4, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 02:04:38.27+00');
+INSERT INTO public."TaskStatusHistories" VALUES (62, 4, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 02:04:43.437+00');
+INSERT INTO public."TaskStatusHistories" VALUES (63, 4, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 02:05:44.807+00');
+INSERT INTO public."TaskStatusHistories" VALUES (64, 5, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 02:10:21.927+00');
+INSERT INTO public."TaskStatusHistories" VALUES (65, 5, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 02:10:45.011+00');
+INSERT INTO public."TaskStatusHistories" VALUES (66, 5, 'EXECUTING', 'FAILED', NULL, 'Timeout waiting for BE ACK for eventId 1d9e2459-90c1-4004-90b8-74e72af4356c', '2026-10-20 02:11:02.439+00');
+INSERT INTO public."TaskStatusHistories" VALUES (67, 1, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 02:11:30.294+00');
+INSERT INTO public."TaskStatusHistories" VALUES (68, 2, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 02:11:30.294+00');
+INSERT INTO public."TaskStatusHistories" VALUES (69, 3, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 02:11:30.294+00');
+INSERT INTO public."TaskStatusHistories" VALUES (70, 4, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 02:11:30.294+00');
+INSERT INTO public."TaskStatusHistories" VALUES (71, 5, 'FAILED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 02:11:30.294+00');
+INSERT INTO public."TaskStatusHistories" VALUES (72, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 02:11:48.525+00');
+INSERT INTO public."TaskStatusHistories" VALUES (73, 1, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 02:11:52.703+00');
+INSERT INTO public."TaskStatusHistories" VALUES (74, 1, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 02:12:32.693+00');
+INSERT INTO public."TaskStatusHistories" VALUES (75, 7, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 02:29:59.247+00');
+INSERT INTO public."TaskStatusHistories" VALUES (76, 7, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 02:30:02.18+00');
+INSERT INTO public."TaskStatusHistories" VALUES (77, 7, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 02:31:00.102+00');
+INSERT INTO public."TaskStatusHistories" VALUES (78, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 03:16:59.757+00');
+INSERT INTO public."TaskStatusHistories" VALUES (79, 2, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 03:17:02.859+00');
+INSERT INTO public."TaskStatusHistories" VALUES (80, 2, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 03:17:45.655+00');
+INSERT INTO public."TaskStatusHistories" VALUES (81, 3, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 03:49:27.17+00');
+INSERT INTO public."TaskStatusHistories" VALUES (82, 3, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 03:49:33.169+00');
+INSERT INTO public."TaskStatusHistories" VALUES (83, 1, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 03:54:30.893+00');
+INSERT INTO public."TaskStatusHistories" VALUES (84, 7, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 03:54:30.893+00');
+INSERT INTO public."TaskStatusHistories" VALUES (85, 2, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 03:54:30.893+00');
+INSERT INTO public."TaskStatusHistories" VALUES (86, 3, 'EXECUTING', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 03:54:30.893+00');
+INSERT INTO public."TaskStatusHistories" VALUES (87, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 03:55:45.406+00');
+INSERT INTO public."TaskStatusHistories" VALUES (88, 1, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 03:55:48.85+00');
+INSERT INTO public."TaskStatusHistories" VALUES (89, 1, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 03:56:04.35+00');
+INSERT INTO public."TaskStatusHistories" VALUES (90, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 03:57:19.966+00');
+INSERT INTO public."TaskStatusHistories" VALUES (91, 2, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 03:57:22.034+00');
+INSERT INTO public."TaskStatusHistories" VALUES (95, 3, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 03:59:38.184+00');
+INSERT INTO public."TaskStatusHistories" VALUES (92, 2, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 03:57:37.285+00');
+INSERT INTO public."TaskStatusHistories" VALUES (93, 3, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 03:59:18.011+00');
+INSERT INTO public."TaskStatusHistories" VALUES (94, 3, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 03:59:23.183+00');
+INSERT INTO public."TaskStatusHistories" VALUES (96, 1, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 04:02:35.071+00');
+INSERT INTO public."TaskStatusHistories" VALUES (97, 2, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 04:02:35.071+00');
+INSERT INTO public."TaskStatusHistories" VALUES (98, 3, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 04:02:35.071+00');
+INSERT INTO public."TaskStatusHistories" VALUES (99, 4, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 04:16:34.51+00');
+INSERT INTO public."TaskStatusHistories" VALUES (100, 4, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 04:16:36.666+00');
+INSERT INTO public."TaskStatusHistories" VALUES (101, 4, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 04:16:52.398+00');
+INSERT INTO public."TaskStatusHistories" VALUES (102, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 04:30:16.81+00');
+INSERT INTO public."TaskStatusHistories" VALUES (103, 2, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 04:30:19.4+00');
+INSERT INTO public."TaskStatusHistories" VALUES (104, 2, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 04:30:35.379+00');
+INSERT INTO public."TaskStatusHistories" VALUES (105, 7, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 04:32:45.945+00');
+INSERT INTO public."TaskStatusHistories" VALUES (106, 7, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 04:32:50.006+00');
+INSERT INTO public."TaskStatusHistories" VALUES (107, 7, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 04:33:06.834+00');
+INSERT INTO public."TaskStatusHistories" VALUES (108, 5, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 04:56:24.439+00');
+INSERT INTO public."TaskStatusHistories" VALUES (109, 5, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 04:56:26.098+00');
+INSERT INTO public."TaskStatusHistories" VALUES (110, 5, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 04:56:41.245+00');
+INSERT INTO public."TaskStatusHistories" VALUES (111, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 04:57:38.686+00');
+INSERT INTO public."TaskStatusHistories" VALUES (112, 1, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 04:57:40.504+00');
+INSERT INTO public."TaskStatusHistories" VALUES (113, 1, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 04:57:56.154+00');
+INSERT INTO public."TaskStatusHistories" VALUES (114, 4, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 05:05:41.709+00');
+INSERT INTO public."TaskStatusHistories" VALUES (115, 2, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 05:05:41.709+00');
+INSERT INTO public."TaskStatusHistories" VALUES (116, 7, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 05:05:41.709+00');
+INSERT INTO public."TaskStatusHistories" VALUES (117, 5, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 05:05:41.709+00');
+INSERT INTO public."TaskStatusHistories" VALUES (118, 1, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet assignment testing', '2026-10-20 05:05:41.709+00');
+INSERT INTO public."TaskStatusHistories" VALUES (119, 1, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 05:06:09.932+00');
+INSERT INTO public."TaskStatusHistories" VALUES (120, 1, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 05:06:13.219+00');
+INSERT INTO public."TaskStatusHistories" VALUES (121, 1, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 05:06:27.963+00');
+INSERT INTO public."TaskStatusHistories" VALUES (122, 2, 'QUEUED', 'ASSIGNED', 2, 'Assigned manually to robot R01.', '2026-10-20 05:17:14.876+00');
+INSERT INTO public."TaskStatusHistories" VALUES (123, 2, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-20 05:17:17.062+00');
+INSERT INTO public."TaskStatusHistories" VALUES (124, 2, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-20 05:17:31.825+00');
+INSERT INTO public."TaskStatusHistories" VALUES (125, 8, NULL, 'QUEUED', 2, 'Transport task created for MANUAL assignment.', '2026-10-29 06:21:23.349+00');
+INSERT INTO public."TaskStatusHistories" VALUES (126, 9, NULL, 'QUEUED', 2, 'Transport task created with AUTO dispatch requested.', '2026-10-30 03:19:49.429+00');
+INSERT INTO public."TaskStatusHistories" VALUES (127, 9, 'QUEUED', 'ASSIGNED', NULL, 'AUTO assignment to R01.', '2026-10-30 03:19:50.815+00');
+INSERT INTO public."TaskStatusHistories" VALUES (128, 9, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-30 03:19:56.1+00');
+INSERT INTO public."TaskStatusHistories" VALUES (129, 9, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-30 03:24:07.968+00');
+INSERT INTO public."TaskStatusHistories" VALUES (130, 10, NULL, 'QUEUED', 2, 'Transport task created with AUTO dispatch requested.', '2026-10-30 03:24:35.646+00');
+INSERT INTO public."TaskStatusHistories" VALUES (131, 10, 'QUEUED', 'ASSIGNED', NULL, 'AUTO assignment to R01.', '2026-10-30 03:24:36.477+00');
+INSERT INTO public."TaskStatusHistories" VALUES (132, 10, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-30 03:24:40.562+00');
+INSERT INTO public."TaskStatusHistories" VALUES (133, 10, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-30 03:27:00.698+00');
+INSERT INTO public."TaskStatusHistories" VALUES (134, 11, NULL, 'QUEUED', 2, 'Transport task created for MANUAL assignment.', '2026-10-30 03:37:15.532+00');
+INSERT INTO public."TaskStatusHistories" VALUES (135, 12, NULL, 'QUEUED', 2, 'Task created with AUTO dispatch mode.', '2026-10-30 05:27:50.749+00');
+INSERT INTO public."TaskStatusHistories" VALUES (136, 12, 'QUEUED', 'ASSIGNED', NULL, 'AUTO assignment to R01.', '2026-10-30 05:27:52.11+00');
+INSERT INTO public."TaskStatusHistories" VALUES (137, 12, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-30 05:27:57.513+00');
+INSERT INTO public."TaskStatusHistories" VALUES (138, 12, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-30 05:30:50.523+00');
+INSERT INTO public."TaskStatusHistories" VALUES (139, 13, NULL, 'QUEUED', 2, 'Task created with AUTO dispatch mode.', '2026-10-30 05:32:38.154+00');
+INSERT INTO public."TaskStatusHistories" VALUES (140, 14, NULL, 'QUEUED', 2, 'Task created with AUTO dispatch mode.', '2026-10-30 05:33:53.687+00');
+INSERT INTO public."TaskStatusHistories" VALUES (141, 13, 'QUEUED', 'ASSIGNED', NULL, 'AUTO assignment to R01.', '2026-10-30 05:34:02.057+00');
+INSERT INTO public."TaskStatusHistories" VALUES (142, 14, 'QUEUED', 'ASSIGNED', NULL, 'AUTO assignment to R02.', '2026-10-30 05:34:03.927+00');
+INSERT INTO public."TaskStatusHistories" VALUES (143, 13, 'ASSIGNED', 'FAILED', NULL, 'Timeout waiting for BE ACK for eventId 3ab28786-e137-4abb-a511-a9140c4b93ad', '2026-10-30 05:34:21.382+00');
+INSERT INTO public."TaskStatusHistories" VALUES (144, 15, NULL, 'QUEUED', 2, 'Task created with MANUAL dispatch mode.', '2026-10-30 05:44:27.623+00');
+INSERT INTO public."TaskStatusHistories" VALUES (145, 1, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskStatusHistories" VALUES (146, 2, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskStatusHistories" VALUES (147, 9, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskStatusHistories" VALUES (148, 10, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskStatusHistories" VALUES (149, 12, 'COMPLETED', 'QUEUED', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskStatusHistories" VALUES (150, 14, 'ASSIGNED', 'QUEUED', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskStatusHistories" VALUES (151, 13, 'FAILED', 'QUEUED', NULL, 'Reset for SmartFleet testing', '2026-10-30 05:51:11.317+00');
+INSERT INTO public."TaskStatusHistories" VALUES (152, 16, NULL, 'QUEUED', 2, 'Task created with AUTO dispatch mode.', '2026-10-30 05:52:32.749+00');
+INSERT INTO public."TaskStatusHistories" VALUES (153, 16, 'QUEUED', 'ASSIGNED', NULL, 'AUTO assignment to R01.', '2026-10-30 05:54:02+00');
+INSERT INTO public."TaskStatusHistories" VALUES (154, 16, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-30 05:54:04.604+00');
+INSERT INTO public."TaskStatusHistories" VALUES (155, 16, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-30 05:54:29.213+00');
+INSERT INTO public."TaskStatusHistories" VALUES (156, 17, NULL, 'QUEUED', 2, 'Task created with AUTO dispatch mode.', '2026-10-30 06:06:01.823+00');
+INSERT INTO public."TaskStatusHistories" VALUES (157, 17, 'QUEUED', 'ASSIGNED', NULL, 'AUTO assignment to R01.', '2026-10-30 06:07:02.339+00');
+INSERT INTO public."TaskStatusHistories" VALUES (158, 17, 'ASSIGNED', 'EXECUTING', NULL, 'MISSION_STARTED', '2026-10-30 06:07:06.521+00');
+INSERT INTO public."TaskStatusHistories" VALUES (159, 17, 'EXECUTING', 'COMPLETED', NULL, 'MISSION_COMPLETED', '2026-10-30 06:08:00.999+00');
+INSERT INTO public."TaskStatusHistories" VALUES (160, 18, NULL, 'QUEUED', 2, 'Task created with MANUAL dispatch mode.', '2026-10-31 06:41:36.493+00');
 
 
 --
@@ -1907,24 +1908,24 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: TransportTasks; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+INSERT INTO public."TransportTasks" VALUES (17, 'TASK-20261030060601-19B728D4EEE74E20', 1, 1, 2, 1, 'COMPLETED', NULL, 'a', 10.00, 2, '2026-10-30 06:06:01.823+00', '2026-10-30 06:07:00+00', '2026-10-30 06:06:01.823+00', '2026-10-30 06:07:02.339+00', '2026-10-30 06:07:06.521+00', '2026-10-30 06:08:00.999+00', NULL, NULL, NULL, NULL, 'AUTO');
+INSERT INTO public."TransportTasks" VALUES (3, 'T003', 1, 1, 2, 3, 'QUEUED', 'PKG-003', 'Test package 003', 3.00, 2, '2026-10-06 08:28:00.441+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (6, 'T006', 1, 1, 2, 3, 'QUEUED', 'PKG-006', 'Test package 006', 5.00, 2, '2026-10-06 08:28:00.442+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (4, 'T004', 1, 1, 2, 1, 'QUEUED', 'PKG-004', 'Test package 004', 1.50, 2, '2026-10-06 08:28:00.442+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (7, 'TASK-20261020015124-EB95395056834246', 1, 1, 2, 1, 'QUEUED', '1', 'test', 5.00, 2, '2026-10-20 01:51:24.565+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (5, 'T005', 1, 1, 2, 2, 'QUEUED', 'PKG-005', 'Test package 005', 4.00, 2, '2026-10-06 08:28:00.442+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (1, 'T001', 1, 1, 2, 3, 'QUEUED', 'PKG-T001', 'Flow 2 dispatch test package', 5.00, 2, '2026-09-28 07:35:34.509+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (2, 'T002', 1, 1, 2, 2, 'QUEUED', 'PKG-T002', 'Normal priority test task', 3.00, 2, '2026-09-28 07:36:34.51+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (8, 'TASK-20261029062123-9B7FF8B131E04B9B', 1, 1, 2, 2, 'QUEUED', '10101', 'test manual option', 0.10, 2, '2026-10-29 06:21:23.349+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (9, 'TASK-20261030031949-333CFF4A27AD44EB', 1, 1, 2, 2, 'QUEUED', NULL, NULL, 0.01, 2, '2026-10-30 03:19:49.429+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (10, 'TASK-20261030032435-98F7F9F4A61C473A', 1, 1, 2, 1, 'QUEUED', NULL, 'ád', 10.00, 2, '2026-10-30 03:24:35.646+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (11, 'TASK-20261030033715-5A5C5578BDF04070', 1, 1, 2, 2, 'QUEUED', NULL, NULL, 10.00, 2, '2026-10-30 03:37:15.532+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (12, 'TASK-20261030052750-FC56969C56A04992', 1, 1, 2, 2, 'QUEUED', NULL, NULL, 0.01, 2, '2026-10-30 05:27:50.749+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (14, 'TASK-20261030053353-AFE0BF085D03455D', 1, 1, 2, 1, 'QUEUED', NULL, NULL, 0.01, 2, '2026-10-30 05:33:53.687+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (13, 'TASK-20261030053238-733A5BD50C504426', 1, 1, 2, 2, 'QUEUED', NULL, NULL, 0.01, 2, '2026-10-30 05:32:38.154+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (15, 'TASK-20261030054427-CB574396072849BF', 1, 1, 2, 2, 'QUEUED', NULL, NULL, 0.01, 2, '2026-10-30 05:44:27.623+00', NULL, '2026-10-30 05:51:11.317+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (18, 'TASK-20261031064136-4DA780B2511C45AE', 1, 1, 2, 2, 'QUEUED', NULL, NULL, 0.01, 2, '2026-10-31 06:41:36.493+00', NULL, '2026-10-31 06:41:36.493+00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'MANUAL');
+INSERT INTO public."TransportTasks" VALUES (16, 'TASK-20261030055232-F5E9D4FF6DC5444B', 1, 1, 2, 1, 'COMPLETED', NULL, NULL, 0.01, 2, '2026-10-30 05:52:32.749+00', '2026-10-30 05:54:00+00', '2026-10-30 05:52:32.749+00', '2026-10-30 05:54:02+00', '2026-10-30 05:54:04.604+00', '2026-10-30 05:54:29.213+00', NULL, NULL, NULL, NULL, 'AUTO');
 
 
 --
@@ -1949,12 +1950,12 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: UserRoles; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
+INSERT INTO public."UserRoles" VALUES (1, 1, '2026-09-27 07:34:35.003+00');
+INSERT INTO public."UserRoles" VALUES (2, 3, '2026-09-27 07:34:35.004+00');
+INSERT INTO public."UserRoles" VALUES (3, 4, '2026-09-27 07:34:35.004+00');
+INSERT INTO public."UserRoles" VALUES (4, 4, '2026-10-06 04:19:21.554+00');
+INSERT INTO public."UserRoles" VALUES (5, 4, '2026-09-27 08:37:38.108+00');
+INSERT INTO public."UserRoles" VALUES (6, 3, '2026-09-30 04:57:37.4+00');
 
 
 --
@@ -1963,12 +1964,12 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: Users; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
-
-
-
-
+INSERT INTO public."Users" VALUES (1, 'sample_user_1', 'sample1@example.invalid', 'DISABLED_SAMPLE_ACCOUNT', 'Sample User 1', NULL, false, '2026-09-27 07:34:34.998+00', '2026-10-06 04:02:43.865+00');
+INSERT INTO public."Users" VALUES (2, 'sample_user_2', 'sample2@example.invalid', 'DISABLED_SAMPLE_ACCOUNT', 'Sample User 2', NULL, false, '2026-09-27 07:34:35.004+00', '2026-09-30 05:06:19.066+00');
+INSERT INTO public."Users" VALUES (3, 'sample_user_3', 'sample3@example.invalid', 'DISABLED_SAMPLE_ACCOUNT', 'Sample User 3', NULL, false, '2026-09-27 07:34:35.004+00', '2026-09-30 05:07:09.299+00');
+INSERT INTO public."Users" VALUES (4, 'sample_user_4', 'sample4@example.invalid', 'DISABLED_SAMPLE_ACCOUNT', 'Sample User 4', NULL, false, '2026-09-27 08:36:29.988+00', '2026-10-06 04:19:22.052+00');
+INSERT INTO public."Users" VALUES (5, 'sample_user_5', 'sample5@example.invalid', 'DISABLED_SAMPLE_ACCOUNT', 'Sample User 5', NULL, false, '2026-09-27 08:37:37.968+00', '2026-09-30 04:52:09.106+00');
+INSERT INTO public."Users" VALUES (6, 'sample_user_6', 'sample6@example.invalid', 'DISABLED_SAMPLE_ACCOUNT', 'Sample User 6', NULL, false, '2026-09-30 04:57:37.294+00', '2026-10-26 04:55:12.572+00');
 
 
 --
@@ -1977,7 +1978,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: Warehouses; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
+INSERT INTO public."Warehouses" VALUES (1, 'WH01', 'SmartFleet Test Warehouse', 'Flow 2 Test Warehouse', true, '2026-09-28 07:37:34.503+00', NULL);
 
 
 --
@@ -1986,8 +1987,8 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Data for Name: Zones; Type: TABLE DATA; Schema: public; Owner: avnadmin
 --
 
-
-
+INSERT INTO public."Zones" VALUES (1, 1, 'Z-PICKUP', 'Pickup Zone', 'PICKUP', 0.50, NULL, true, '2026-09-28 07:37:34.504+00', NULL);
+INSERT INTO public."Zones" VALUES (2, 1, 'Z-DELIVERY', 'Delivery Zone', 'DELIVERY', 0.50, NULL, true, '2026-09-28 07:37:34.504+00', NULL);
 
 
 --
@@ -1996,7 +1997,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: DeliveryVerifications_VerificationID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."DeliveryVerifications_VerificationID_seq"', 1, false);
 
 
 --
@@ -2005,7 +2006,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: MapConfigurations_MapID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."MapConfigurations_MapID_seq"', 1, false);
 
 
 --
@@ -2014,7 +2015,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: MissionStatusHistories_MissionStatusHistoryID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."MissionStatusHistories_MissionStatusHistoryID_seq"', 120, true);
 
 
 --
@@ -2023,7 +2024,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: MissionWaypoints_WaypointID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."MissionWaypoints_WaypointID_seq"', 1, false);
 
 
 --
@@ -2032,7 +2033,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Missions_MissionID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Missions_MissionID_seq"', 46, true);
 
 
 --
@@ -2041,7 +2042,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Notifications_NotificationID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Notifications_NotificationID_seq"', 1, false);
 
 
 --
@@ -2050,7 +2051,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: QrCheckpointLinks_LinkID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."QrCheckpointLinks_LinkID_seq"', 1, false);
 
 
 --
@@ -2059,7 +2060,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: QrCheckpoints_CheckpointID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."QrCheckpoints_CheckpointID_seq"', 1, false);
 
 
 --
@@ -2068,7 +2069,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: RefreshTokens_RefreshTokenID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."RefreshTokens_RefreshTokenID_seq"', 1, false);
 
 
 --
@@ -2077,7 +2078,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: RobotCommandOutbox_Id_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."RobotCommandOutbox_Id_seq"', 36, true);
 
 
 --
@@ -2086,7 +2087,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: RobotIncidents_IncidentID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."RobotIncidents_IncidentID_seq"', 1, false);
 
 
 --
@@ -2095,7 +2096,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: RobotMaintenanceRecords_MaintenanceID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."RobotMaintenanceRecords_MaintenanceID_seq"', 1, true);
 
 
 --
@@ -2104,7 +2105,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: RobotQrScanEvents_ScanID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."RobotQrScanEvents_ScanID_seq"', 1, false);
 
 
 --
@@ -2113,7 +2114,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: RobotStatusHistories_RobotStatusHistoryID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."RobotStatusHistories_RobotStatusHistoryID_seq"', 90, true);
 
 
 --
@@ -2122,7 +2123,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: RobotTelemetryLogs_TelemetryID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."RobotTelemetryLogs_TelemetryID_seq"', 1, false);
 
 
 --
@@ -2131,7 +2132,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Robots_RobotID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Robots_RobotID_seq"', 5, true);
 
 
 --
@@ -2140,7 +2141,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Roles_RoleID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Roles_RoleID_seq"', 4, true);
 
 
 --
@@ -2149,7 +2150,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Stations_StationID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Stations_StationID_seq"', 2, true);
 
 
 --
@@ -2158,7 +2159,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: SystemAuditLogs_AuditID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."SystemAuditLogs_AuditID_seq"', 1, false);
 
 
 --
@@ -2167,7 +2168,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: TaskAssignments_AssignmentID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."TaskAssignments_AssignmentID_seq"', 46, true);
 
 
 --
@@ -2176,7 +2177,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: TaskStatusHistories_TaskStatusHistoryID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."TaskStatusHistories_TaskStatusHistoryID_seq"', 160, true);
 
 
 --
@@ -2185,7 +2186,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: TransportTasks_TaskID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."TransportTasks_TaskID_seq"', 18, true);
 
 
 --
@@ -2194,7 +2195,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: TruckTaskLinks_TruckTaskLinkID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."TruckTaskLinks_TruckTaskLinkID_seq"', 1, false);
 
 
 --
@@ -2203,7 +2204,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: TruckVisits_TruckVisitID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."TruckVisits_TruckVisitID_seq"', 1, false);
 
 
 --
@@ -2212,7 +2213,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Users_UserID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Users_UserID_seq"', 6, true);
 
 
 --
@@ -2221,7 +2222,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Warehouses_WarehouseID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Warehouses_WarehouseID_seq"', 1, true);
 
 
 --
@@ -2230,7 +2231,7 @@ CREATE VIEW public."v_TruckTaskCountdown" AS
 -- Name: Zones_ZoneID_seq; Type: SEQUENCE SET; Schema: public; Owner: avnadmin
 --
 
-
+SELECT pg_catalog.setval('public."Zones_ZoneID_seq"', 2, true);
 
 
 --
