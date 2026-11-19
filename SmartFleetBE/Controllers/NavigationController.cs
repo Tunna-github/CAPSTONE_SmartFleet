@@ -14,6 +14,7 @@ public sealed class NavigationController(
     NavigationCoordinator coordinator,
     SmartFleetDbContext db,
     MqttService mqtt,
+    IHostEnvironment environment,
     ILogger<NavigationController> logger) : ControllerBase
 {
     [HttpGet("map")]
@@ -71,6 +72,67 @@ public sealed class NavigationController(
     {
         var intersection = coordinator.GetIntersection(arucoId);
         return intersection == null ? NotFound(new { message = "Unknown intersection." }) : Ok(intersection);
+    }
+
+    // Lightweight count endpoint for dashboards, with breakdown by last scanned QR.
+    [HttpGet("intersections/{arucoId:int}/approaching")]
+    public IActionResult GetApproachingCount(int arucoId)
+    {
+        var x = coordinator.GetIntersection(arucoId);
+        if (x == null) return NotFound(new { message = "Unknown intersection." });
+        return Ok(new
+        {
+            intersectionArUcoId = arucoId,
+            x.ApproachingCount,
+            x.WaitingCount,
+            x.InsideCount,
+            x.TotalRelevantCount,
+            x.ActiveRobotCode,
+            x.ApproachingBySourceArUco,
+            x.ApproachingRobots
+        });
+    }
+
+    // Manual testing with a JWT. A real robot sends the same JSON via MQTT /scan.
+    // ?simulate=true skips command publishing ONLY for a Development Admin demo.
+    [HttpPost("robots/{robotCode}/scan")]
+    public async Task<IActionResult> ReportRobotScan(
+        string robotCode, [FromBody] RobotArUcoScanReport report,
+        [FromQuery] bool simulate, CancellationToken ct)
+    {
+        if (simulate && (!environment.IsDevelopment() || !User.IsInRole(AppRoles.Admin)))
+            return Forbid();
+        var robot = await db.Robots.AsNoTracking()
+            .Where(item => item.RobotCode == robotCode && item.IsActive)
+            .Select(item => new { item.RobotId, item.RobotCode })
+            .SingleOrDefaultAsync(ct);
+        if (robot == null)
+            return NotFound(new { message = "Unknown or inactive robot code." });
+        var result = coordinator.OnScan(robot.RobotId, robot.RobotCode, report);
+        if (!result.Success) return Error(result);
+        if (!simulate)
+        {
+            try
+            {
+                await NavigationMqttDispatch.PublishAsync(mqtt, result.Directives, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Scan recorded, but MQTT directive delivery failed.");
+                return StatusCode(503, new { message = "Scan recorded, but MQTT publish failed." });
+            }
+        }
+        var intersection = report.NextArUcoId.HasValue
+            ? coordinator.GetIntersection(report.NextArUcoId.Value) : null;
+        return Ok(new
+        {
+            robot.RobotCode,
+            report.CurrentArUcoId,
+            report.NextArUcoId,
+            isNextIntersection = intersection != null,
+            simulated = simulate,
+            intersection
+        });
     }
 
     [HttpPut("intersections/{arucoId:int}")]

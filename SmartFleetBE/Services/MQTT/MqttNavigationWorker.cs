@@ -40,6 +40,9 @@ public sealed class MqttNavigationWorker(
                             .WithTopicFilter(f => f
                                 .WithTopic("smartfleet/robot/+/navigation")
                                 .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce))
+                            .WithTopicFilter(f => f
+                                .WithTopic("smartfleet/robot/+/scan")
+                                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce))
                             .Build(), stoppingToken);
                     if (result.Items.Any(x => (int)x.ResultCode >= 128))
                         throw new IOException("Navigation MQTT subscription rejected.");
@@ -79,12 +82,18 @@ public sealed class MqttNavigationWorker(
             if (args.ApplicationMessage.Payload.Length > 2048) return;
             var parts = args.ApplicationMessage.Topic.Split('/');
             if (parts.Length != 4 || parts[0] != "smartfleet" || parts[1] != "robot" ||
-                parts[3] != "navigation" || string.IsNullOrWhiteSpace(parts[2]))
+                (parts[3] != "navigation" && parts[3] != "scan") ||
+                string.IsNullOrWhiteSpace(parts[2]))
                 return;
 
-            var evt = JsonSerializer.Deserialize<RobotNavigationEvent>(
-                args.ApplicationMessage.ConvertPayloadToString(), Options);
-            if (evt == null) return;
+            var payload = args.ApplicationMessage.ConvertPayloadToString();
+            RobotNavigationEvent? evt = null;
+            RobotArUcoScanReport? scan = null;
+            if (parts[3] == "scan")
+                scan = JsonSerializer.Deserialize<RobotArUcoScanReport>(payload, Options);
+            else
+                evt = JsonSerializer.Deserialize<RobotNavigationEvent>(payload, Options);
+            if (evt == null && scan == null) return;
 
             await _messageGate.WaitAsync(ct);
             try
@@ -97,12 +106,14 @@ public sealed class MqttNavigationWorker(
                     .SingleOrDefaultAsync(ct);
                 if (robot == null) return;
 
-                var result = coordinator.OnNavigationEvent(robot.RobotId, robot.RobotCode, evt);
+                var result = scan != null
+                    ? coordinator.OnScan(robot.RobotId, robot.RobotCode, scan)
+                    : coordinator.OnNavigationEvent(robot.RobotId, robot.RobotCode, evt);
                 if (!result.Success)
                 {
                     logger.LogWarning(
-                        "Rejected {Event} for {Robot} at QR{Marker}: {Reason}",
-                        evt.Event, robot.RobotCode, evt.IntersectionArUcoId, result.Error);
+                        "Rejected {EventType} for {Robot}: {Reason}",
+                        scan != null ? "SCAN" : evt!.Event, robot.RobotCode, result.Error);
                     // Rejected navigation is always a local HOLD/STOP case for the robot.
                     return;
                 }

@@ -60,6 +60,27 @@ public sealed class RobotNavigationEvent
     public int? CurrentArUcoId { get; set; }
 }
 
+// Robot detected current marker and knows its planned NEXT marker.
+// A raw camera ID alone cannot predict a turn at a fork.
+public sealed class RobotArUcoScanReport
+{
+    [JsonRequired]
+    public int? CurrentArUcoId { get; set; }
+    // Must be present. Use explicit null only when the planned route ends.
+    [JsonRequired]
+    public int? NextArUcoId { get; set; }
+}
+
+public sealed class ApproachingRobotView
+{
+    public int RobotId { get; init; }
+    public string RobotCode { get; init; } = "";
+    public int CurrentArUcoId { get; init; }
+    public int NextArUcoId { get; init; }
+    public string Phase { get; init; } = "WAITING";
+    public DateTime LastReportedAtUtc { get; init; }
+}
+
 public sealed class NavigationDirective
 {
     public string Type { get; init; } = "NAV_CONTROL";
@@ -81,8 +102,16 @@ public sealed class IntersectionTrafficView
     public bool ActiveRobotEntered { get; init; }
     public bool BlockedPendingPhysicalClearance { get; init; }
     public int LastServedRobotId { get; init; }
+    // Waiting + granted but not yet entered. Inside/occupied is counted separately.
     public int ApproachingCount { get; init; }
+    public int WaitingCount { get; init; }
+    public int InsideCount { get; init; }
+    public int TotalRelevantCount { get; init; }
     public IReadOnlyList<string> WaitingRobotCodes { get; init; } = [];
+    public IReadOnlyList<ApproachingRobotView> ApproachingRobots { get; init; } = [];
+    // E.g. {"1":1,"2":1,"3":1,"5":1} for four robots headed to QR4.
+    public IReadOnlyDictionary<int, int> ApproachingBySourceArUco { get; init; } =
+        new Dictionary<int, int>();
 }
 
 public sealed class NavigationOperation

@@ -17,6 +17,11 @@ public sealed class NavigationCoordinator
         public string LidarStatus { get; set; } = "NO_SCAN_DATA";
         public DateTime LidarAtUtc { get; set; } = DateTime.MinValue;
         public int? IntersectionId { get; set; }
+        public int? CurrentArUcoId { get; set; }
+        public int? NextArUcoId { get; set; }
+        public DateTime LastApproachAtUtc { get; set; } = DateTime.MinValue;
+        // Expiring a route report must never turn into an automatic GO.
+        public bool RequiresFreshRouteReport { get; set; }
     }
 
     private sealed class IntersectionState
@@ -36,6 +41,10 @@ public sealed class NavigationCoordinator
     private readonly object _gate = new();
     private readonly string _configPath;
     private readonly ILogger<NavigationCoordinator> _logger;
+    // Reports must be refreshed by the robot while approaching (e.g. every 1-2s).
+    // A lost robot is removed from the *count*, but granted/entered ownership is
+    // never released by TTL: physical clearance or EXIT remains necessary.
+    private readonly TimeSpan _approachTtl;
     private readonly string _epoch = Guid.NewGuid().ToString("N");
     private readonly Dictionary<string, RobotState> _robots =
         new(StringComparer.OrdinalIgnoreCase);
@@ -50,6 +59,8 @@ public sealed class NavigationCoordinator
         ILogger<NavigationCoordinator> logger)
     {
         _logger = logger;
+        _approachTtl = TimeSpan.FromSeconds(Math.Clamp(
+            configuration.GetValue("Navigation:ApproachTtlSeconds", 60), 10, 300));
         _configPath = configuration["Navigation:StateFile"] ??
             Path.Combine(environment.ContentRootPath, "App_Data", "navigation-state.json");
 
@@ -130,6 +141,7 @@ public sealed class NavigationCoordinator
 
         lock (_gate)
         {
+            PruneStaleApproachesLocked(DateTime.UtcNow);
             if (HasTraffic())
                 return NavigationOperation.Fail(
                     "Cannot change the map while intersections have active/waiting robots " +
@@ -152,6 +164,7 @@ public sealed class NavigationCoordinator
     {
         lock (_gate)
         {
+            PruneStaleApproachesLocked(DateTime.UtcNow);
             if (HasTraffic())
                 return NavigationOperation.Fail(
                     "Cannot edit intersections while traffic is active or safety-locked.", true);
@@ -175,6 +188,7 @@ public sealed class NavigationCoordinator
     {
         lock (_gate)
         {
+            PruneStaleApproachesLocked(DateTime.UtcNow);
             return _stored.Map!.Cells.SelectMany(row => row)
                 .Where(cell => cell.Type == "qr" && cell.IsIntersection && cell.ArucoId.HasValue)
                 .Select(cell => ToView(GetOrCreateIntersection(cell.ArucoId!.Value)))
@@ -187,6 +201,7 @@ public sealed class NavigationCoordinator
     {
         lock (_gate)
         {
+            PruneStaleApproachesLocked(DateTime.UtcNow);
             var cell = FindQrCell(_stored.Map!, arucoId);
             return cell is { IsIntersection: true }
                 ? ToView(GetOrCreateIntersection(arucoId)) : null;
@@ -200,6 +215,7 @@ public sealed class NavigationCoordinator
 
         lock (_gate)
         {
+            PruneStaleApproachesLocked(DateTime.UtcNow);
             var robot = GetOrCreateRobot(robotId, robotCode);
             robot.LidarStatus = status;
             robot.LidarAtUtc = DateTime.UtcNow;
@@ -209,6 +225,82 @@ public sealed class NavigationCoordinator
             {
                 var newlyGranted = TryGrant(traffic);
                 if (newlyGranted != null) outgoing[newlyGranted.RobotCode] = newlyGranted;
+            }
+            outgoing[robotCode] = DirectiveFor(robot);
+            return NavigationOperation.Ok(outgoing.Values.ToList());
+        }
+    }
+
+    /// <summary>
+    /// Register the *last scanned marker* and the *planned next marker*.
+    /// Counting happens only when the next marker is an actual intersection and
+    /// the map links the two QR points. Repeated reports are idempotent.
+    /// Scans never prove that a granted robot has physically EXITed the crossing.
+    /// </summary>
+    public NavigationOperation OnScan(int robotId, string robotCode,
+        RobotArUcoScanReport? report)
+    {
+        if (report == null || !report.CurrentArUcoId.HasValue)
+            return NavigationOperation.Fail("currentArUcoId is required.");
+        int currentId = report.CurrentArUcoId.Value;
+        lock (_gate)
+        {
+            var now = DateTime.UtcNow;
+            PruneStaleApproachesLocked(now);
+            var current = FindQrCell(_stored.Map!, currentId);
+            if (current == null)
+                return NavigationOperation.Fail(
+                    $"Current ArUco {currentId} is not on the configured map.");
+            WarehouseMapCell? next = null;
+            if (report.NextArUcoId is int nextId)
+            {
+                next = FindQrCell(_stored.Map!, nextId);
+                if (next == null || !AreDirectQrNeighbors(currentId, nextId))
+                    return NavigationOperation.Fail(
+                        $"Route {currentId} -> {nextId} is not a linked pair of QR markers.");
+            }
+
+            var robot = GetOrCreateRobot(robotId, robotCode);
+            var targetIntersectionId = next is { IsIntersection: true }
+                ? report.NextArUcoId : null;
+            var outgoing = new Dictionary<string, NavigationDirective>(
+                StringComparer.OrdinalIgnoreCase);
+
+            // Route changed before entering. Remove OLD waiting registration.
+            // An active/granted robot MUST NOT release a lock via a route scan.
+            if (robot.IntersectionId is int oldId && oldId != targetIntersectionId)
+            {
+                var oldTraffic = GetOrCreateIntersection(oldId);
+                if (string.Equals(oldTraffic.ActiveRobotCode, robotCode,
+                        StringComparison.OrdinalIgnoreCase))
+                    return NavigationOperation.Fail(
+                        "Robot has an intersection grant; ENTER then EXIT, or perform physically verified recovery.",
+                        true);
+                oldTraffic.Waiting.Remove(robotCode);
+                if (oldTraffic.Waiting.Count == 0)
+                    oldTraffic.QueueOpenedAtUtc = DateTime.MinValue;
+                robot.IntersectionId = null;
+                if (TryGrant(oldTraffic) is { } oldGrant)
+                    outgoing[oldGrant.RobotCode] = oldGrant;
+            }
+
+            robot.CurrentArUcoId = currentId;
+            robot.NextArUcoId = report.NextArUcoId;
+            robot.RequiresFreshRouteReport = false;
+            if (targetIntersectionId is int intersectionId)
+            {
+                var traffic = GetOrCreateIntersection(intersectionId);
+                robot.IntersectionId = intersectionId;
+                robot.LastApproachAtUtc = now;
+                if (!string.Equals(traffic.ActiveRobotCode, robotCode,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    if (traffic.Waiting.Count == 0)
+                        traffic.QueueOpenedAtUtc = now;
+                    traffic.Waiting[robotCode] = robotId;
+                }
+                if (TryGrant(traffic) is { } grant)
+                    outgoing[grant.RobotCode] = grant;
             }
             outgoing[robotCode] = DirectiveFor(robot);
             return NavigationOperation.Ok(outgoing.Values.ToList());
@@ -225,6 +317,7 @@ public sealed class NavigationCoordinator
 
         lock (_gate)
         {
+            PruneStaleApproachesLocked(DateTime.UtcNow);
             var marker = FindQrCell(_stored.Map!, message.IntersectionArUcoId);
             if (marker is not { IsIntersection: true })
                 return NavigationOperation.Fail("Target ArUco is not configured as an intersection.");
@@ -243,13 +336,10 @@ public sealed class NavigationCoordinator
                     if (robot.IntersectionId.HasValue &&
                         robot.IntersectionId.Value != message.IntersectionArUcoId)
                         return NavigationOperation.Fail("Robot is already committed to another intersection.", true);
-                    if (traffic.Blocked)
-                    {
-                        robot.IntersectionId = message.IntersectionArUcoId;
-                        return NavigationOperation.Ok([
-                            StopDirective(robot, "INTERSECTION_SAFETY_LOCKED")
-                        ]);
-                    }
+                    robot.CurrentArUcoId = message.CurrentArUcoId;
+                    robot.NextArUcoId = message.IntersectionArUcoId;
+                    robot.LastApproachAtUtc = DateTime.UtcNow;
+                    robot.RequiresFreshRouteReport = false;
                     robot.IntersectionId = message.IntersectionArUcoId;
                     if (!string.Equals(traffic.ActiveRobotCode, robotCode, StringComparison.OrdinalIgnoreCase))
                     {
@@ -278,6 +368,9 @@ public sealed class NavigationCoordinator
                     traffic.ActiveRobotEntered = false;
                     traffic.Waiting.Remove(robotCode);
                     robot.IntersectionId = null;
+                    robot.CurrentArUcoId = message.CurrentArUcoId;
+                    robot.NextArUcoId = null;
+                    robot.RequiresFreshRouteReport = false;
                     break;
 
                 case "CANCEL":
@@ -289,6 +382,8 @@ public sealed class NavigationCoordinator
                         traffic.QueueOpenedAtUtc = DateTime.MinValue;
                     if (robot.IntersectionId == message.IntersectionArUcoId)
                         robot.IntersectionId = null;
+                    robot.NextArUcoId = null;
+                    robot.RequiresFreshRouteReport = true;
                     break;
             }
 
@@ -320,8 +415,10 @@ public sealed class NavigationCoordinator
             {
                 if (_robots.TryGetValue(code, out var robot))
                 {
-                    directives.Add(StopDirective(robot, "MANUAL_INTERSECTION_CLEAR"));
                     robot.IntersectionId = null;
+                    robot.NextArUcoId = null;
+                    robot.RequiresFreshRouteReport = true;
+                    directives.Add(StopDirective(robot, "MANUAL_INTERSECTION_CLEAR"));
                 }
             }
             traffic.ActiveRobotCode = null;
@@ -348,6 +445,7 @@ public sealed class NavigationCoordinator
             return null;
         var eligible = traffic.Waiting
             .Where(pair => _robots.TryGetValue(pair.Key, out var state) &&
+                           now - state.LastApproachAtUtc <= _approachTtl &&
                            IsLidarSafe(state, now))
             .Select(pair => (Code: pair.Key, RobotId: pair.Value))
             .OrderBy(item => item.RobotId > traffic.LastServedRobotId ? 0 : 1)
@@ -370,6 +468,11 @@ public sealed class NavigationCoordinator
     {
         var config = ConfigFor(robot.RobotCode);
         var now = DateTime.UtcNow;
+        if (robot.RequiresFreshRouteReport)
+            return StopDirective(robot, "ROUTE_REPORT_STALE");
+        if (robot.CurrentArUcoId.HasValue && !robot.NextArUcoId.HasValue &&
+            !robot.IntersectionId.HasValue)
+            return StopDirective(robot, "NO_NEXT_WAYPOINT");
         if (!IsLidarSafe(robot, now))
             return StopDirective(robot, "LIDAR_UNSAFE_OR_STALE");
 
@@ -445,8 +548,30 @@ public sealed class NavigationCoordinator
 
     private IntersectionTrafficView ToView(IntersectionState state)
     {
-        var ordered = state.Waiting.OrderBy(pair => pair.Value)
+        var waitingCodes = state.Waiting.OrderBy(pair => pair.Value)
             .Select(pair => pair.Key).ToList();
+        var approachingCodes = waitingCodes.ToList();
+        if (state.ActiveRobotCode is string active && !state.ActiveRobotEntered)
+            approachingCodes.Add(active);
+        var approaching = approachingCodes
+            .Where(code => _robots.ContainsKey(code))
+            .Select(code => _robots[code])
+            .Where(robot => robot.CurrentArUcoId.HasValue)
+            .OrderBy(robot => robot.RobotId)
+            .Select(robot => new ApproachingRobotView
+            {
+                RobotId = robot.RobotId,
+                RobotCode = robot.RobotCode,
+                CurrentArUcoId = robot.CurrentArUcoId!.Value,
+                NextArUcoId = state.ArucoId,
+                Phase = string.Equals(robot.RobotCode, state.ActiveRobotCode,
+                    StringComparison.OrdinalIgnoreCase) ? "GRANTED" : "WAITING",
+                LastReportedAtUtc = robot.LastApproachAtUtc
+            }).ToList();
+        var countsBySource = approaching.GroupBy(item => item.CurrentArUcoId)
+            .OrderBy(group => group.Key)
+            .ToDictionary(group => group.Key, group => group.Count());
+        int inside = state.ActiveRobotEntered && state.ActiveRobotCode != null ? 1 : 0;
         return new IntersectionTrafficView
         {
             IntersectionArUcoId = state.ArucoId,
@@ -454,9 +579,38 @@ public sealed class NavigationCoordinator
             ActiveRobotEntered = state.ActiveRobotEntered,
             BlockedPendingPhysicalClearance = state.Blocked,
             LastServedRobotId = state.LastServedRobotId,
-            ApproachingCount = ordered.Count + (state.ActiveRobotCode == null ? 0 : 1),
-            WaitingRobotCodes = ordered
+            ApproachingCount = approaching.Count,
+            WaitingCount = waitingCodes.Count,
+            InsideCount = inside,
+            TotalRelevantCount = approaching.Count + inside,
+            WaitingRobotCodes = waitingCodes,
+            ApproachingRobots = approaching,
+            ApproachingBySourceArUco = countsBySource
         };
+    }
+
+    private void PruneStaleApproachesLocked(DateTime now)
+    {
+        foreach (var traffic in _intersections.Values)
+        {
+            // NEVER expire a granted or physically-entered lock via time.
+            var stale = traffic.Waiting.Keys.Where(code =>
+                !_robots.TryGetValue(code, out var robot) ||
+                now - robot.LastApproachAtUtc > _approachTtl).ToArray();
+            foreach (var code in stale)
+            {
+                traffic.Waiting.Remove(code);
+                if (_robots.TryGetValue(code, out var robot) &&
+                    robot.IntersectionId == traffic.ArucoId)
+                {
+                    robot.IntersectionId = null;
+                    robot.NextArUcoId = null;
+                    robot.RequiresFreshRouteReport = true;
+                }
+            }
+            if (traffic.Waiting.Count == 0)
+                traffic.QueueOpenedAtUtc = DateTime.MinValue;
+        }
     }
 
     private bool AreDirectQrNeighbors(int first, int second)
