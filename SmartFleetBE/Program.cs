@@ -67,13 +67,15 @@ builder.Services.AddSwaggerGen(options =>
 // Database
 // =====================================================
 
+var databaseConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(databaseConnection))
+{
+    throw new InvalidOperationException(
+        "Set ConnectionStrings:DefaultConnection to the PostgreSQL connection string.");
+}
+
 builder.Services.AddDbContext<SmartFleetDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString(
-            "DefaultConnection"
-        )
-    )
-);
+    options.UseNpgsql(databaseConnection));
 
 
 // =====================================================

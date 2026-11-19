@@ -62,7 +62,7 @@ public sealed class TransportTaskService : ITransportTaskService
             PayloadWeightKg = request.PayloadWeightKg,
             CreatedBy = createdByUserId,
             CreatedAt = now,
-            ScheduledTime = request.ScheduledTime
+            ScheduledTime = NormalizeScheduledTime(request.ScheduledTime)
         };
 
         await _transportTaskRepository.AddAsync(task, cancellationToken);
@@ -134,7 +134,7 @@ public sealed class TransportTaskService : ITransportTaskService
         task.PackageCode = NormalizeOptional(request.PackageCode);
         task.ItemDescription = NormalizeOptional(request.ItemDescription);
         task.PayloadWeightKg = request.PayloadWeightKg;
-        task.ScheduledTime = request.ScheduledTime;
+        task.ScheduledTime = NormalizeScheduledTime(request.ScheduledTime);
 
         await _transportTaskRepository.SaveChangesAsync(cancellationToken);
 
@@ -253,6 +253,16 @@ public sealed class TransportTaskService : ITransportTaskService
     private static string GenerateTrackingCode()
     {
         return $"TASK-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..36].ToUpperInvariant();
+    }
+
+    private static DateTime? NormalizeScheduledTime(DateTime? scheduledTime)
+    {
+        if (scheduledTime is not { } value)
+            return null;
+
+        return value.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            : value.ToUniversalTime();
     }
 
     private static string? NormalizeOptional(string? value)

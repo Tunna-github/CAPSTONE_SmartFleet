@@ -119,19 +119,15 @@ public sealed class TaskDispatchService : ITaskDispatchService
                 .BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
 
 
-        var robotQuery = _dbContext.Database.IsSqlServer()
-            ? _dbContext.Robots.FromSqlInterpolated($"SELECT * FROM dbo.Robots WITH (UPDLOCK, HOLDLOCK) WHERE RobotID = {robotId}")
-            : _dbContext.Robots.Where(r => r.RobotId == robotId);
-        var robot = await robotQuery.SingleOrDefaultAsync(cancellationToken);
+        var robot = await _dbContext.Robots
+            .SingleOrDefaultAsync(r => r.RobotId == robotId, cancellationToken);
 
         // -------------------------------------------------
         // 1. FIND TASK
         // -------------------------------------------------
 
-        var taskQuery = _dbContext.Database.IsSqlServer()
-            ? _dbContext.TransportTasks.FromSqlInterpolated($"SELECT * FROM dbo.TransportTasks WITH (UPDLOCK, HOLDLOCK) WHERE TaskID = {taskId}")
-            : _dbContext.TransportTasks.Where(t => t.TaskId == taskId);
-        var task = await taskQuery.SingleOrDefaultAsync(cancellationToken);
+        var task = await _dbContext.TransportTasks
+            .SingleOrDefaultAsync(t => t.TaskId == taskId, cancellationToken);
 
         if (task is null)
         {

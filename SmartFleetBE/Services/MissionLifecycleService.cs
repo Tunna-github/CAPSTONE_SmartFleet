@@ -18,11 +18,7 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db)
             return MissionEventResult.Rejected;
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        // The robot row serializes dispatch, completion and messages from multiple API instances.
-        var robotQuery = db.Database.IsSqlServer()
-            ? db.Robots.FromSqlInterpolated($"SELECT * FROM dbo.Robots WITH (UPDLOCK, HOLDLOCK) WHERE RobotCode = {robotCode}")
-            : db.Robots.Where(r => r.RobotCode == robotCode);
-        var robot = await robotQuery.SingleOrDefaultAsync(ct);
+        var robot = await db.Robots.SingleOrDefaultAsync(r => r.RobotCode == robotCode, ct);
         if (robot is null || !string.Equals(robot.RobotCode, robotCode, StringComparison.Ordinal))
             return MissionEventResult.Rejected;
 
