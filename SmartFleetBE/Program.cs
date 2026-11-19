@@ -13,8 +13,13 @@ using SmartFleetBE.Repositories.Interfaces;
 using SmartFleetBE.Services;
 using SmartFleetBE.Services.Interfaces;
 using SmartFleetBE.Hubs;
+using SmartFleetBE.Navigation;
 
 var builder = WebApplication.CreateBuilder(args);
+// LOCAL WEBOTS PILOT only. This file is ignored by Git and is never deployed.
+builder.Configuration.AddJsonFile("App_Data/demo-route-config.json", optional: true, reloadOnChange: true);
+if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled") && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException("DemoRoute is allowed only in ASPNETCORE_ENVIRONMENT=Development.");
 
 // =====================================================
 // 1. CONTROLLERS AND CORS
@@ -173,6 +178,10 @@ builder.Services.AddSingleton<
 
 // Keep the existing Fast ACK implementation unchanged.
 builder.Services.AddSingleton<MqttService>();
+// QR graph A* / Webots progress state for one-robot pilot.
+builder.Services.AddSingleton<QrDemoRouteService>();
+// Shared, single-process navigation map and intersection coordinator.
+builder.Services.AddSingleton<NavigationCoordinator>();
 
 builder.Services.AddScoped<MissionLifecycleService>();
 
@@ -192,6 +201,15 @@ if (enableMqttWorkers)
         .AddHostedService<MqttMissionStatusWorker>();
 
     builder.Services.AddHostedService<MqttRobotTelemetryWorker>();
+    if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled"))
+        builder.Services.AddHostedService<QrDemoProgressWorker>();
+
+    // Disabled by default until the JetRacer understands NAV_CONTROL.
+    // Exactly ONE live Backend must coordinate a physical intersection.
+    if (builder.Configuration.GetValue<bool>("Navigation:Enabled"))
+    {
+        builder.Services.AddHostedService<MqttNavigationWorker>();
+    }
 
     // Existing worker: sends committed commands
     // from RobotCommandOutbox through MQTT.

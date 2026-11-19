@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MQTTnet;
 using MQTTnet.Protocol;
 using SmartFleetBE.DTOs;
+using SmartFleetBE.Navigation;
 
 namespace SmartFleetBE.Services;
 
@@ -11,6 +12,8 @@ public sealed class MqttRobotTelemetryWorker(
     IServiceScopeFactory scopes,
     IConfiguration configuration,
     FleetRealtimePublisher realtime,
+    NavigationCoordinator navigation,
+    MqttService mqttPublisher,
     ILogger<MqttRobotTelemetryWorker> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -204,6 +207,32 @@ public sealed class MqttRobotTelemetryWorker(
             .Select(r => new { r.RobotId, r.RobotCode })
             .SingleOrDefaultAsync(ct);
         if (robot == null) return;
+
+        // ADDITIVE integration: existing SignalR telemetry still runs unchanged.
+        // Only the single active navigation Backend may publish NAV_CONTROL.
+        if (configuration.GetValue<bool>("Navigation:Enabled"))
+        {
+            var decision = navigation.OnLidar(robot.RobotId, robot.RobotCode, status);
+            if (!decision.Success)
+            {
+                logger.LogWarning("Navigation rejected LiDAR update from {Robot}: {Reason}",
+                    robot.RobotCode, decision.Error);
+            }
+            else
+            {
+                try
+                {
+                    await NavigationMqttDispatch.PublishAsync(
+                        mqttPublisher, decision.Directives, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Hardware must fail closed if fresh NAV_CONTROL is missing.
+                    logger.LogError(ex, "Navigation MQTT publish failed for {Robot}",
+                        robot.RobotCode);
+                }
+            }
+        }
 
         // Live sensor display only; does not mark robot online or touch DB rows.
         await realtime.LidarUpdatedAsync(robot.RobotId, robot.RobotCode,

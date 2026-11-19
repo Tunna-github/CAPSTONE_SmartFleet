@@ -28,6 +28,8 @@ export function Sidebar({
                 { id: "users", label: "User Management", path: "/admin/users", icon: IC.users },
                 { id: "robots", label: "Robot Assets", path: "/admin/robots", icon: IC.robots },
                 { id: "maps", label: "Warehouse Maps", path: "/admin/maps", icon: IC.maps },
+                { id: "qr-missions", label: "QR Mission Monitor", path: "/admin/qr-missions", icon: IC.maps },
+                { id: "traffic", label: "Intersection Traffic", path: "/admin/navigation", icon: IC.maps },
             ]
             : role === "maintenance"
                 ? [
@@ -37,6 +39,8 @@ export function Sidebar({
                 : [
                     { id: "dashboard", label: "Dashboard", path: "/dashboard", icon: IC.dashboard },
                     { id: "tasks", label: "Tasks", path: "/dashboard/tasks", icon: IC.tasks },
+                    { id: "qr-missions", label: "QR Mission Monitor", path: "/dashboard/qr-missions", icon: IC.maps },
+                    { id: "traffic", label: "Intersection Traffic", path: "/dashboard/navigation", icon: IC.maps },
                     { id: "robots", label: "Fleet Status", path: "/dashboard/robots", icon: IC.robots },
                     { id: "analytics", label: "Analytics", path: "/dashboard/analytics", icon: IC.analytics },
                 ];

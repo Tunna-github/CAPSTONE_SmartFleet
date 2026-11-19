@@ -9,7 +9,10 @@ import {
 } from "../components/WarehouseGrid"
 
 export default function WarehouseMapsPage() {
-  const { warehouseLayout, setWarehouseLayout, links, setLinks } = useWarehouseMap()
+  const {
+    warehouseLayout, setWarehouseLayout, links, setLinks,
+    mapRevision, mapLoading, mapSaving, mapError, reloadMap, saveMap,
+  } = useWarehouseMap()
   const [toast, setToast] = useState<{
     msg: string
     type: "success" | "error" | "info"
@@ -21,6 +24,8 @@ export default function WarehouseMapsPage() {
   const [brush, setBrush] =
     useState<"wall" | "floor" | "station" | "qr" | "charge">("qr")
   const [brushLabel, setBrushLabel] = useState("")
+  const [qrIdInput, setQrIdInput] = useState("")
+  const [qrIntersection, setQrIntersection] = useState(false)
 
   const stationLabels = useMemo(() => {
     const out: string[] = []
@@ -126,6 +131,11 @@ export default function WarehouseMapsPage() {
           occupiedCell.type === "qr" ||
           occupiedCell.type === "charge")
       ) {
+        // Allow clicking an existing QR to edit its metadata without painting over it.
+        if (occupiedCell.type === "qr" && brush === "qr") {
+          setToast(null)
+          return
+        }
         const itemName =
           occupiedCell.type === "station"
             ? "station"
@@ -137,6 +147,27 @@ export default function WarehouseMapsPage() {
           type: "error",
         })
         return
+      }
+
+      // Backend requires a unique physical ArUco ID for every QR marker.
+      if (brush === "qr") {
+        const newLabel = brushLabel.trim() || nextCode("QR")
+        const inferred = /^QR0*([0-9]+)$/i.exec(newLabel)
+        const raw = qrIdInput.trim() || inferred?.[1]
+        const newId = raw === undefined ? NaN : Number(raw)
+        if (!Number.isInteger(newId) || newId < 0 || newId > 49) {
+          setToast({ msg: "Choose a physical ArUco ID from 0 to 49 for this QR marker.", type: "error" })
+          return
+        }
+        const alreadyUsed = warehouseLayout.some(rowCells => rowCells.some(c => {
+          if (c.type !== "qr") return false
+          const inferredExisting = /^QR0*([0-9]+)$/i.exec(c.label ?? "")
+          return (c.arucoId ?? (inferredExisting ? Number(inferredExisting[1]) : undefined)) === newId
+        }))
+        if (alreadyUsed) {
+          setToast({ msg: `ArUco ID ${newId} is already placed on the map. Choose a unique ID.`, type: "error" })
+          return
+        }
       }
 
       setWarehouseLayout((prev) => {
@@ -171,7 +202,11 @@ export default function WarehouseMapsPage() {
           else newLabel = nextCode("S")
         }
 
-        next[row][col] = { type: brush, label: newLabel }
+        const qrMatch = /^QR0*([0-9]+)$/i.exec(newLabel)
+        const arucoId = qrIdInput.trim() ? Number(qrIdInput) : qrMatch ? Number(qrMatch[1]) : undefined
+        next[row][col] = brush === "qr"
+          ? { type: "qr", label: newLabel, arucoId, isIntersection: qrIntersection }
+          : { type: brush, label: newLabel }
         if (oldIsPoint && oldLabel && oldLabel !== newLabel) {
           setLinks((prevLinks) =>
             prevLinks.map(([a, b]) => [
@@ -187,8 +222,22 @@ export default function WarehouseMapsPage() {
         return next
       })
     },
-    [brush, brushLabel, nextCode, pendingStation, warehouseLayout, selectedCell],
+    [brush, brushLabel, nextCode, pendingStation, warehouseLayout, selectedCell, qrIdInput, qrIntersection],
   )
+
+  const selectedQrCell = selectedCell
+    ? warehouseLayout[selectedCell.row]?.[selectedCell.col]
+    : undefined
+
+  const updateSelectedQr = (changes: { arucoId?: number; isIntersection?: boolean }) => {
+    const target = selectedCell
+    if (!target) return
+    setWarehouseLayout(prev => prev.map((row, ri) => row.map((cell, ci) =>
+      ri === target.row && ci === target.col && cell.type === "qr"
+        ? { ...cell, ...changes }
+        : cell
+    )))
+  }
 
   return (
     <div
@@ -199,6 +248,23 @@ export default function WarehouseMapsPage() {
         title="Warehouse Maps"
         sub="Edit routes, stations, charging points and QR markers"
       >
+        <button type="button" className="rounded-lg border px-3 py-2 text-xs font-semibold"
+          style={{ background: "var(--surface-3)", borderColor: "var(--border-medium)" }}
+          disabled={mapLoading || mapSaving}
+          title="Discard unsaved edits and fetch the Backend map"
+          onClick={() => void reloadMap()
+            .then(() => setToast({ msg: "Reloaded map from Backend.", type: "success" }))
+            .catch(err => setToast({ msg: `Reload failed: ${err?.message ?? "API error"}`, type: "error" }))}>
+          {mapLoading ? "Loading..." : "Reload Backend Map"}
+        </button>
+        <button type="button" className="rounded-lg border px-3 py-2 text-xs font-semibold"
+          style={{ background: "#0d9488", borderColor: "#0d9488", color: "white" }}
+          disabled={mapRevision === null || mapLoading || mapSaving}
+          onClick={() => void saveMap()
+            .then(() => setToast({ msg: "Saved map to Backend!", type: "success" }))
+            .catch(err => setToast({ msg: `Save failed: ${err?.message ?? "API error"}`, type: "error" }))}>
+          {mapSaving ? "Saving..." : "Save to Backend"}
+        </button>
         <PrimaryBtn
           onClick={() => {
             const next = createDefaultWarehouseLayout()
@@ -212,6 +278,10 @@ export default function WarehouseMapsPage() {
           <Icon d={IC.refresh} size={15} /> Reset Map
         </PrimaryBtn>
       </PageHeader>
+      <div className="px-6 py-2 text-xs" style={{ color: "var(--text-faint)" }}>
+        Backend map revision: {mapRevision ?? "not loaded"} · Edits are local until you click Save to Backend.
+        {mapError && <div role="alert" style={{ color: "#f87171" }}>Navigation API: {mapError}</div>}
+      </div>
       <div
         className="flex-1 min-h-0 overflow-y-auto p-6"
         role="region"
@@ -334,6 +404,20 @@ export default function WarehouseMapsPage() {
                     }}
                     aria-label="Point label"
                   />
+                  {brush === "qr" && (
+                    <>
+                      <input type="number" min={0} max={49} value={qrIdInput}
+                        onChange={e => setQrIdInput(e.target.value)}
+                        placeholder="ArUco ID 0-49"
+                        aria-label="ArUco ID" title="Physical ArUco ID; if blank, QR01 means ID 1"
+                        className="w-32 px-3 py-2 rounded-lg text-[12px]"
+                        style={{ background: "var(--surface-3)", border: "1px solid var(--border-medium)" }}/>
+                      <label className="text-[11px] flex items-center gap-1">
+                        <input type="checkbox" checked={qrIntersection} onChange={e => setQrIntersection(e.target.checked)} />
+                        Intersection
+                      </label>
+                    </>
+                  )}
                   <span
                     className="text-[11px] font-mono"
                     style={{ color: "var(--text-dimmest)" }}
@@ -343,6 +427,23 @@ export default function WarehouseMapsPage() {
                 </div>
               )}
 
+              {mapMode === "points" && selectedQrCell?.type === "qr" && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2"
+                  style={{ borderColor: "var(--border-medium)", background: "var(--surface-3)" }}>
+                  <span className="text-xs font-semibold">Edit {selectedQrCell.label}</span>
+                  <label className="text-xs flex items-center gap-1">ID
+                    <input type="number" min={0} max={49} className="w-16 rounded border px-1 py-1"
+                      style={{ borderColor: "var(--border-medium)", background: "var(--surface-2)" }}
+                      value={selectedQrCell.arucoId ?? ""}
+                      onChange={e => updateSelectedQr({ arucoId: e.target.value === "" ? undefined : Number(e.target.value) })}/>
+                  </label>
+                  <label className="text-xs flex items-center gap-1">
+                    <input type="checkbox" checked={!!selectedQrCell.isIntersection}
+                      onChange={e => updateSelectedQr({ isIntersection: e.target.checked })}/>
+                    Intersection
+                  </label>
+                </div>
+              )}
               <div className="ml-auto flex items-center gap-2">
                 <button
                   type="button"

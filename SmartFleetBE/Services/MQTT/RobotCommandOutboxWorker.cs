@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 namespace SmartFleetBE.Services;
 
 public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttService mqtt,
+    IConfiguration configuration, QrDemoRouteService qrDemo,
     ILogger<RobotCommandOutboxWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -22,9 +23,29 @@ public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttSe
 
                     if (active) 
                     {
-                        await mqtt.PublishAsync(command.Topic, command.Payload, stoppingToken);
-                        command.DeliveredAt = DateTime.UtcNow;
-                        await db.SaveChangesAsync(stoppingToken);
+                        // The existing CIRCLE command becomes a real QR route only
+                        // when this Webots pilot is explicitly enabled.
+                        // NEVER send a CIRCLE fallback for an unconfigured task.
+                        try
+                        {
+                            string payload = command.Payload;
+                            if (configuration.GetValue<bool>("DemoRoute:Enabled"))
+                            {
+                                var assignment = await db.TaskAssignments.AsNoTracking()
+                                    .Include(a => a.Robot).Include(a => a.Mission)
+                                    .SingleAsync(a => a.AssignmentId == command.AssignmentId, stoppingToken);
+                                payload = qrDemo.BuildMqttCommand(assignment);
+                            }
+                            await mqtt.PublishAsync(command.Topic, payload, stoppingToken);
+                            command.DeliveredAt = DateTime.UtcNow;
+                            await db.SaveChangesAsync(stoppingToken);
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            // Fail closed. Keep this outbox entry pending and allow
+                            // other valid mission commands through in the same tick.
+                            logger.LogWarning(ex, "QR route not ready for assignment {AssignmentId}; command not sent", command.AssignmentId);
+                        }
                     }
                 }
             }

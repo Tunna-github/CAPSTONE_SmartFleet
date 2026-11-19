@@ -9,7 +9,7 @@ const GW = CELL * GCOLS;
 const GH = CELL * GROWS;
 
 export type WarehouseCellType = "floor" | "wall" | "station" | "qr" | "charge";
-export interface WarehouseCell { type: WarehouseCellType; label?: string; color?: string; }
+export interface WarehouseCell { type: WarehouseCellType; label?: string; color?: string; arucoId?: number; isIntersection?: boolean; }
 export type WarehouseLayout = WarehouseCell[][];
 
 export function createDefaultWarehouseLayout(): WarehouseLayout {
@@ -310,6 +310,12 @@ export function WarehouseGrid({
                     <>
                         <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
                         <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize="8" fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.label}</text>
+                        {cell.type === "qr" && cell.isIntersection && (
+                            <g>
+                                <circle cx={x + CELL - 8} cy={y + 8} r={6} fill="#f59e0b" />
+                                <text x={x + CELL - 8} y={y + 11} textAnchor="middle" fontSize="8" fontWeight="bold" fill="#111827">I</text>
+                            </g>
+                        )}
                     </>
                 )}
             </g>

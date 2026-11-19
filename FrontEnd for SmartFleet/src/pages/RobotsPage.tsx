@@ -352,7 +352,10 @@ export function RobotsPage() {
                                             <textarea
                                                 aria-label={`Reason for ${robot.robotCode}`}
                                                 value={reasonByRobot[robotId] ?? ""}
-                                                onChange={(e) => setReasonByRobot((prev) => ({ ...prev, [robotId]: e.currentTarget.value }))}
+                                                onChange={(e) => {
+                                                    const value = e.currentTarget.value;
+                                                    setReasonByRobot((prev) => ({ ...prev, [robotId]: value }));
+                                                }}
                                                 disabled={disabled}
                                                 maxLength={500}
                                                 rows={2}
@@ -406,7 +409,10 @@ export function RobotsPage() {
                                                                     type="text"
                                                                     aria-label={`Resolve incident ${incident.incidentId}`}
                                                                     value={noteByIncident[incident.incidentId] ?? ""}
-                                                                    onChange={(e) => setNoteByIncident((prev) => ({ ...prev, [incident.incidentId]: e.currentTarget.value }))}
+                                                                    onChange={(e) => {
+                                                                        const value = e.currentTarget.value;
+                                                                        setNoteByIncident((prev) => ({ ...prev, [incident.incidentId]: value }));
+                                                                    }}
                                                                     maxLength={1000}
                                                                     disabled={pendingAction !== null}
                                                                     placeholder="Resolution note..."

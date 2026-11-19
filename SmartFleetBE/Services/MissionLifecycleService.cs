@@ -13,13 +13,21 @@ public enum MissionEventResult
     Rejected
 }
 
-public sealed class MissionLifecycleService(SmartFleetDbContext db)
+public sealed class MissionLifecycleService(SmartFleetDbContext db,
+    IConfiguration configuration, QrDemoRouteService qrDemo)
 {
     public async Task<MissionEventResult> HandleAsync(
         string robotCode,
         RobotMissionEvent message,
         CancellationToken ct = default)
     {
+        // Test pilot: a robot cannot complete a transport task merely by
+        // sending MISSION_COMPLETED. The QR route has to reach pickup + drop.
+        if (configuration.GetValue<bool>("DemoRoute:Enabled") &&
+            message.Event == "MISSION_COMPLETED" &&
+            !qrDemo.CanComplete(message.MissionId, robotCode))
+            return MissionEventResult.Rejected;
+
         // =====================================================
         // 1. VALIDATE EVENT
         // =====================================================

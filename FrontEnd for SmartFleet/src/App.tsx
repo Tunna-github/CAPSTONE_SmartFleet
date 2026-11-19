@@ -20,6 +20,8 @@ import { TasksPage } from "./pages/TasksPage"
 import { AdminDashboard } from "./pages/AdminDashboard"
 
 import WarehouseMapsPage from "./pages/WarehouseMapsPage"
+import QrMissionMonitorPage from "./pages/QrMissionMonitorPage"
+import NavigationTrafficPage from "./pages/NavigationTrafficPage"
 import { RobotsPage } from "./pages/RobotsPage"
 
 import { UserProfilePage } from "./pages/UserProfilePage"
@@ -180,6 +182,8 @@ export default function App() {
                   <Route path="/dashboard" element={<OperatorDashboard />} />
 
                   <Route path="/dashboard/tasks" element={<TasksPage />} />
+                  <Route path="/dashboard/qr-missions" element={<QrMissionMonitorPage />} />
+                  <Route path="/dashboard/navigation" element={<NavigationTrafficPage />} />
 
                   <Route
                     path="/dashboard/analytics"
@@ -225,6 +229,8 @@ export default function App() {
                   />
 
                   <Route path="/admin/maps" element={<WarehouseMapsPage />} />
+                  <Route path="/admin/qr-missions" element={<QrMissionMonitorPage />} />
+                  <Route path="/admin/navigation" element={<NavigationTrafficPage />} />
                 </Route>
               </Route>
 
