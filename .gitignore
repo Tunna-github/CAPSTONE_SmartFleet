@@ -14,3 +14,12 @@ SmartFleetBE/appsettings.Local.json
 .env
 .env.*
 SmartFleetBE/appsettings.json
+
+# Local runtime map and safety locks (never commit active robot state)
+SmartFleetBE/App_Data/navigation-state.json
+SmartFleetBE/App_Data/navigation-state.json.tmp
+
+# Single-Webots QR mission pilot: test-only runtime config/state
+SmartFleetBE/App_Data/demo-route-config.json
+SmartFleetBE/App_Data/qr-demo-state.json
+SmartFleetBE/App_Data/qr-demo-state.json.tmp
