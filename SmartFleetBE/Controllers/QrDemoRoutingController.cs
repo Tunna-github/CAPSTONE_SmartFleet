@@ -62,6 +62,10 @@ public sealed class QrDemoRoutingController(
             : Ok(new { taskId, value.PickupArUcoId, value.DeliveryArUcoId });
     }
 
+    // Canonical, directional QR graph derived from saved Warehouse Map links.
+    [HttpGet("map/graph")]
+    public IActionResult GetMapGraph() => Ok(routes.GetDirectedQrGraph());
+
     [HttpGet("robots/positions")]
     public IActionResult Positions() => Ok(routes.GetRobotPositions());
 

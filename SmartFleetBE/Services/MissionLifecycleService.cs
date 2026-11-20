@@ -180,7 +180,8 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
 
         if (
             message.Event == "MISSION_STARTED" &&
-            mission.MissionStatus == "NAVIGATING_TO_PICKUP" &&
+            mission.MissionStatus is
+                ("NAVIGATING_TO_PICKUP" or "NAVIGATING_TO_DELIVERY") &&
             task.TaskStatus ==
                 TransportTaskStatuses.Executing
         )

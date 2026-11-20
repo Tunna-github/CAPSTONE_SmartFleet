@@ -148,6 +148,20 @@ public sealed class MqttMissionStatusWorker(
         }
     }
 
+    private static bool IsRetryableMissionConflict(Exception error)
+    {
+        // EF Core may wrap Npgsql errors in DbUpdateException and
+        // InvalidOperationException, so examine the complete inner chain.
+        for (Exception? current = error; current is not null;
+             current = current.InnerException)
+        {
+            if (current is Npgsql.PostgresException pg &&
+                (pg.SqlState == "40001" || pg.SqlState == "40P01"))
+                return true;
+        }
+        return false;
+    }
+
     private async Task ReceiveAsync(
         MqttApplicationMessageReceivedEventArgs args)
     {
@@ -182,16 +196,33 @@ public sealed class MqttMissionStatusWorker(
             }
 
             // Database processing must finish before Applied ACK.
-            using var scope = scopes.CreateScope();
-
+            // PostgreSQL SERIALIZABLE transactions can fail with SQLSTATE 40001
+            // when telemetry or another event updates a related row. Retry the
+            // WHOLE transaction using a FRESH scoped DbContext each attempt.
             var dbTimer = Stopwatch.StartNew();
+            const int maxMissionAttempts = 5;
+            MissionEventResult result;
 
-            var result = await scope.ServiceProvider
-                .GetRequiredService<MissionLifecycleService>()
-                .HandleAsync(
-                    topic[2],
-                    message,
-                    _stoppingToken);
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    using var attemptScope = scopes.CreateScope();
+                    result = await attemptScope.ServiceProvider
+                        .GetRequiredService<MissionLifecycleService>()
+                        .HandleAsync(topic[2], message, _stoppingToken);
+                    break;
+                }
+                catch (Exception ex) when (
+                    IsRetryableMissionConflict(ex) && attempt < maxMissionAttempts)
+                {
+                    logger.LogWarning(
+                        "Mission {Event} for {Robot} hit PostgreSQL concurrency " +
+                        "conflict; retrying transaction ({Attempt}/{MaxAttempts}).",
+                        message.Event, topic[2], attempt, maxMissionAttempts);
+                    await Task.Delay(TimeSpan.FromMilliseconds(150 * attempt), _stoppingToken);
+                }
+            }
 
             dbTimer.Stop();
 

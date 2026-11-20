@@ -240,9 +240,77 @@ public sealed class TaskDispatchService : ITaskDispatchService
     // ASSIGN TASK MANUALLY
     // =====================================================
 
-    public async Task<
-        TransportTaskServiceResult<ManualAssignTaskResponse>>
+    // Retry the ENTIRE manual assignment transaction after a PostgreSQL
+    // serialization failure, not just SaveChangesAsync. The inner method owns
+    // one Serializable transaction; on failure it is disposed/rolled back
+    // before the next attempt. No DB schema change is required.
+    public async Task<TransportTaskServiceResult<ManualAssignTaskResponse>>
         AssignManualAsync(
+            long taskId,
+            int robotId,
+            int operatorUserId,
+            CancellationToken cancellationToken = default)
+    {
+        const int maxAttempts = 5;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                return await AssignManualCoreAsync(
+                    taskId, robotId, operatorUserId, cancellationToken);
+            }
+            catch (Exception ex) when (
+                !cancellationToken.IsCancellationRequested &&
+                IsManualAssignmentSerializationConflict(ex))
+            {
+                // Core method's await using has rolled back and disposed the
+                // transaction by the time control reaches this catch block.
+                // Detached entities prevent replaying changes from a failed try.
+                _db.ChangeTracker.Clear();
+
+                if (attempt == maxAttempts)
+                {
+                    _logger.LogWarning(ex,
+                        "Manual assignment of Task {TaskId} to Robot {RobotId} " +
+                        "failed after {Attempts} serialization retries",
+                        taskId, robotId, attempt);
+                    return TransportTaskServiceResult<ManualAssignTaskResponse>
+                        .Conflict("Robot telemetry or another transaction updated " +
+                                  "the robot concurrently. Please retry assignment.");
+                }
+
+                _logger.LogWarning(
+                    "PostgreSQL concurrency conflict while assigning Task {TaskId} " +
+                    "to Robot {RobotId} (attempt {Attempt}/{MaxAttempts}); " +
+                    "retrying the entire transaction",
+                    taskId, robotId, attempt, maxAttempts);
+
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(
+                        125 * attempt + Random.Shared.Next(75, 250)),
+                    cancellationToken);
+            }
+        }
+
+        return TransportTaskServiceResult<ManualAssignTaskResponse>
+            .Conflict("Could not assign robot after retrying the transaction.");
+    }
+
+    private static bool IsManualAssignmentSerializationConflict(Exception ex)
+    {
+        for (Exception? current = ex; current != null;
+             current = current.InnerException)
+        {
+            if (current is Npgsql.PostgresException pg &&
+                (pg.SqlState == "40001" || pg.SqlState == "40P01"))
+                return true;
+        }
+        return false;
+    }
+
+    private async Task<
+        TransportTaskServiceResult<ManualAssignTaskResponse>>
+        AssignManualCoreAsync(
             long taskId,
             int robotId,
             int operatorUserId,

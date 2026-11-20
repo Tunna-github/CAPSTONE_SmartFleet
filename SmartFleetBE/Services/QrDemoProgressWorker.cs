@@ -19,6 +19,16 @@ public sealed class QrDemoProgressWorker(
     private static readonly JsonSerializerOptions Options =
         new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
 
+    // SmartFleet QR transaction retry: same source of SQLSTATE 40001 as mission updates.
+    private static bool IsPgConflict(Exception error)
+    {
+        for (Exception? e = error; e != null; e = e.InnerException)
+            if (e is Npgsql.PostgresException pg &&
+                (pg.SqlState == "40001" || pg.SqlState == "40P01"))
+                return true;
+        return false;
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var client = new MqttClientFactory().CreateMqttClient();
@@ -42,27 +52,51 @@ public sealed class QrDemoProgressWorker(
                     if (view != null && view.PickupReached && !view.DeliveryReached &&
                         report.WaypointIndex == view.PickupWaypointIndex)
                     {
-                        using var scope = scopes.CreateScope();
-                        var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
-                        var mission = await db.Missions.SingleOrDefaultAsync(
-                            m => m.MissionId == report.MissionId &&
-                                 m.Assignment.Robot.RobotCode == parts[2], stoppingToken);
-                        if (mission is { MissionStatus: "NAVIGATING_TO_PICKUP" })
+                        long? changedAssignmentId = null;
+                        const int maxQrAttempts = 5;
+                        for (var attempt = 1; ; attempt++)
                         {
-                            var now = DateTime.UtcNow;
-                            mission.MissionStatus = "NAVIGATING_TO_DELIVERY";
-                            mission.LastProgressAt = now;
-                            db.MissionStatusHistories.Add(new MissionStatusHistory
+                            try
                             {
-                                MissionId = report.MissionId,
-                                PreviousStatus = "NAVIGATING_TO_PICKUP",
-                                NewStatus = "NAVIGATING_TO_DELIVERY",
-                                Source = "WEBOTS_QR_ODOMETRY_DEMO",
-                                Reason = $"Reached pickup QR{report.ArucoId}; pickup package verification not enabled.",
-                                ChangedAt = now
-                            });
-                            await db.SaveChangesAsync(stoppingToken);
-                            try { await realtime.MissionUpdatedAsync(mission.AssignmentId, stoppingToken); }
+                                // Retry the WHOLE database operation with a FRESH scope.
+                                // The in-memory waypoint report is idempotent, and the
+                                // status guard prevents duplicate history inserts.
+                                using var scope = scopes.CreateScope();
+                                var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
+                                var mission = await db.Missions.SingleOrDefaultAsync(
+                                    m => m.MissionId == report.MissionId &&
+                                         m.Assignment.Robot.RobotCode == parts[2], stoppingToken);
+                                if (mission is { MissionStatus: "NAVIGATING_TO_PICKUP" })
+                                {
+                                    var now = DateTime.UtcNow;
+                                    mission.MissionStatus = "NAVIGATING_TO_DELIVERY";
+                                    mission.LastProgressAt = now;
+                                    db.MissionStatusHistories.Add(new MissionStatusHistory
+                                    {
+                                        MissionId = report.MissionId,
+                                        PreviousStatus = "NAVIGATING_TO_PICKUP",
+                                        NewStatus = "NAVIGATING_TO_DELIVERY",
+                                        Source = "ROBOT_AGENT",
+                                        Reason = $"Reached pickup QR{report.ArucoId}; pickup package verification not enabled.",
+                                        ChangedAt = now
+                                    });
+                                    await db.SaveChangesAsync(stoppingToken);
+                                    changedAssignmentId = mission.AssignmentId;
+                                }
+                                break;
+                            }
+                            catch (Exception ex) when (IsPgConflict(ex) && attempt < maxQrAttempts)
+                            {
+                                logger.LogWarning(
+                                    "QR pickup progress for mission {MissionId} hit a PostgreSQL conflict; " +
+                                    "retrying the whole operation ({Attempt}/{MaxAttempts}).",
+                                    report.MissionId, attempt, maxQrAttempts);
+                                await Task.Delay(TimeSpan.FromMilliseconds(attempt * 150), stoppingToken);
+                            }
+                        }
+                        if (changedAssignmentId.HasValue)
+                        {
+                            try { await realtime.MissionUpdatedAsync(changedAssignmentId.Value, stoppingToken); }
                             catch (Exception ex) when (ex is not OperationCanceledException)
                             { logger.LogWarning(ex, "Mission pickup SignalR broadcast failed"); }
                         }

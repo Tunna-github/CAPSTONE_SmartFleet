@@ -20,6 +20,8 @@ public sealed class QrDemoRouteService
         public int ArucoId { get; init; }
         public int Row { get; init; }
         public int Col { get; init; }
+        // Null for the initial checkpoint; N/E/S/W for each following linked road.
+        public string? TravelDirection { get; init; }
         public string Stage { get; init; } = "TO_PICKUP";
     }
 
@@ -149,6 +151,46 @@ public sealed class QrDemoRouteService
         }
     }
 
+    // The FE Warehouse Map is the ONLY QR topology. This read-only endpoint
+    // presents the same axis-aligned linked graph used by A* routing.
+    public object GetDirectedQrGraph()
+    {
+        var map = _navigation.GetMap();
+        var nodes = ReadNodes(map);
+        var edges = TraversableQrLinks(map, nodes);
+        var qrNodes = nodes.Values.OrderBy(n => n.Id).Select(n => new
+        {
+            arucoId = n.Id, label = n.Label, row = n.Row, col = n.Col
+        }).ToArray();
+        var directedEdges = edges.SelectMany(edge => new[]
+        {
+            new {
+                fromArUcoId = edge.From.Id,
+                toArUcoId = edge.To.Id,
+                travelDirection = DirectionBetween(edge.From, edge.To),
+                gridDistance = Math.Abs(edge.From.Row - edge.To.Row) +
+                               Math.Abs(edge.From.Col - edge.To.Col)
+            },
+            new {
+                fromArUcoId = edge.To.Id,
+                toArUcoId = edge.From.Id,
+                travelDirection = DirectionBetween(edge.To, edge.From),
+                gridDistance = Math.Abs(edge.From.Row - edge.To.Row) +
+                               Math.Abs(edge.From.Col - edge.To.Col)
+            }
+        }).OrderBy(e => e.fromArUcoId).ThenBy(e => e.toArUcoId).ToArray();
+        return new
+        {
+            mapRevision = map.Revision,
+            source = "BACKEND_WAREHOUSE_MAP",
+            qrNodes,
+            directedEdges,
+            ignoredNonQrOrNonAxisLinkCount = map.Links.Count - edges.Count,
+            note = "Only explicitly linked, straight QR corridors are navigable. " +
+                   "Map editing cannot create a physical road in Webots."
+        };
+    }
+
     public string BuildMqttCommand(TaskAssignment assignment)
     {
         long missionId = assignment.Mission?.MissionId
@@ -170,7 +212,7 @@ public sealed class QrDemoRouteService
                 throw new InvalidOperationException($"No fresh Webots READY report for {assignment.Robot.RobotCode}. Start Backend first, then restart the Webots controller and wait for QR READY.");
         }
         if (!nodes.ContainsKey(startId))
-            throw new InvalidOperationException($"Robot {assignment.Robot.RobotCode} has unknown start QR {startId}; check Webots START_ARUCO_ID and the saved map.");
+            throw new InvalidOperationException($"Robot {assignment.Robot.RobotCode} has unknown start QR {startId}; check the detected camera QR and the saved map.");
         if (!nodes.ContainsKey(pickupId) || !nodes.ContainsKey(deliveryId))
             throw new InvalidOperationException("Task pickup/delivery QR was deleted from the map.");
 
@@ -183,6 +225,7 @@ public sealed class QrDemoRouteService
             ArucoId = id,
             Row = nodes[id].Row,
             Col = nodes[id].Col,
+            TravelDirection = index == 0 ? null : DirectionBetween(nodes[fullIds[index - 1]], nodes[id]),
             Stage = index == pickupIndex ? "PICKUP" :
                 index == fullIds.Count - 1 ? "DELIVERY" :
                 index < pickupIndex ? "TO_PICKUP" : "TO_DELIVERY"
@@ -239,10 +282,15 @@ public sealed class QrDemoRouteService
         {
             if (string.Equals(report.Event, "READY", StringComparison.OrdinalIgnoreCase))
             {
-                // Startup position is a test calibration value, not a camera-detected scan.
-                var expected = _configuration.GetValue<int>($"DemoRoute:RobotStartQr:{robotCode}", -1);
-                if (expected >= 0 && expected != report.ArucoId)
-                    return (false, $"Webots QR{report.ArucoId} disagrees with configured expected start QR{expected}");
+                // READY is camera-confirmed by Webots. Use the reported QR for
+                // every new mission, even if the previous mission ended at QR7.
+                // Fixed-start validation remains opt-in for legacy demo setups.
+                if (_configuration.GetValue<bool>("DemoRoute:EnforceFixedStartQr"))
+                {
+                    var expected = _configuration.GetValue<int>($"DemoRoute:RobotStartQr:{robotCode}", -1);
+                    if (expected >= 0 && expected != report.ArucoId)
+                        return (false, $"Webots QR{report.ArucoId} disagrees with configured expected start QR{expected}");
+                }
                 _store.RobotPositions[robotCode] = report.ArucoId;
                 _freshRobotPositions.Add(robotCode);
                 SaveLocked();
@@ -307,15 +355,41 @@ public sealed class QrDemoRouteService
         return result;
     }
 
-    private static List<int> FindPath(WarehouseMapDocument map, Dictionary<int, Node> nodes, int start, int goal)
+    private static bool AxisAligned(Node from, Node to) =>
+        (from.Row == to.Row && from.Col != to.Col) ||
+        (from.Col == to.Col && from.Row != to.Row);
+
+    private static string DirectionBetween(Node from, Node to)
     {
-        if (start == goal) return [start];
+        if (from.Row == to.Row && from.Col < to.Col) return "E";
+        if (from.Row == to.Row && from.Col > to.Col) return "W";
+        if (from.Col == to.Col && from.Row < to.Row) return "S";
+        if (from.Col == to.Col && from.Row > to.Row) return "N";
+        throw new InvalidOperationException($"Map link QR{from.Id} -> QR{to.Id} is not a straight, axis-aligned physical road. Fix the QR grid positions/links in Warehouse Maps.");
+    }
+
+    // Shared by the graph API and route planner; there is no robot-side TOPOLOGY.
+    private static List<(Node From, Node To)> TraversableQrLinks(
+        WarehouseMapDocument map, Dictionary<int, Node> nodes)
+    {
         var byLabel = nodes.Values.ToDictionary(n => n.Label, StringComparer.OrdinalIgnoreCase);
-        var graph = nodes.Keys.ToDictionary(k => k, _ => new List<int>());
+        var result = new List<(Node From, Node To)>();
         foreach (var link in map.Links)
         {
             if (link.Count != 2 || !byLabel.TryGetValue(link[0], out var from) ||
                 !byLabel.TryGetValue(link[1], out var to)) continue;
+            if (!AxisAligned(from, to)) continue;
+            result.Add((from, to));
+        }
+        return result;
+    }
+
+    private static List<int> FindPath(WarehouseMapDocument map, Dictionary<int, Node> nodes, int start, int goal)
+    {
+        if (start == goal) return [start];
+        var graph = nodes.Keys.ToDictionary(k => k, _ => new List<int>());
+        foreach (var (from, to) in TraversableQrLinks(map, nodes))
+        {
             graph[from.Id].Add(to.Id);
             graph[to.Id].Add(from.Id);
         }
@@ -344,6 +418,6 @@ public sealed class QrDemoRouteService
                 queue.Enqueue(next, candidate + Dist(next, goal));
             }
         }
-        throw new InvalidOperationException($"No QR-only path from QR{start} to QR{goal}. Check Edit Links and Save to Backend.");
+        throw new InvalidOperationException($"No axis-aligned QR path from QR{start} to QR{goal}. Check QR positions and Edit Links in Warehouse Maps, then Save to Backend.");
     }
 }

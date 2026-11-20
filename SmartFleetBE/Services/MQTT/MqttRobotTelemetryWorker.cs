@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MQTTnet;
@@ -16,6 +17,21 @@ public sealed class MqttRobotTelemetryWorker(
     MqttService mqttPublisher,
     ILogger<MqttRobotTelemetryWorker> logger) : BackgroundService
 {
+    // SmartFleet throttle: robot snapshot is not the live telemetry stream.
+    // SignalR receives EVERY valid telemetry event. Persist the mutable Robots
+    // row at most once per configured interval, reducing contention with the
+    // SERIALIZABLE mission and assignment transactions.
+    private readonly ConcurrentDictionary<string, DateTime> _robotSnapshotAt = new();
+
+    private static bool IsPgConflict(Exception error)
+    {
+        for (Exception? e = error; e != null; e = e.InnerException)
+            if (e is Npgsql.PostgresException pg &&
+                (pg.SqlState == "40001" || pg.SqlState == "40P01"))
+                return true;
+        return false;
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -117,7 +133,19 @@ public sealed class MqttRobotTelemetryWorker(
             if (message.PositionY.HasValue) robot.CurrentCoordY = message.PositionY.Value;
             if (message.Heading.HasValue) robot.CurrentHeading = message.Heading.Value;
 
-            if (configuration.GetValue<bool>("Mqtt:StoreTelemetryLogs"))
+            var snapshotIntervalSeconds = Math.Clamp(
+                configuration.GetValue("Mqtt:RobotSnapshotIntervalSeconds", 10), 2, 30);
+            var persistRobotSnapshot = !_robotSnapshotAt.TryGetValue(robot.RobotCode, out var previous)
+                || now - previous >= TimeSpan.FromSeconds(snapshotIntervalSeconds);
+            var storeTelemetryLogs = configuration.GetValue<bool>("Mqtt:StoreTelemetryLogs");
+
+            // Skip only the shared Robots-row UPDATE, never the live stream.
+            // The in-memory robot still contains this event's newest battery,
+            // timestamps and position for the battery SignalR payload below.
+            if (!persistRobotSnapshot)
+                db.Entry(robot).State = EntityState.Detached;
+
+            if (storeTelemetryLogs)
                 db.RobotTelemetryLogs.Add(new RobotTelemetryLog {
                     RobotId = robot.RobotId,
                     PositionX = message.PositionX, PositionY = message.PositionY,
@@ -131,10 +159,28 @@ public sealed class MqttRobotTelemetryWorker(
                     RecordedAt = now
                 });
 
-            await db.SaveChangesAsync(ct);
+            var snapshotSaved = false;
+            if (persistRobotSnapshot || storeTelemetryLogs)
+            {
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                    if (persistRobotSnapshot)
+                    {
+                        _robotSnapshotAt[robot.RobotCode] = now;
+                        snapshotSaved = true;
+                    }
+                }
+                catch (Exception ex) when (IsPgConflict(ex))
+                {
+                    // A telemetry sample may be dropped from storage safely:
+                    // the next sample will retry, and mission transactions win.
+                    logger.LogDebug("Deferred telemetry DB snapshot for {Robot} after PostgreSQL conflict", robot.RobotCode);
+                }
+            }
             try
             {
-                // Battery telemetry is persisted before broadcasting; no MQTT ACK is delayed.
+                // Broadcast every telemetry event, even when DB snapshots are throttled.
                 if (message.BatteryPercent.HasValue || message.BatteryVoltage.HasValue)
                 {
                     int staleAfterSeconds = Math.Clamp(
@@ -144,7 +190,8 @@ public sealed class MqttRobotTelemetryWorker(
                         RobotBatteryResponse.FromRobot(robot, now, staleAfterSeconds), ct);
                 }
 
-                await realtime.RobotUpdatedAsync(robot.RobotCode, ct);
+                if (snapshotSaved)
+                    await realtime.RobotUpdatedAsync(robot.RobotCode, ct);
                 await realtime.TelemetryUpdatedAsync(robot.RobotCode, message, now, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
