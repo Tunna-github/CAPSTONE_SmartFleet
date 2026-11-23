@@ -298,13 +298,13 @@ public sealed class TransportTasksController : ControllerBase
         ActionResult<IReadOnlyCollection<AvailableRobotResponse>>>
         GetAvailableRobots(
             long taskId,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, [FromQuery] bool includeIneligible = false)
     {
         var result =
             await _taskDispatchService
                 .GetAvailableRobotsAsync(
                     taskId,
-                    cancellationToken);
+                    cancellationToken, includeIneligible);
 
         return result.Status switch
         {

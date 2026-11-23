@@ -73,6 +73,8 @@ export interface TransportTaskDetails {
 }
 
 export interface AvailableRobot {
+    isEligible: boolean;
+    ineligibilityReason: string | null;
     robotId: number | null;
     operationalStatus: string | null;
     id: string;
@@ -233,6 +235,8 @@ function normalizeAvailableRobot(
     item: Record<string, unknown>
 ): AvailableRobot {
     return {
+        isEligible: item.isEligible === true,
+        ineligibilityReason: typeof item.ineligibilityReason === "string" ? item.ineligibilityReason : null,
         robotId:
             typeof item.robotId === "number"
                 ? item.robotId
@@ -378,12 +382,13 @@ export async function updateTransportTask(
 // =====================================================
 
 export async function getAvailableRobotsForTask(
-    taskId: number | string
+    taskId: number | string, includeIneligible = false
 ): Promise<AvailableRobot[]> {
     const { data } = await apiClient.get<
         ApiResult<Record<string, unknown>[]>
     >(
-        ENDPOINTS.transportTasks.availableRobots(taskId)
+        ENDPOINTS.transportTasks.availableRobots(taskId),
+        { params: { includeIneligible } }
     );
 
     return unwrapApiResponse(data)

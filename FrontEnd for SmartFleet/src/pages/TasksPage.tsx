@@ -15,7 +15,7 @@ interface EditState { delivery: string; priority: Priority; }
 const PRIORITY_ORDER: Record<Priority, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 
 export function TasksPage() {
-    const { tasks, robots, cancelTask, deleteTask, refreshTasks, isTasksLoading, tasksError, setTaskRobot } = useData();
+    const { tasks, cancelTask, deleteTask, refreshTasks, isTasksLoading, tasksError, setTaskRobot } = useData();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [createOpen, setCreateOpen] = useState(false);
@@ -425,7 +425,7 @@ export function TasksPage() {
                                 Showing {section.items.length} of {section.total} {section.id === "completed" ? "completed" : "queue"} tasks
                             </span>
                             <span className="font-mono text-[11px]" style={{ color: "var(--text-dimmest)" }}>
-                                {robots.filter((r) => r.mqtt === "ONLINE").length} robots online
+                                View current robot availability in Assign
                             </span>
                         </div>
                     </section>
@@ -599,12 +599,27 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
             setLoading(false);
             return;
         }
-        getAvailableRobotsForTask(task.taskId).then(items => {
-            if (active) setRobots(items);
-        }).catch(err => {
-            if (active) setError(err?.message || "Unable to load available robots.");
-        }).finally(() => { if (active) setLoading(false); });
-        return () => { active = false; };
+        let fetching = false;
+        const load = async () => {
+            if (fetching || inFlight.current) return;
+            fetching = true;
+            try {
+                const items = await getAvailableRobotsForTask(task.taskId!, true);
+                if (active) {
+                    setRobots(items);
+                    setSelected(previous => items.some(r => r.isEligible && String(r.robotId) === previous) ? previous : "");
+                }
+            } catch (err) {
+                if (active) {
+                    setRobots([]);
+                    setSelected("");
+                    setError((err as Error).message || "Unable to load available robots.");
+                }
+            } finally { fetching = false; if (active) setLoading(false); }
+        };
+        void load();
+        const poll = window.setInterval(() => void load(), 5000);
+        return () => { active = false; window.clearInterval(poll); };
     }, [task.taskId, retry]);
 
     return (
@@ -612,24 +627,31 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
             <form className="p-6 space-y-4" aria-busy={loading || busy} onSubmit={async event => {
                 event.preventDefault();
                 const robotId = Number(selected);
-                if (inFlight.current || task.taskId == null || !robots.some(robot => robot.robotId === robotId)) return;
+                if (inFlight.current || task.taskId == null || !robots.some(robot => robot.robotId === robotId && robot.isEligible)) return;
                 inFlight.current = true;
                 setBusy(true);
                 setError("");
                 try {
+                    const latest = await getAvailableRobotsForTask(task.taskId, true);
+                    setRobots(latest);
+                    if (!latest.some(robot => robot.robotId === robotId && robot.isEligible)) {
+                        setSelected("");
+                        throw new Error("Selected robot is no longer eligible or connected. Select another robot.");
+                    }
                     const result = await assignRobotToTask(task.taskId, robotId);
                     inFlight.current = false;
                     setBusy(false);
                     await onAssigned(result);
                     return;
                 } catch (err) {
+                    setSelected("");
                     setError((err as { message?: string })?.message || "Assignment failed. Reload available robots and try again.");
                     inFlight.current = false;
                     setBusy(false);
                     return;
                 }
             }}>
-                <p className="text-[12px]" style={{ color: "var(--text-faint)" }}>Only robots eligible for this task are shown. Confirming sends an assignment to the backend.</p>
+                <p className="text-[12px]" style={{ color: "var(--text-faint)" }}>{robots.filter(r => r.isEligible).length} eligible / {robots.length} registered robots. Unavailable robots are disabled with a reason. Status refreshes every 5 seconds and is checked again on confirmation.</p>
                 {error && <p role="alert" className="text-[12px] text-red-400">{error}</p>}
                 {loading ? <p role="status">Loading available robots...</p> : (
                     <div>
@@ -639,12 +661,15 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
                             style={{ background: "var(--surface-3)", color: "var(--text-primary)", border: "1px solid var(--border-medium)" }}>
                             <option value="">Select a robot</option>
                             {robots.filter(robot => robot.robotId != null).map(robot => (
-                                <option key={robot.robotId} value={robot.robotId!}>
-                                    {robot.id} | Battery: {robot.battery == null ? "N/A" : `${robot.battery}%`} | {robot.mqtt || "Unknown connection"} | {robot.operationalStatus || "Unknown status"}
+                                <option key={robot.robotId} value={robot.robotId!} disabled={!robot.isEligible}>
+                                    {robot.id} | Battery: {robot.battery == null ? "N/A" : `${robot.battery}%`} | {robot.isEligible ? "Eligible" : robot.ineligibilityReason || "Unavailable"}
                                 </option>
                             ))}
                         </select>
-                        {!error && !robots.length && <p className="mt-2 text-[12px]">No available robots for this task.</p>}
+                        {!error && !robots.some(r => r.isEligible) && <p className="mt-2 text-[12px]">No available robots for this task. Wait for a connected, eligible robot and reload.</p>}
+                        <ul aria-label="Unavailable robots" className="mt-2 space-y-1 text-[12px]">
+                            {robots.filter(r => !r.isEligible).map(r => <li key={r.robotId}>{r.id}: {r.ineligibilityReason || "Unavailable"}</li>)}
+                        </ul>
                     </div>
                 )}
                 <div className="flex flex-wrap gap-3">

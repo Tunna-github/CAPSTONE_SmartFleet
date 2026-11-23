@@ -10,7 +10,7 @@ public interface ITaskDispatchService
             IReadOnlyCollection<AvailableRobotResponse>>>
         GetAvailableRobotsAsync(
             long taskId,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default, bool includeIneligible = false);
 
 
     Task<

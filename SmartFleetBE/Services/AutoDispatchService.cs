@@ -98,6 +98,8 @@ public sealed class AutoDispatchService(
 
                 var now = (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime;
                 var weightKg = task.PayloadWeightKg.Value;
+                var presenceCutoff = now.AddSeconds(-RobotPresencePolicy.TimeoutSeconds(configuration));
+                var presenceFuture = now.AddSeconds(5);
 
                 // Do not dispatch future scheduled tasks.
                 if (task.ScheduledTime is { } scheduled &&
@@ -161,6 +163,8 @@ public sealed class AutoDispatchService(
                         // Robot must be online and free
                         r.ConnectionStatus == "ONLINE" &&
                         r.OperationalStatus == "AVAILABLE" &&
+                        r.LastHeartbeatTime >= presenceCutoff && r.LastHeartbeatTime <= presenceFuture &&
+                        r.LastTelemetryTime >= presenceCutoff && r.LastTelemetryTime <= presenceFuture &&
 
                         // A recovered task must move to another robot, even if a failed one was restored.
                         !db.TaskAssignments.Any(a => a.TaskId == taskId && a.RobotId == r.RobotId &&

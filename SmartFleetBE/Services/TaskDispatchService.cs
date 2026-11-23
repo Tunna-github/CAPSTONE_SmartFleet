@@ -38,7 +38,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
             IReadOnlyCollection<AvailableRobotResponse>>>
         GetAvailableRobotsAsync(
             long taskId,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, bool includeIneligible = false)
     {
         var task = await _db.TransportTasks
             .AsNoTracking()
@@ -95,153 +95,47 @@ public sealed class TaskDispatchService : ITaskDispatchService
         _logger.LogInformation("Task {TaskId}: warehouseId={WarehouseId}, payloadKg={PayloadKg}", 
             taskId, task.WarehouseId, weightKg);
 
-        // Get ALL robots first to see what's being filtered
-        var allRobots = await _db.Robots
-            .AsNoTracking()
-            .Where(r => r.WarehouseId == task.WarehouseId)
-            .ToListAsync(cancellationToken);
-
-        _logger.LogInformation("Task {TaskId}: Found {RobotCount} robots in warehouse", 
-            taskId, allRobots.Count);
-
+        // Show exclusion reasons when requested; never silently treat a DB row as a live robot.
+        var allRobots = await _db.Robots.AsNoTracking().OrderBy(r => r.RobotCode).ToListAsync(cancellationToken);
+        var busy = (await _db.TaskAssignments.Where(a => a.AssignmentStatus == "ACTIVE")
+            .Select(a => a.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
+        var failed = (await _db.TaskAssignments.Where(a => a.TaskId == taskId && a.AssignmentStatus == "FAILED")
+            .Select(a => a.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
+        var maintenance = (await _db.RobotMaintenanceRecords.Where(m =>
+            m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS")
+            .Select(m => m.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
+        var incidents = (await _db.RobotIncidents.Where(i => !i.IsResolved &&
+            (i.Severity == "HIGH" || i.Severity == "CRITICAL"))
+            .Select(i => i.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
+        var now = DateTime.UtcNow;
+        var robots = new List<AvailableRobotResponse>();
         foreach (var robot in allRobots)
         {
-            string reason = "";
-            bool passes = true;
-
-            if (await _db.TaskAssignments.AnyAsync(a => a.TaskId == taskId &&
-                a.RobotId == robot.RobotId && a.AssignmentStatus == "FAILED", cancellationToken))
-            {
-                reason = "Previously failed this task; select another robot";
-                passes = false;
-            }
-            else if (!robot.IsActive)
-            {
-                reason = "Not active";
-                passes = false;
-            }
-            else if (robot.RobotType != "PHYSICAL")
-            {
-                reason = $"Type={robot.RobotType} (not PHYSICAL)";
-                passes = false;
-            }
-            else if (robot.ConnectionStatus != "ONLINE")
-            {
-                reason = $"ConnectionStatus={robot.ConnectionStatus} (not ONLINE)";
-                passes = false;
-            }
-            else if (robot.OperationalStatus != "AVAILABLE")
-            {
-                reason = $"OperationalStatus={robot.OperationalStatus} (not AVAILABLE)";
-                passes = false;
-            }
-            else if (robot.BatteryPercent == null)
-            {
-                reason = "BatteryPercent is null";
-                passes = false;
-            }
-            else if (robot.BatteryPercent < MinimumBatteryPercent)
-            {
-                reason = $"Battery={robot.BatteryPercent}% (min {MinimumBatteryPercent}%)";
-                passes = false;
-            }
-            else if (robot.MaxPayloadWeightKg < weightKg)
-            {
-                reason = $"MaxPayload={robot.MaxPayloadWeightKg}kg (task needs {weightKg}kg)";
-                passes = false;
-            }
-
-            if (passes)
-            {
-                // Check for active assignments
-                var hasActiveAssignment = await _db.TaskAssignments.AnyAsync(a =>
-                    a.RobotId == robot.RobotId &&
-                    a.AssignmentStatus == "ACTIVE", cancellationToken);
-
-                if (hasActiveAssignment)
-                {
-                    reason = "Has ACTIVE assignment";
-                    passes = false;
-                }
-            }
-
-            if (passes)
-            {
-                // Check for maintenance
-                var hasMaintenance = await _db.RobotMaintenanceRecords.AnyAsync(m =>
-                    m.RobotId == robot.RobotId &&
-                    (m.MaintenanceStatus == "SCHEDULED" ||
-                     m.MaintenanceStatus == "IN_PROGRESS"), cancellationToken);
-
-                if (hasMaintenance)
-                {
-                    reason = "Has SCHEDULED or IN_PROGRESS maintenance";
-                    passes = false;
-                }
-            }
-
-            if (passes)
-            {
-                // Check for incidents
-                var hasIncident = await _db.RobotIncidents.AnyAsync(i =>
-                    i.RobotId == robot.RobotId &&
-                    !i.IsResolved &&
-                    (i.Severity == "HIGH" ||
-                     i.Severity == "CRITICAL"), cancellationToken);
-
-                if (hasIncident)
-                {
-                    reason = "Has unresolved HIGH/CRITICAL incident";
-                    passes = false;
-                }
-            }
-
-            var status = passes ? "✓ PASS" : "✗ FAIL";
-            _logger.LogInformation("Robot {RobotId} ({RobotCode}): {Status} - {Reason}", 
-                robot.RobotId, robot.RobotCode, status, reason);
+            var reasons = new List<string>();
+            if (robot.WarehouseId != task.WarehouseId) reasons.Add("Different warehouse");
+            if (!robot.IsActive) reasons.Add("Robot inactive");
+            if (robot.RobotType != "PHYSICAL") reasons.Add("Robot type is not PHYSICAL");
+            if (robot.ConnectionStatus != "ONLINE") reasons.Add("Robot OFFLINE");
+            if (robot.OperationalStatus != "AVAILABLE") reasons.Add($"Robot status: {robot.OperationalStatus}");
+            if (!RobotPresencePolicy.IsFresh(robot, now, _configuration)) reasons.Add("Heartbeat/telemetry missing or stale");
+            if (robot.BatteryPercent == null || robot.BatteryPercent < MinimumBatteryPercent) reasons.Add("Battery must be at least 20%");
+            if (robot.MaxPayloadWeightKg < weightKg) reasons.Add("Insufficient payload capacity");
+            if (busy.Contains(robot.RobotId)) reasons.Add("Has ACTIVE assignment");
+            if (failed.Contains(robot.RobotId)) reasons.Add("Previously failed this task");
+            if (maintenance.Contains(robot.RobotId)) reasons.Add("Maintenance scheduled or in progress");
+            if (incidents.Contains(robot.RobotId)) reasons.Add("Unresolved serious incident");
+            var eligible = reasons.Count == 0;
+            if (!includeIneligible && !eligible) continue;
+            robots.Add(new AvailableRobotResponse {
+                RobotId = robot.RobotId, RobotCode = robot.RobotCode,
+                BatteryPercent = robot.BatteryPercent, ConnectionStatus = robot.ConnectionStatus,
+                OperationalStatus = robot.OperationalStatus, IsEligible = eligible,
+                IneligibilityReason = eligible ? null : string.Join("; ", reasons),
+                LastHeartbeatTime = robot.LastHeartbeatTime, LastTelemetryTime = robot.LastTelemetryTime
+            });
         }
-
-        var robots = await _db.Robots
-            .AsNoTracking()
-            .Where(r =>
-                r.WarehouseId == task.WarehouseId &&
-                r.IsActive &&
-                r.RobotType == "PHYSICAL" &&
-                r.ConnectionStatus == "ONLINE" &&
-                r.OperationalStatus == "AVAILABLE" &&
-                r.BatteryPercent != null &&
-                r.BatteryPercent >= MinimumBatteryPercent &&
-                r.MaxPayloadWeightKg >= weightKg &&
-
-                !_db.TaskAssignments.Any(a =>
-                    a.RobotId == r.RobotId &&
-                    a.AssignmentStatus == "ACTIVE") &&
-
-                !_db.RobotMaintenanceRecords.Any(m =>
-                    m.RobotId == r.RobotId &&
-                    (m.MaintenanceStatus == "SCHEDULED" ||
-                     m.MaintenanceStatus == "IN_PROGRESS")) &&
-
-                !_db.RobotIncidents.Any(i =>
-                    i.RobotId == r.RobotId &&
-                    !i.IsResolved &&
-                    (i.Severity == "HIGH" ||
-                     i.Severity == "CRITICAL")))
-            .OrderByDescending(r => r.BatteryPercent)
-            .ThenBy(r => r.RobotId)
-            .Select(r => new AvailableRobotResponse
-            {
-                RobotId = r.RobotId,
-                RobotCode = r.RobotCode,
-                BatteryPercent = r.BatteryPercent,
-                ConnectionStatus = r.ConnectionStatus,
-                OperationalStatus = r.OperationalStatus
-            })
-            .ToListAsync(cancellationToken);
-
-        _logger.LogInformation("Task {TaskId}: Final result: {RobotCount} robots available", 
-            taskId, robots.Count);
-
+        robots = robots.OrderByDescending(r => r.IsEligible).ThenByDescending(r => r.BatteryPercent)
+            .ThenBy(r => r.RobotId).ToList();
         return TransportTaskServiceResult<
             IReadOnlyCollection<AvailableRobotResponse>>
             .Success(robots);
@@ -414,6 +308,10 @@ public sealed class TaskDispatchService : ITaskDispatchService
         }
 
         // STEP 4: VALIDATE ROBOT
+
+        if (!RobotPresencePolicy.IsFresh(robot, DateTime.UtcNow, _configuration))
+            return TransportTaskServiceResult<ManualAssignTaskResponse>
+                .Conflict("Robot heartbeat/telemetry is missing or stale. Wait for fresh robot data and reload the robot list.");
 
         if (!robot.IsActive)
         {

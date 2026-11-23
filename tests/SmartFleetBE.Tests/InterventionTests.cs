@@ -45,7 +45,7 @@ public sealed class InterventionTests
         if (assigned)
         {
             var robot = new Robot { RobotId = 1, RobotCode = "R1", OperationalStatus = "BUSY", ConnectionStatus = "ONLINE",
-                LastTelemetryTime = DateTime.UtcNow, WarehouseId = 1, IsActive = true,
+                LastHeartbeatTime = DateTime.UtcNow, LastTelemetryTime = DateTime.UtcNow, WarehouseId = 1, IsActive = true,
                 RobotType = "PHYSICAL", BatteryPercent = 100m, MaxPayloadWeightKg = 10m };
             var a = new TaskAssignment { AssignmentId = 1, TaskId = 1, Robot = robot, AssignmentStatus = "ACTIVE" };
             db.TaskAssignments.Add(a);
@@ -275,7 +275,8 @@ public sealed class InterventionTests
         db.Robots.Single().OperationalStatus = "ERROR";
         db.Robots.Add(new Robot { RobotId = 2, RobotCode = "R2", WarehouseId = 1, RobotType = "PHYSICAL",
             OperationalStatus = "AVAILABLE", ConnectionStatus = "ONLINE", IsActive = replacementAvailable,
-            BatteryPercent = 80m, MaxPayloadWeightKg = 10m });
+            BatteryPercent = 80m, MaxPayloadWeightKg = 10m,
+            LastHeartbeatTime = DateTime.UtcNow, LastTelemetryTime = DateTime.UtcNow });
         await db.SaveChangesAsync();
         var clock = new TestClock();
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
@@ -356,6 +357,78 @@ public sealed class InterventionTests
             NullLogger<AutoDispatchService>.Instance);
         Assert.False(await auto.TryAssignAsync(1)); // manual tasks never become AUTO after recovery
     }
+
+    [Fact]
+    public async Task RobotListExplainsExcludedRobotsAndNeverOffersFailedRobotAgain()
+    {
+        var (db, _, _) = Fixture(false);
+        for (int i = 1; i <= 6; i++) db.Robots.Add(new Robot { RobotId = i, RobotCode = $"R0{i}",
+            WarehouseId = 1, IsActive = true, RobotType = "PHYSICAL", MaxPayloadWeightKg = 10,
+            BatteryPercent = i == 3 ? 15 : 80, ConnectionStatus = i == 4 ? "OFFLINE" : "ONLINE",
+            OperationalStatus = i == 5 ? "MAINTENANCE" : "AVAILABLE",
+            LastHeartbeatTime = DateTime.UtcNow.AddSeconds(i == 6 ? -120 : 0),
+            LastTelemetryTime = DateTime.UtcNow.AddSeconds(i == 6 ? -120 : 0) });
+        await db.SaveChangesAsync();
+        var config = DispatchConfig();
+        var service = new TaskDispatchService(db, config, NullLogger<TaskDispatchService>.Instance);
+        var eligible = await service.GetAvailableRobotsAsync(1);
+        Assert.Equal(new[] { 1, 2 }, eligible.Value!.Select(r => r.RobotId));
+        var candidates = await service.GetAvailableRobotsAsync(1, includeIneligible: true);
+        Assert.Equal(6, candidates.Value!.Count);
+        Assert.All(candidates.Value!.Where(r => r.RobotId >= 3), r => {
+            Assert.False(r.IsEligible); Assert.False(string.IsNullOrWhiteSpace(r.IneligibilityReason)); });
+        db.TaskAssignments.Add(new TaskAssignment { TaskId = 1, RobotId = 1, AssignmentStatus = "FAILED" });
+        await db.SaveChangesAsync();
+        eligible = await service.GetAvailableRobotsAsync(1);
+        Assert.Equal(2, Assert.Single(eligible.Value!).RobotId);
+    }
+
+    [Theory]
+    [InlineData("STALE")]
+    [InlineData("MISSING_TELEMETRY")]
+    [InlineData("OFFLINE")]
+    [InlineData("BUSY")]
+    [InlineData("LOW_BATTERY")]
+    [InlineData("REMOVED")]
+    public async Task RobotChangingAfterSelectionCannotBeManuallyOrAutomaticallyAssigned(string change)
+    {
+        var (db, _, _) = Fixture(false);
+        var r = new Robot { RobotId = 1, RobotCode = "R01", WarehouseId = 1, IsActive = true,
+            RobotType = "PHYSICAL", MaxPayloadWeightKg = 10, BatteryPercent = 80,
+            ConnectionStatus = "ONLINE", OperationalStatus = "AVAILABLE",
+            LastHeartbeatTime = DateTime.UtcNow, LastTelemetryTime = DateTime.UtcNow };
+        db.Robots.Add(r);
+        await db.SaveChangesAsync();
+        var config = DispatchConfig();
+        var manual = new TaskDispatchService(db, config, NullLogger<TaskDispatchService>.Instance);
+        Assert.Single((await manual.GetAvailableRobotsAsync(1)).Value!);
+        switch (change)
+        {
+            case "STALE": r.LastHeartbeatTime = DateTime.UtcNow.AddMinutes(-5); break;
+            case "MISSING_TELEMETRY": r.LastTelemetryTime = null; break;
+            case "OFFLINE": r.ConnectionStatus = "OFFLINE"; break;
+            case "BUSY": r.OperationalStatus = "BUSY"; break;
+            case "LOW_BATTERY": r.BatteryPercent = 5; break;
+            case "REMOVED": db.Robots.Remove(r); break;
+        }
+        await db.SaveChangesAsync();
+        var result = await manual.AssignManualAsync(1, 1, 42);
+        Assert.NotEqual(SmartFleetBE.Services.Results.TransportTaskResultStatus.Success, result.Status);
+        Assert.Empty((await manual.GetAvailableRobotsAsync(1)).Value!);
+        var options = (DbContextOptions<SmartFleetDbContext>)db.GetService<IDbContextOptions>();
+        using var provider = new ServiceCollection().AddScoped(_ => new SmartFleetDbContext(options)).BuildServiceProvider();
+        var factory = provider.GetRequiredService<IServiceScopeFactory>();
+        var auto = new AutoDispatchService(factory, config, new FleetRealtimePublisher(new SinkHub(), factory),
+            NullLogger<AutoDispatchService>.Instance);
+        Assert.False(await auto.TryAssignAsync(1));
+        Assert.Empty(db.TaskAssignments);
+        Assert.Empty(db.Missions);
+        Assert.Empty(db.RobotCommandOutbox);
+        Assert.Equal("QUEUED", db.TransportTasks.Single().TaskStatus);
+    }
+
+    private static IConfiguration DispatchConfig() => new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?> { ["AutoDispatch:VerifiedPayloadLimitKg"] = "10" }).Build();
 
     private sealed class TestClock : TimeProvider
     {

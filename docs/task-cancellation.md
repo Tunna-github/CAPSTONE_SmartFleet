@@ -64,6 +64,31 @@ API: POST `/api/v1/task-interventions/{taskId}/recover-requeue` (Maintenance onl
 Body: reason, expectedAssignmentId, physicalSafetyConfirmed=true,
 loadRemovedConfirmed=true, loadReturnedToPickupConfirmed=true.
 
+## Robot availability when assigning
+
+The Assign dialog requests `available-robots?includeIneligible=true` and shows every
+registered robot, disabling ineligible options and explaining exclusions (warehouse,
+status, battery, payload, maintenance, incident, active assignment, previous failure,
+or stale/missing heartbeat and telemetry). The default API without this flag still
+returns eligible robots only. The old six-robots-online footer used mockData; it has
+been replaced with a link in wording to check current availability in Assign.
+
+Both manual confirmation and AUTO now require recent LastHeartbeatTime AND
+LastTelemetryTime, not merely a historical ONLINE flag. Default freshness is 45 seconds;
+`Dispatch:PresenceTimeoutSeconds` can configure 15..300 seconds. Timestamps more than
+5 seconds in the future are rejected. No schema migration is needed.
+The dialog refreshes every 5 seconds, clears selections that become ineligible, and
+fetches the current list before submitting. The backend independently revalidates
+inside the assignment transaction. No eligible robot means manual submission is
+disabled and AUTO keeps the task queued. A database row is not proof of physical presence.
+
+A read-only inspection on 2026-11-23 of the database selected by local appsettings
+found five rows R01..R05. Under the former filters R01/R02 passed; R03 had 15% battery,
+R04 was OFFLINE, and R05 was in MAINTENANCE. R01/R02 also had stale timestamps, so the
+new presence checks exclude them until real robot telemetry resumes. No live rows
+were edited during inspection or testing. Deployment environment overrides may select
+a different database; these counts describe the inspected connection only.
+
 ## Durable protocol and audit
 
 TaskInterventions is a persistent overlay, avoiding changes to existing status constraints.
@@ -120,13 +145,13 @@ now calls the backend and refreshes persisted data instead of releasing a mock r
 
 ## Verification
 
-- Backend: `dotnet test tests/SmartFleetBE.Tests` (30 passing tests).
+- Backend: `dotnet test tests/SmartFleetBE.Tests` (37 passing tests).
   EF InMemory tests cover policy and state/audit transitions; they do NOT prove PostgreSQL
   constraints, SERIALIZABLE concurrency, real JWT authentication or physical motion.
 - Robot: `python tests/test_robot_safety.py` (6 passing tests) executes actual safety functions with mocked
   motors/camera/MQTT. Both edited Python controllers also pass AST syntax validation.
 - Frontend: `npm run build`, `npx tsc --noEmit`, and `npm run test:web`
-  (5 passing Playwright tests in Edge, covering roles, recovery confirmation and FAILED display), with
+  (9 passing Playwright tests in Edge, covering roles, recovery, FAILED display and assignment eligibility), with
   intercepted HTTP responses; these do not contact the real backend, DB, or broker.
 - Live PostgreSQL migration, full Webots motion, and JetRacer hardware validation remain
   deployment/integration checks. Never infer physical stop from a successful HTTP response.
