@@ -16,10 +16,12 @@ import cv2
 import numpy as np
 import math
 import os
+import sys
 import json
 import queue
 import time
 import uuid
+import datetime as sf_datetime
 import paho.mqtt.client as mqtt
 from controller import Robot, Keyboard
 
@@ -28,16 +30,46 @@ from controller import Robot, Keyboard
 # ============================================================
 BROKER_IP = "localhost"
 BROKER_PORT = 1883
-ROBOT_CODE = "R01"            # Must equal the robot assigned in SmartFleet
+# SMARTFLEET_MULTI_ROBOT_ARGS_V1
+# Each simulated robot is a separate process but shares this source file.
+# Configure Robot.controllerArgs per robot in Webots, for example:
+#   --robot-code=R01 --start-qr=0 --start-heading=S
+#   --robot-code=R02 --start-qr=5 --start-heading=S
+# The fallback below preserves the original one-robot R01 demo; it must NEVER
+# be relied upon when multiple robots are present.
+def _sf_controller_arg(key, default):
+    prefix = "--{}=".format(key)
+    matches = [value[len(prefix):] for value in sys.argv[1:]
+               if value.startswith(prefix)]
+    if len(matches) > 1:
+        raise ValueError("Duplicated Webots controller argument " + prefix)
+    return matches[0] if matches else default
+
+
+ROBOT_CODE = _sf_controller_arg("robot-code", "R01").upper()
+if not ROBOT_CODE.startswith("R") or not ROBOT_CODE[1:].isdigit():
+    raise ValueError("Invalid Webots --robot-code: " + repr(ROBOT_CODE))
+if not any(value.startswith("--robot-code=") for value in sys.argv[1:]):
+    print("[CONFIG WARNING] controllerArgs has no --robot-code; using R01! "
+          "Set a unique code on EVERY Webots Robot before adding more.")
 # QR0 is only a ONE-TIME first-run calibration anchor, not a fixed mission start.
 # After the first valid driven segment, the controller learns its world yaw frame
 # and can cold-start from ANY visible QR using the saved orientation calibration.
-FIRST_RUN_CALIBRATION_QR = 0
-FIRST_RUN_HEADING = "S"  # Preserve the proven QR0 initial drive/turn procedure
+FIRST_RUN_CALIBRATION_QR = int(_sf_controller_arg("start-qr", "0"))
+FIRST_RUN_HEADING = _sf_controller_arg("start-heading", "S").upper()
+if FIRST_RUN_HEADING not in ("N", "S", "E", "W") or FIRST_RUN_CALIBRATION_QR < 0:
+    raise ValueError("Invalid Webots --start-heading or --start-qr")
 HEADING_CALIBRATION_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "smartfleet_heading_calibration_{}.json".format(ROBOT_CODE),
 )
+# WEBOTS ONLY. Never enable fake sensor CLEAR on a real JetRacer.
+INTERSECTION_PILOT = _sf_controller_arg("intersection-pilot", "false").lower() in ("true", "1", "yes")
+SF_FAKE_CLEAR = _sf_controller_arg("sim-lidar", "false").lower() in ("true", "1", "yes")
+SF_NAV_ACK_TIMEOUT = 15.0
+SF_NAV_ACK_RETRY = 1.5
+SF_LIDAR_INTERVAL = 0.8
+SF_TEST_HOLD_SECONDS = max(0.0, min(30.0, float(_sf_controller_arg("traffic-test-hold", "0"))))
 READY_HEARTBEAT_SECONDS = 10.0
 SIMULATED_BATTERY_PERCENT = 85.0  # Webots demo telemetry, NOT a real battery measurement
 SIMULATED_BATTERY_VOLTAGE = 11.6
@@ -52,6 +84,11 @@ STATUS_ACK_TOPIC = "smartfleet/robot/{}/status-ack".format(ROBOT_CODE)
 QR_PROGRESS_TOPIC = "smartfleet/robot/{}/qr-progress".format(ROBOT_CODE)
 QR_PROGRESS_ACK_TOPIC = "smartfleet/robot/{}/qr-progress-ack".format(ROBOT_CODE)
 TELEMETRY_TOPIC = "smartfleet/robot/{}/telemetry".format(ROBOT_CODE)
+SF_SCAN_TOPIC = "smartfleet/robot/{}/scan".format(ROBOT_CODE)
+SF_NAV_EVENT_TOPIC = "smartfleet/robot/{}/navigation".format(ROBOT_CODE)
+SF_NAV_ACK_TOPIC = "smartfleet/robot/{}/navigation-ack".format(ROBOT_CODE)
+SF_NAV_CONTROL_TOPIC = "smartfleet/robot/{}/nav-control".format(ROBOT_CODE)
+SF_LIDAR_TOPIC = "smartfleet/robot/{}/lidar".format(ROBOT_CODE)
 
 # ============================================================
 # WEBOTS DEVICES - original working controller
@@ -141,10 +178,23 @@ last_telemetry_at = -100.0
 mission_camera_lost_since = None
 heading_calibration = None
 last_bootstrap_warning_at = 0.0
+sf_nav_epoch = None
+sf_nav_sequence = -1
+sf_nav_directive = None
+sf_nav_notice = None
+sf_nav_request = None
+sf_active_intersection = None
+sf_last_lidar_at = 0.0
+sf_last_hold_log = 0.0
+sf_reconnected_with_mission = False
 
 
 def set_motor_speeds(v_left, v_right):
     """Working wheel control, capped at ROBOT_MAX_VEL."""
+    if INTERSECTION_PILOT and mission is not None and mission.get("phase") == "MOVING":
+        factor = sf_wheel_scale()
+        v_left *= factor
+        v_right *= factor
     v_l = max(-ROBOT_MAX_VEL, min(ROBOT_MAX_VEL, v_left))
     v_r = max(-ROBOT_MAX_VEL, min(ROBOT_MAX_VEL, v_right))
     left_motor.setVelocity(v_l)
@@ -352,6 +402,8 @@ def validate_command(data):
         ids.append(waypoint["arucoId"])
         if not valid_int(waypoint.get("row")) or not valid_int(waypoint.get("col")):
             raise ValueError("Waypoint missing Backend grid coordinates")
+    if INTERSECTION_PILOT:
+        sf_validate_intersection_waypoints(waypoints)
     if ids[0] != data["startArUcoId"] or ids[-1] != data["deliveryArUcoId"]:
         raise ValueError("Route endpoints mismatch")
     pi = data["pickupWaypointIndex"]
@@ -384,7 +436,8 @@ def on_connect(cli, userdata, flags, reason_code, properties=None):
     connected = reason_code == 0
     if connected:
         cli.subscribe([(COMMAND_TOPIC, 1), (STATUS_ACK_TOPIC, 1),
-                       (QR_PROGRESS_ACK_TOPIC, 1)])
+                       (QR_PROGRESS_ACK_TOPIC, 1), (SF_NAV_CONTROL_TOPIC, 1),
+                       (SF_NAV_ACK_TOPIC, 1)])
         # A reconnect is not proof that the Backend retained an in-memory READY.
         ready_acknowledged = False
         ready_event_id = None
@@ -395,6 +448,9 @@ def on_connect(cli, userdata, flags, reason_code, properties=None):
 
 
 def on_disconnect(cli, userdata, disconnect_flags, reason_code, properties=None):
+    global sf_reconnected_with_mission
+    if INTERSECTION_PILOT and mission is not None:
+        sf_reconnected_with_mission = True
     global connected
     connected = False
     print("[MQTT] Disconnected: motors will HOLD")
@@ -502,6 +558,9 @@ def publish_failure(data, reason):
 
 
 def fail_mission(reason, notify_backend=True):
+    global sf_nav_request, sf_reconnected_with_mission
+    sf_nav_request = None
+    sf_reconnected_with_mission = False
     global mission, pending, current_state, is_first_checkin
     global ready_acknowledged, ready_event_id, ready_last_sent
     stop_robot()
@@ -529,6 +588,8 @@ def start_mission(data):
     if is_first_checkin or not ready_acknowledged:
         raise ValueError("Robot has not yet camera-detected START QR / READY was not ACKed")
     validate_command(data)
+    if INTERSECTION_PILOT and sf_active_intersection is not None:
+        raise ValueError("Previous intersection reservation still active; investigate/clear physically")
     mission = dict(data)
     mission["phase"] = "STARTING"
     mission["next_index"] = 0
@@ -620,6 +681,14 @@ def handle_safety_command(data):
         for i in range(1, len(waypoints)):
             if waypoints[i].get("travelDirection") != expected_grid_direction(waypoints[i-1], waypoints[i]):
                 return
+        if INTERSECTION_PILOT:
+            try:
+                sf_validate_intersection_waypoints(waypoints)
+                if sf_active_intersection is not None:
+                    raise ValueError("active intersection reservation requires recovery")
+            except ValueError as ex:
+                print("[SAFETY HOLD] RETURN_HOME not safe under traffic protocol:", ex)
+                return
         mission = dict(data)
         safety_generation[task_id] = generation
         latch_safety(data)
@@ -676,6 +745,10 @@ def handle_incoming():
                 if mission is None and all(valid_int(data.get(k)) for k in
                                            ("taskId", "assignmentId", "missionId")):
                     publish_failure(data, "Rejected route: " + str(ex))
+        elif topic == SF_NAV_CONTROL_TOPIC:
+            sf_accept_nav_directive(data)
+        elif topic == SF_NAV_ACK_TOPIC:
+            sf_accept_nav_ack(data)
         elif topic == QR_PROGRESS_ACK_TOPIC and ready_event_id is not None and \
                 data.get("eventId") == ready_event_id:
             if data.get("accepted") is True:
@@ -715,7 +788,286 @@ def tick_pending():
     return None
 
 
+# SF_INTERSECTION_PILOT_V1: fail-closed Webots intersection reservation.
+# This pilot uses simulated CLEAR sensor messages only when explicitly enabled.
+# Real physical robots MUST use actual obstacle sensing and safety-rated controls.
+
+def sf_timestamp(raw):
+    if not isinstance(raw, str):
+        return None
+    try:
+        value = sf_datetime.datetime.fromisoformat(raw.replace('Z', '+00:00'))
+        if value.tzinfo is None:
+            return None
+        return value.astimezone(sf_datetime.timezone.utc)
+    except (ValueError, TypeError):
+        return None
+
+
+def sf_accept_nav_directive(data):
+    global sf_nav_epoch, sf_nav_sequence, sf_nav_directive, sf_nav_notice
+    if not INTERSECTION_PILOT or data.get('robotCode') != ROBOT_CODE:
+        return
+    epoch, seq = data.get('epoch'), data.get('sequence')
+    expiry = sf_timestamp(data.get('expiresAtUtc'))
+    if not isinstance(epoch, str) or not epoch or type(seq) is not int or expiry is None:
+        sf_nav_directive = None
+        stop_robot()
+        return
+    if sf_nav_epoch is not None and sf_nav_epoch != epoch:
+        stop_robot()
+        sf_nav_directive = None
+        # Coordinator restart may have lost transient state; never resume motion
+        # using a GO from the new epoch without manual recovery.
+        if mission is not None:
+            print('[TRAFFIC {}] BACKEND EPOCH CHANGED: halting, check intersection lock'.format(ROBOT_CODE))
+            fail_mission('Navigation Backend restarted during mission; manual recovery required',
+                         notify_backend=False)
+            return
+        sf_nav_sequence = -1
+    if sf_nav_epoch == epoch and seq <= sf_nav_sequence:
+        return
+    sf_nav_epoch, sf_nav_sequence = epoch, seq
+    if expiry <= sf_datetime.datetime.now(sf_datetime.timezone.utc):
+        sf_nav_directive = None
+        stop_robot()
+        return
+    if data.get('mode') not in ('STOP', 'SLOW', 'GO'):
+        sf_nav_directive = None
+        stop_robot()
+        return
+    sf_nav_directive = dict(data)
+    sf_nav_directive['_expiry'] = expiry
+    notice = (data.get('mode'), data.get('intersectionArUcoId'),
+              data.get('intersectionGranted'), data.get('reason'))
+    if notice != sf_nav_notice:
+        print('[TRAFFIC {}] NAV {} intersection={} granted={} reason={}'.format(
+            ROBOT_CODE, *notice))
+        sf_nav_notice = notice
+    if data.get('mode') == 'STOP':
+        stop_robot()
+
+
+def sf_accept_nav_ack(data):
+    if not INTERSECTION_PILOT or sf_nav_request is None:
+        return
+    if data.get('robotCode') != ROBOT_CODE or data.get('eventId') != sf_nav_request['eventId']:
+        return
+    if data.get('kind') != sf_nav_request['kind']:
+        return
+    sf_nav_request['accepted'] = data.get('accepted') is True
+    sf_nav_request['reason'] = str(data.get('reason', ''))
+
+
+def sf_validate_intersection_waypoints(waypoints):
+    if not isinstance(waypoints, list) or len(waypoints) < 2:
+        raise ValueError('Traffic pilot requires at least two route checkpoints')
+    for w in waypoints:
+        if type(w.get('isIntersection')) is not bool:
+            raise ValueError('Backend route missing isIntersection; install Backend pilot patch first')
+    if waypoints[0]['isIntersection'] or waypoints[-1]['isIntersection']:
+        raise ValueError('Traffic pilot route must start and finish OUTSIDE intersections')
+    if any(a['isIntersection'] and b['isIntersection'] for a, b in zip(waypoints, waypoints[1:])):
+        raise ValueError('Adjacent intersections unsupported in safe pilot')
+
+
+def sf_nav_send(kind, data, payload, intersection_id=None):
+    global sf_nav_request
+    if sf_nav_request is not None:
+        raise ValueError('Navigation request still pending')
+    event_id = str(uuid.uuid4())
+    payload = dict(payload)
+    payload['eventId'] = event_id
+    topic = SF_SCAN_TOPIC if kind == 'SCAN' else SF_NAV_EVENT_TOPIC
+    sf_nav_request = {
+        'kind': kind, 'eventId': event_id, 'topic': topic, 'payload': payload,
+        'intersectionId': intersection_id, 'accepted': None, 'reason': '',
+        'deadline': time.monotonic() + SF_NAV_ACK_TIMEOUT,
+        'retry_at': time.monotonic() + SF_NAV_ACK_RETRY
+    }
+    data['phase'] = 'NAV_WAIT_ACK'
+    stop_robot()
+    if not publish(topic, payload):
+        print('[TRAFFIC {}] Waiting for MQTT to send {}'.format(ROBOT_CODE, kind))
+
+
+def sf_begin_segment(data):
+    """Stop at predecessor checkpoint and register before any next movement."""
+    if not INTERSECTION_PILOT:
+        return sf_start_physical_segment(data)
+    i = data['next_index']
+    if i < 1 or i >= len(data['waypoints']):
+        raise ValueError('Invalid nav waypoint index')
+    prev, target = data['waypoints'][i - 1], data['waypoints'][i]
+    if current_marker != prev['arucoId']:
+        raise ValueError('Camera QR does not match predecessor stop checkpoint')
+    if sf_active_intersection is not None:
+        if prev['arucoId'] != sf_active_intersection or target['isIntersection']:
+            raise ValueError('Unexpected active intersection reservation on next segment')
+        data['phase'] = 'NAV_WAIT_GRANT'
+        data['sf_hold_until'] = time.monotonic() + SF_TEST_HOLD_SECONDS
+        if SF_TEST_HOLD_SECONDS:
+            print('[TRAFFIC {}] TEST HOLD for {:.1f}s inside QR{} (Webots-only)'.format(
+                ROBOT_CODE, SF_TEST_HOLD_SECONDS, sf_active_intersection))
+        print('[TRAFFIC {}] Keep QR{} reserved while driving toward exit QR{}'.format(
+            ROBOT_CODE, sf_active_intersection, target['arucoId']))
+        stop_robot()
+        return
+    if target['isIntersection']:
+        kind = 'APPROACH'
+        payload = {'event': 'APPROACH', 'intersectionArUcoId': target['arucoId'],
+                   'currentArUcoId': current_marker}
+        print('[TRAFFIC {}] APPROACH QR{} from QR{}; stopped for Backend grant'.format(
+            ROBOT_CODE, target['arucoId'], current_marker))
+        sf_nav_send(kind, data, payload, target['arucoId'])
+    else:
+        print('[TRAFFIC {}] Register corridor QR{} -> QR{}'.format(
+            ROBOT_CODE, current_marker, target['arucoId']))
+        sf_nav_send('SCAN', data, {'currentArUcoId': current_marker,
+                                   'nextArUcoId': target['arucoId']})
+
+
+def sf_move_permission(data):
+    """Fresh Backend directive is mandatory for *every* moving segment."""
+    directive = sf_nav_directive
+    if not connected or directive is None:
+        return False
+    if directive.get('mode') not in ('GO', 'SLOW'):
+        return False
+    expiry = directive.get('_expiry')
+    if expiry is None or expiry <= sf_datetime.datetime.now(sf_datetime.timezone.utc):
+        return False
+    try:
+        speed = float(directive.get('maxLinearSpeed', 0))
+        if not 0 < speed <= 5:
+            return False
+    except (ValueError, TypeError):
+        return False
+    i = data.get('next_index', 0)
+    if i < 1 or i >= len(data['waypoints']):
+        return False
+    target = data['waypoints'][i]
+    protected = target['arucoId'] if target['isIntersection'] else sf_active_intersection
+    if protected is not None:
+        if (directive.get('intersectionArUcoId') != protected or
+                directive.get('intersectionGranted') is not True or
+                directive.get('mode') != 'GO'):
+            return False
+    else:
+        if directive.get('intersectionArUcoId') is not None:
+            return False
+    return True
+
+
+def sf_tick_nav_gate(data):
+    global sf_nav_request, sf_active_intersection, sf_last_hold_log
+    stop_robot()
+    if data['phase'] == 'NAV_WAIT_ACK':
+        req = sf_nav_request
+        if req is None:
+            fail_mission('Missing navigation request state')
+            return
+        if req['accepted'] is False:
+            fail_mission('Backend rejected navigation {}: {}'.format(req['kind'], req['reason']))
+            return
+        if req['accepted'] is None:
+            now = time.monotonic()
+            if now >= req['deadline']:
+                fail_mission('No Backend ACK for navigation {}'.format(req['kind']))
+                return
+            if connected and now >= req['retry_at']:
+                publish(req['topic'], req['payload'])
+                req['retry_at'] = now + SF_NAV_ACK_RETRY
+            return
+        kind, protected = req['kind'], req['intersectionId']
+        sf_nav_request = None
+        if kind in ('SCAN', 'APPROACH'):
+            data['phase'] = 'NAV_WAIT_GRANT'
+            return
+        if kind == 'ENTER':
+            sf_active_intersection = protected
+            print('[TRAFFIC {}] ENTER QR{} acknowledged; reservation held'.format(
+                ROBOT_CODE, protected))
+            sf_start_physical_segment(data)
+            return
+        if kind == 'EXIT':
+            print('[TRAFFIC {}] EXIT QR{} acknowledged at QR{}; lock released'.format(
+                ROBOT_CODE, sf_active_intersection, current_marker))
+            sf_active_intersection = None
+            if data.get('home_command_id'):
+                data['next_index'] += 1
+                if data['next_index'] >= len(data['waypoints']):
+                    finish_home(data)
+                else:
+                    sf_begin_segment(data)
+            else:
+                send_progress(data, data['next_index'])
+                data['phase'] = 'WAIT_WAYPOINT_ACK'
+            return
+        fail_mission('Unexpected navigation ack kind: ' + kind)
+        return
+    if data['phase'] == 'NAV_WAIT_GRANT':
+        if time.monotonic() < data.get('sf_hold_until', 0):
+            return
+        if not sf_move_permission(data):
+            now = time.monotonic()
+            if now - sf_last_hold_log >= 5:
+                target = data['waypoints'][data['next_index']]['arucoId']
+                print('[TRAFFIC {}] HOLD at QR{}: waiting valid GO for QR{}'.format(
+                    ROBOT_CODE, current_marker, target))
+                sf_last_hold_log = now
+            return
+        next_wp = data['waypoints'][data['next_index']]
+        if next_wp['isIntersection']:
+            intersection_id = next_wp['arucoId']
+            print('[TRAFFIC {}] GRANTED QR{}; confirm protected entry'.format(
+                ROBOT_CODE, intersection_id))
+            sf_nav_send('ENTER', data, {'event': 'ENTER',
+                                       'intersectionArUcoId': intersection_id}, intersection_id)
+        else:
+            sf_start_physical_segment(data)
+        return
+    fail_mission('Invalid traffic gate phase ' + str(data['phase']))
+
+
+def sf_tick_lidar():
+    """Simulated traffic heartbeat, NOT a physical obstacle detector."""
+    global sf_last_lidar_at
+    if not INTERSECTION_PILOT or not SF_FAKE_CLEAR or not connected:
+        return
+    now = time.monotonic()
+    if now - sf_last_lidar_at < SF_LIDAR_INTERVAL:
+        return
+    sf_last_lidar_at = now
+    publish(SF_LIDAR_TOPIC, {'status': 'CLEAR', 'distanceCm': None,
+                             'simulated': True, 'source': 'WEBOTS_PILOT_ONLY'}, qos=1)
+
+
+def sf_wheel_scale():
+    """Apply NAV_CONTROL's speed as a conservative *relative* wheel cap.
+
+    BE maxLinearSpeed is a ROS-style command, not calibrated wheel rad/s.
+    The 0.18 reference only maps demo speeds; it is not a real m/s claim.
+    """
+    if not INTERSECTION_PILOT:
+        return 1.0
+    if sf_nav_directive is None or sf_nav_directive.get('mode') == 'STOP':
+        return 0.0
+    expiry = sf_nav_directive.get('_expiry')
+    if expiry is None or expiry <= sf_datetime.datetime.now(sf_datetime.timezone.utc):
+        return 0.0
+    try:
+        cap = float(sf_nav_directive.get('maxLinearSpeed', 0))
+        return max(0.0, min(1.0, cap / 0.18))
+    except (ValueError, TypeError):
+        return 0.0
+
+
 def begin_segment(data):
+    return sf_begin_segment(data)
+
+
+def sf_start_physical_segment(data):
     global current_state, state_start_time, turn_direction, stable_counter
     global last_detected_id, missing_align_frames, mission_camera_lost_since
     i = data["next_index"]
@@ -762,6 +1114,14 @@ def reached_marker(data, detected_id):
         else:
             begin_segment(data)
         return
+    if INTERSECTION_PILOT and sf_active_intersection is not None and i > 0 and             data["waypoints"][i - 1]["arucoId"] == sf_active_intersection:
+        if data["waypoints"][i].get("isIntersection"):
+            raise ValueError("Cannot exit directly into a second intersection")
+        print("[TRAFFIC {}] QR{} camera-confirmed beyond intersection QR{}; request EXIT".format(
+            ROBOT_CODE, current_marker, sf_active_intersection))
+        sf_nav_send("EXIT", data, {"event": "EXIT", "intersectionArUcoId": sf_active_intersection,
+                                   "currentArUcoId": current_marker}, sf_active_intersection)
+        return
     send_progress(data, i)
     data["phase"] = "WAIT_WAYPOINT_ACK"
 
@@ -777,6 +1137,11 @@ def tick_mission():
         stop_robot()
         return
     data = mission
+    if INTERSECTION_PILOT and sf_reconnected_with_mission:
+        stop_robot()
+        fail_mission("MQTT connection lost during reserved navigation; manual recovery required",
+                     notify_backend=False)
+        return
     if not connected:
         stop_robot()  # fail-closed on MQTT loss; no blind motion
         return
@@ -837,6 +1202,13 @@ def tick_mission():
     if pending is not None:
         stop_robot()
         return
+    if INTERSECTION_PILOT:
+        if data["phase"] in ("NAV_WAIT_ACK", "NAV_WAIT_GRANT"):
+            sf_tick_nav_gate(data)
+            return
+        if data["phase"] == "MOVING" and not sf_move_permission(data):
+            stop_robot()
+            return
     if data["phase"] != "MOVING":
         stop_robot()
         return
@@ -991,12 +1363,18 @@ print("[BOOT] SmartFleet Webots CAMERA ArUco full-mission driver", ROBOT_CODE)
 heading_calibration = read_heading_calibration()
 print("[BOOT] Waiting for a camera-visible QR and Backend READY ACK")
 print("[BOOT] MANUAL 0-8 keyboard mission controls are disabled; Q stops the pilot")
+if INTERSECTION_PILOT:
+    print("[TRAFFIC] INTERSECTION PILOT ON for", ROBOT_CODE,
+          "| SIMULATED CLEAR (Webots only) =", SF_FAKE_CLEAR)
+    if not SF_FAKE_CLEAR:
+        print("[TRAFFIC] Without fresh real sensor data the Backend must keep the robot stopped")
 try:
     client.connect(BROKER_IP, BROKER_PORT, 60)
     client.loop_start()
     while robot.step(timestep) != -1 and is_running:
         handle_incoming()
         tick_telemetry()
+        sf_tick_lidar()
         tick_ready()
         key = keyboard.getKey()
         if key != -1 and (key & 0xFF) in (ord("q"), ord("Q")):

@@ -23,6 +23,8 @@ public sealed class QrDemoRouteService
         // Null for the initial checkpoint; N/E/S/W for each following linked road.
         public string? TravelDirection { get; init; }
         public string Stage { get; init; } = "TO_PICKUP";
+        // SMARTFLEET_INTERSECTION_WAYPOINT_V1: configured Backend safety flag.
+        public bool IsIntersection { get; init; }
     }
 
     public sealed class RouteProgressReport
@@ -217,7 +219,11 @@ public sealed class QrDemoRouteService
             throw new InvalidOperationException("Task pickup/delivery QR was deleted from the map.");
 
         var pickupRoute = FindPath(map, nodes, startId, pickupId);
-        var deliveryRoute = FindPath(map, nodes, pickupId, deliveryId);
+        // Preserve arrival direction when optimizing the pickup -> delivery leg.
+        var incomingToPickup = pickupRoute.Count > 1
+            ? DirectionBetween(nodes[pickupRoute[^2]], nodes[pickupRoute[^1]])
+            : null;
+        var deliveryRoute = FindPath(map, nodes, pickupId, deliveryId, incomingToPickup);
         var fullIds = pickupRoute.Concat(deliveryRoute.Skip(1)).ToList();
         var pickupIndex = pickupRoute.Count - 1;
         var waypoints = fullIds.Select((id, index) => new QrWaypoint
@@ -225,6 +231,7 @@ public sealed class QrDemoRouteService
             ArucoId = id,
             Row = nodes[id].Row,
             Col = nodes[id].Col,
+                IsIntersection = map.Cells[nodes[id].Row][nodes[id].Col].IsIntersection,
             TravelDirection = index == 0 ? null : DirectionBetween(nodes[fullIds[index - 1]], nodes[id]),
             Stage = index == pickupIndex ? "PICKUP" :
                 index == fullIds.Count - 1 ? "DELIVERY" :
@@ -333,6 +340,7 @@ public sealed class QrDemoRouteService
         return new { startArUcoId = start, homeArUcoId = home, mapRevision = map.Revision,
             waypoints = ids.Select((id, i) => new QrWaypoint { ArucoId = id,
                 Row = nodes[id].Row, Col = nodes[id].Col,
+                IsIntersection = map.Cells[nodes[id].Row][nodes[id].Col].IsIntersection,
                 TravelDirection = i == 0 ? null : DirectionBetween(nodes[ids[i - 1]], nodes[id]),
                 Stage = "RETURN_HOME" }).ToArray() };
     }
@@ -398,40 +406,145 @@ public sealed class QrDemoRouteService
         return result;
     }
 
-    private static List<int> FindPath(WarehouseMapDocument map, Dictionary<int, Node> nodes, int start, int goal)
+    // SMARTFLEET_WEIGHTED_ASTAR_V1: snapshot-based estimated-time routing.
+    // Costs: grid distance proxy + heading changes + current intersection queue.
+    // This is NOT collision avoidance, real-time rerouting, or physical ETA.
+    // All edge costs are nonnegative, so the Euclidean heuristic remains admissible.
+    private List<int> FindPath(
+        WarehouseMapDocument map,
+        Dictionary<int, Node> nodes,
+        int start,
+        int goal,
+        string? initialHeading = null)
     {
         if (start == goal) return [start];
-        var graph = nodes.Keys.ToDictionary(k => k, _ => new List<int>());
+
+        var graph = nodes.Keys.ToDictionary(id => id, _ => new List<int>());
         foreach (var (from, to) in TraversableQrLinks(map, nodes))
         {
             graph[from.Id].Add(to.Id);
             graph[to.Id].Add(from.Id);
         }
-        double Dist(int a, int b) => Math.Sqrt(Math.Pow(nodes[a].Row - nodes[b].Row, 2) +
-                                               Math.Pow(nodes[a].Col - nodes[b].Col, 2));
-        var best = new Dictionary<int, double> { [start] = 0 };
-        var previous = new Dictionary<int, int>();
-        var queue = new PriorityQueue<int, double>();
-        queue.Enqueue(start, Dist(start, goal));
-        while (queue.TryDequeue(out var at, out var priority))
+
+        // The map editor has one source of topology and intersection flags.
+        // A snapshot avoids mutable traffic updates halfway through A*.
+        var traffic = _navigation.GetIntersections()
+            .ToDictionary(x => x.IntersectionArUcoId);
+
+        // Existing active demo missions provide a lightweight demand estimate
+        // even before NAV_CONTROL /scan integration is enabled in Webots.
+        // Do not treat this estimate as physical occupancy or a safety grant.
+        var plannedDemand = new Dictionary<int, int>();
+        lock (_gate)
         {
-            if (priority > best[at] + Dist(at, goal) + 1e-9) continue;
-            if (at == goal)
+            foreach (var mission in _missions.Values)
             {
-                var route = new List<int> { goal };
-                while (previous.TryGetValue(route[^1], out var prev)) route.Add(prev);
+                if (mission.NextWaypointIndex >= mission.Waypoints.Count)
+                    continue;
+                var upcoming = mission.Waypoints
+                    .Skip(mission.NextWaypointIndex).Take(4)
+                    .Select(w => w.ArucoId).Distinct();
+                foreach (var qr in upcoming)
+                {
+                    if (!traffic.ContainsKey(qr)) continue;
+                    plannedDemand.TryGetValue(qr, out var count);
+                    plannedDemand[qr] = count + 1;
+                }
+            }
+        }
+        double plannedSeconds = Math.Max(0.0, _configuration.GetValue(
+            "DemoRoute:Planner:PlannedMissionPenaltySeconds", 2.0));
+        double cellSeconds = Math.Max(0.01, _configuration.GetValue(
+            "DemoRoute:Planner:SecondsPerGridCell", 1.0));
+        double turnSeconds = Math.Max(0.0, _configuration.GetValue(
+            "DemoRoute:Planner:TurnPenaltySeconds", 1.5));
+        double uTurnSeconds = Math.Max(0.0, _configuration.GetValue(
+            "DemoRoute:Planner:UTurnPenaltySeconds", 3.0));
+        double queueSeconds = Math.Max(0.0, _configuration.GetValue(
+            "DemoRoute:Planner:WaitRobotPenaltySeconds", 4.0));
+        double occupiedSeconds = Math.Max(0.0, _configuration.GetValue(
+            "DemoRoute:Planner:OccupiedIntersectionPenaltySeconds", 6.0));
+
+        double Euclidean(int a, int b)
+        {
+            double dr = nodes[a].Row - nodes[b].Row;
+            double dc = nodes[a].Col - nodes[b].Col;
+            return Math.Sqrt(dr * dr + dc * dc);
+        }
+        double Heuristic(int id) => Euclidean(id, goal) * cellSeconds;
+
+        double TurnPenalty(string previous, string next)
+        {
+            if (string.IsNullOrEmpty(previous) || previous == next)
+                return 0.0;
+            bool opposite = (previous == "N" && next == "S") ||
+                            (previous == "S" && next == "N") ||
+                            (previous == "E" && next == "W") ||
+                            (previous == "W" && next == "E");
+            return opposite ? uTurnSeconds : turnSeconds;
+        }
+
+        // Incoming heading is part of the search state; simply storing the
+        // lowest-cost node would give incorrect routes when turns are costly.
+        var origin = (Node: start, Heading: initialHeading ?? "");
+        var best = new Dictionary<(int Node, string Heading), double>
+        {
+            [origin] = 0.0
+        };
+        var parent = new Dictionary<(int Node, string Heading),
+                                    (int Node, string Heading)>();
+        var frontier = new PriorityQueue<(int Node, string Heading), double>();
+        frontier.Enqueue(origin, Heuristic(start));
+
+        while (frontier.TryDequeue(out var state, out var priority))
+        {
+            if (!best.TryGetValue(state, out var cost) ||
+                priority > cost + Heuristic(state.Node) + 1e-9)
+                continue;
+
+            if (state.Node == goal)
+            {
+                var route = new List<int> { state.Node };
+                while (parent.TryGetValue(state, out var previous))
+                {
+                    state = previous;
+                    route.Add(state.Node);
+                }
                 route.Reverse();
                 return route;
             }
-            foreach (var next in graph[at])
+
+            foreach (var next in graph[state.Node])
             {
-                var candidate = best[at] + Dist(at, next);
-                if (best.TryGetValue(next, out var old) && candidate >= old - 1e-9) continue;
-                best[next] = candidate;
-                previous[next] = at;
-                queue.Enqueue(next, candidate + Dist(next, goal));
+                // Physical-clearance safety lock: do not plan INTO this QR.
+                if (traffic.TryGetValue(next, out var intersection) &&
+                    intersection.BlockedPendingPhysicalClearance)
+                    continue;
+
+                string direction = DirectionBetween(nodes[state.Node], nodes[next]);
+                double delay = 0.0;
+                if (intersection != null)
+                {
+                    delay += intersection.WaitingCount * queueSeconds;
+                    delay += intersection.InsideCount * occupiedSeconds;
+                    if (plannedDemand.TryGetValue(next, out var count))
+                        delay += count * plannedSeconds;
+                }
+                double candidate = cost +
+                    Euclidean(state.Node, next) * cellSeconds +
+                    TurnPenalty(state.Heading, direction) + delay;
+                var nextState = (Node: next, Heading: direction);
+                if (best.TryGetValue(nextState, out var known) &&
+                    candidate >= known - 1e-9)
+                    continue;
+                best[nextState] = candidate;
+                parent[nextState] = state;
+                frontier.Enqueue(nextState, candidate + Heuristic(next));
             }
         }
-        throw new InvalidOperationException($"No axis-aligned QR path from QR{start} to QR{goal}. Check QR positions and Edit Links in Warehouse Maps, then Save to Backend.");
+
+        throw new InvalidOperationException(
+            $"No usable QR path from QR{start} to QR{goal}. " +
+            "Check linked roads and physically blocked intersections in Warehouse Maps.");
     }
 }

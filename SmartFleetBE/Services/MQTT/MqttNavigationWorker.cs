@@ -20,6 +20,9 @@ public sealed class MqttNavigationWorker(
     private static readonly JsonSerializerOptions Options =
         new(JsonSerializerDefaults.Web);
     private readonly SemaphoreSlim _messageGate = new(1, 1);
+    // SMARTFLEET_NAV_ACK_V1: dedupe accepted requests on QoS1 resend.
+    private readonly Dictionary<string, (string Robot, string Kind)> _ackCache = new(StringComparer.Ordinal);
+    private readonly Queue<string> _ackOrder = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -87,6 +90,15 @@ public sealed class MqttNavigationWorker(
                 return;
 
             var payload = args.ApplicationMessage.ConvertPayloadToString();
+            // Correlation ID is optional for older clients; pilot clients always send it.
+            using var requestDocument = JsonDocument.Parse(payload);
+            string? eventId = null;
+            if (requestDocument.RootElement.ValueKind == JsonValueKind.Object &&
+                requestDocument.RootElement.TryGetProperty("eventId", out var idProperty) &&
+                idProperty.ValueKind == JsonValueKind.String)
+                eventId = idProperty.GetString();
+            if (eventId is { Length: > 128 }) return;
+            var kind = parts[3] == "scan" ? "SCAN" : "";
             RobotNavigationEvent? evt = null;
             RobotArUcoScanReport? scan = null;
             if (parts[3] == "scan")
@@ -94,6 +106,7 @@ public sealed class MqttNavigationWorker(
             else
                 evt = JsonSerializer.Deserialize<RobotNavigationEvent>(payload, Options);
             if (evt == null && scan == null) return;
+            if (scan == null) kind = evt!.Event.Trim().ToUpperInvariant();
 
             await _messageGate.WaitAsync(ct);
             try
@@ -105,6 +118,14 @@ public sealed class MqttNavigationWorker(
                     .Select(x => new { x.RobotId, x.RobotCode })
                     .SingleOrDefaultAsync(ct);
                 if (robot == null) return;
+                if (eventId != null && _ackCache.TryGetValue(eventId, out var old))
+                {
+                    bool sameRequest = string.Equals(old.Robot, robot.RobotCode, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(old.Kind, kind, StringComparison.Ordinal);
+                    await PublishPilotAck(robot.RobotCode, kind, eventId, sameRequest,
+                        sameRequest ? "Already applied" : "Event ID reused for different robot/event", ct);
+                    return;
+                }
 
                 var result = scan != null
                     ? coordinator.OnScan(robot.RobotId, robot.RobotCode, scan)
@@ -115,10 +136,19 @@ public sealed class MqttNavigationWorker(
                         "Rejected {EventType} for {Robot}: {Reason}",
                         scan != null ? "SCAN" : evt!.Event, robot.RobotCode, result.Error);
                     // Rejected navigation is always a local HOLD/STOP case for the robot.
+                    await PublishPilotAck(robot.RobotCode, kind, eventId, false, result.Error, ct);
                     return;
                 }
 
                 await NavigationMqttDispatch.PublishAsync(publisher, result.Directives, ct);
+                if (eventId != null)
+                {
+                    _ackCache[eventId] = (robot.RobotCode, kind);
+                    _ackOrder.Enqueue(eventId);
+                    while (_ackOrder.Count > 4096)
+                        _ackCache.Remove(_ackOrder.Dequeue());
+                }
+                await PublishPilotAck(robot.RobotCode, kind, eventId, true, "Applied", ct);
             }
             finally
             {
@@ -134,5 +164,14 @@ public sealed class MqttNavigationWorker(
         {
             logger.LogError(ex, "Navigation event failed; robot must remain stopped without a fresh grant.");
         }
+    }
+
+    // SMARTFLEET_NAV_ACK_V1: only a Backend-applied navigation state is ACKed.
+    private Task PublishPilotAck(string robotCode, string kind, string? eventId,
+        bool accepted, string reason, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(eventId)) return Task.CompletedTask;
+        return publisher.PublishAsync($"smartfleet/robot/{robotCode}/navigation-ack",
+            JsonSerializer.Serialize(new { robotCode, kind, eventId, accepted, reason }, Options), ct);
     }
 }
