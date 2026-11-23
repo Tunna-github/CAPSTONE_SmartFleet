@@ -7,7 +7,8 @@ using SmartFleetBE.Model;
 namespace SmartFleetBE.Services;
 
 public sealed record InterventionRequest(string Reason, bool PhysicalSafetyConfirmed = false,
-    bool LoadRemovedConfirmed = false);
+    bool LoadRemovedConfirmed = false, bool LoadReturnedToPickupConfirmed = false,
+    long? ExpectedAssignmentId = null);
 
 public static class CancellationPolicy
 {
@@ -18,7 +19,7 @@ public static class CancellationPolicy
 }
 
 public sealed class TaskInterventionService(SmartFleetDbContext db,
-    QrDemoRouteService routes, IConfiguration configuration)
+    QrDemoRouteService routes, IConfiguration configuration, TimeProvider? clock = null)
 {
     public async Task<bool> IsHeld(long taskId, CancellationToken ct) =>
         await db.TaskInterventions.AnyAsync(x => x.TaskId == taskId &&
@@ -48,14 +49,61 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         if (action is "cancel" or "request-cancel" && control.State != "NORMAL" &&
             !(action == "request-cancel" && control.State is "CANCELLED_HOLD" or "RETURNING_HOME" or "CANCEL_STOP_PENDING"))
             throw new InvalidOperationException("An intervention is already pending. Use Maintenance recovery.");
-        var now = DateTime.UtcNow;
+        var now = (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         var robot = assignment?.Robot;
         var mission = assignment?.Mission;
         string? command = null;
         // Capture the device snapshot BEFORE force cancellation changes any status.
-        Audit(action, taskId, userId, request.Reason.Trim(), assignment, control, now);
+        Audit(action, taskId, userId, request.Reason.Trim(), assignment, control, now, request);
         switch (action)
         {
+            case "recover-requeue":
+                if (assignment == null || request.ExpectedAssignmentId != assignment.AssignmentId)
+                    throw new InvalidOperationException("Assignment changed or was not specified. Refresh and physically confirm recovery for the current assignment.");
+                if (assignment?.Mission == null ||
+                    !(task.TaskStatus == "FAILED" || assignment.Mission.MissionStatus == "FAILED" ||
+                      robot!.OperationalStatus == "ERROR" || control.State == "CANCEL_REQUESTED"))
+                    throw new InvalidOperationException("Recovery requires a failed/interrupted task with an active assignment.");
+                if (!request.PhysicalSafetyConfirmed || !request.LoadRemovedConfirmed ||
+                    !request.LoadReturnedToPickupConfirmed)
+                    throw new InvalidOperationException("Maintenance must confirm physical stop, load removal, and return of the load to this task's original pickup station.");
+                if (!await db.Stations.AnyAsync(s => s.StationId == task.PickupStationId &&
+                    s.Zone.WarehouseId == task.WarehouseId && s.IsActive, ct))
+                    throw new InvalidOperationException("Original pickup station is missing or inactive.");
+                assignment.AssignmentStatus = "FAILED";
+                assignment.EndedAt = now;
+                assignment.ReassignmentReason = request.Reason.Trim();
+                if (assignment.Mission.MissionStatus != "FAILED")
+                {
+                    db.MissionStatusHistories.Add(new MissionStatusHistory {
+                        MissionId = assignment.Mission.MissionId,
+                        PreviousStatus = assignment.Mission.MissionStatus, NewStatus = "FAILED",
+                        Source = "SYSTEM", ChangedBy = userId, Reason = request.Reason.Trim(), ChangedAt = now });
+                    assignment.Mission.MissionStatus = "FAILED";
+                }
+                assignment.Mission.EndExecutionTime ??= now;
+                assignment.Mission.FailureReason ??= request.Reason.Trim();
+                db.RobotStatusHistories.Add(new RobotStatusHistory { RobotId = assignment.RobotId,
+                    PreviousOperationalStatus = robot!.OperationalStatus, NewOperationalStatus = "MAINTENANCE",
+                    Reason = request.Reason.Trim(), ChangedAt = now });
+                robot!.OperationalStatus = "MAINTENANCE";
+                robot.UpdatedAt = now;
+                db.TaskStatusHistories.Add(new TaskStatusHistory { TaskId = taskId,
+                    PreviousStatus = task.TaskStatus, NewStatus = "QUEUED", ChangedBy = userId,
+                    Reason = $"Recovered load at original pickup; redispatch after 30 seconds. {request.Reason.Trim()}", ChangedAt = now });
+                task.TaskStatus = "QUEUED";
+                task.QueuedAt = now;
+                var retryAt = now.AddSeconds(30);
+                if (!task.ScheduledTime.HasValue || task.ScheduledTime < retryAt) task.ScheduledTime = retryAt;
+                task.AssignedAt = null;
+                task.StartedAt = null;
+                task.CompletedAt = null;
+                // The old mission retains failure details; the new attempt starts clean.
+                task.FailureReason = null;
+                control.State = "NORMAL";
+                control.Paused = false;
+                command = "FORCE_CANCEL"; // Stops/fences the old robot; never authorizes its reuse.
+                break;
             case "cancel":
                 if (assignment != null)
                 {
@@ -120,7 +168,10 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return new { taskId, taskStatus = task.TaskStatus, state = control.State,
-            paused = control.Paused, message = command == null ? "Task cancelled." :
+            paused = control.Paused, retryAt = task.ScheduledTime,
+            message = action == "recover-requeue" ?
+                $"Recovered at pickup. Task QUEUED; eligible for {(task.DispatchMode == "AUTO" ? "AUTO" : "manual")} assignment at {task.ScheduledTime:O}. Failed robot remains in Maintenance." :
+                command == null ? "Task cancelled." :
                 "Intervention saved. Robot command pending acknowledgement; robot is not available for dispatch." };
     }
 
@@ -155,13 +206,15 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
     }
 
     private void Audit(string action, long taskId, int? userId, string reason,
-        TaskAssignment? a, TaskIntervention control, DateTime now) =>
+        TaskAssignment? a, TaskIntervention control, DateTime now, InterventionRequest? confirmation = null) =>
         db.SystemAuditLogs.Add(new SystemAuditLog { UserId = userId, ActionCategory = "TASK_SAFETY",
             ActionName = action, EntityType = "TransportTask", EntityId = taskId.ToString(), CreatedAt = now,
             Description = JsonSerializer.Serialize(new { reason, taskId, timestamp = now,
                 assignmentId = a?.AssignmentId, robotId = a?.RobotId, robotState = a?.Robot.OperationalStatus,
                 connection = a?.Robot.ConnectionStatus, missionState = a?.Mission?.MissionStatus,
-                control.State, control.Paused }) });
+                control.State, control.Paused, confirmation?.PhysicalSafetyConfirmed,
+                confirmation?.LoadRemovedConfirmed, confirmation?.LoadReturnedToPickupConfirmed,
+                confirmation?.ExpectedAssignmentId }) });
 
     private void Queue(TaskIntervention c, TaskAssignment a, string command, DateTime now, object? route = null)
     {

@@ -18,8 +18,9 @@ public sealed class TaskInterventionsController(TaskInterventionService service,
     {
         var rows = await db.TaskAssignments.AsNoTracking()
             .Where(a => a.AssignmentStatus == "ACTIVE")
-            .Select(a => new { a.TaskId, a.RobotId, a.Robot.RobotCode,
+            .Select(a => new { a.TaskId, a.AssignmentId, a.RobotId, a.Robot.RobotCode,
                 a.Task.TaskTrackingCode, a.Task.TaskStatus, a.Robot.OperationalStatus,
+                a.Task.PickupStationId, pickupStationName = a.Task.PickupStation.StationName,
                 a.Robot.ConnectionStatus, missionStatus = a.Mission == null ? null : a.Mission.MissionStatus,
                 intervention = db.TaskInterventions.FirstOrDefault(c => c.TaskId == a.TaskId) })
             .ToListAsync(ct);
@@ -42,6 +43,11 @@ public sealed class TaskInterventionsController(TaskInterventionService service,
         Execute(taskId, "force-cancel", request, ct);
 
     // Any authenticated role may stop motion. No business cancellation permission is implied.
+    [HttpPost("{taskId:long}/recover-requeue")]
+    [Authorize(Roles = AppRoles.MaintenanceTechnician)]
+    public Task<IActionResult> RecoverRequeue(long taskId, InterventionRequest request, CancellationToken ct) =>
+        Execute(taskId, "recover-requeue", request, ct);
+
     [HttpPost("{taskId:long}/pause")]
     public Task<IActionResult> Pause(long taskId, InterventionRequest request, CancellationToken ct) =>
         Execute(taskId, "pause", request, ct);

@@ -139,6 +139,7 @@ function normalizeStatus(value: unknown): TaskStatus {
         normalized === "ASSIGNED" ||
         normalized === "EXECUTING" ||
         normalized === "COMPLETED" ||
+        normalized === "FAILED" ||
         normalized === "CANCELLED"
     ) {
         return normalized;

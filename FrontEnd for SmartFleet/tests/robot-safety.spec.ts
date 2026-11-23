@@ -14,7 +14,7 @@ for (const role of ["Warehouse Operator", "Maintenance Technician", "Administrat
       const path = new URL(request.url()).pathname;
       if (path.endsWith("/users/me")) return route.fulfill({ json: user });
       if (path === "/api/v1/task-interventions" && request.method() === "GET")
-        return route.fulfill({ json: [{ taskId: 1, robotId: 1, robotCode: "TEST-R1", taskTrackingCode: "TASK-TEST",
+        return route.fulfill({ json: [{ taskId: 1, assignmentId: 1, robotId: 1, robotCode: "TEST-R1", taskTrackingCode: "TASK-TEST",
           taskStatus: "EXECUTING", missionStatus: "NAVIGATING_TO_PICKUP", connectionStatus: "ONLINE",
           operationalStatus: "BUSY", intervention: { state: "CANCEL_REQUESTED", paused: true, commandAcknowledged: false } }] });
       if (path.startsWith("/api/v1/task-interventions/") && request.method() === "POST") {
@@ -45,7 +45,7 @@ for (const role of ["Warehouse Operator", "Maintenance Technician", "Administrat
       await page.getByRole("textbox", { name: "Reason" }).fill("Load removed and robot isolated");
       await page.getByRole("checkbox", { name: "I physically confirmed" }).check();
       await expect(force).toBeDisabled();
-      await page.getByRole("checkbox", { name: "I confirmed the load" }).check();
+      await page.getByRole("checkbox", { name: "I confirmed the load is removed and accounted for.", exact: true }).check();
       await force.click();
       await expect.poll(() => calls.length).toBe(2);
       expect(calls[1].body.physicalSafetyConfirmed).toBe(true);

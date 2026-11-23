@@ -130,8 +130,6 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
             "ABORTED")
         {
             var duplicate =
-                message.Event == "MISSION_STARTED"
-                ||
                 (
                     message.Event == "MISSION_COMPLETED" &&
                     mission.MissionStatus == "COMPLETED"
@@ -141,6 +139,9 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
                     message.Event == "MISSION_FAILED" &&
                     mission.MissionStatus == "FAILED"
                 );
+
+            // A delayed start ACK must never authorize the old robot to execute
+            // a mission that has already failed and been recovered/requeued.
 
             await tx.RollbackAsync(ct);
 

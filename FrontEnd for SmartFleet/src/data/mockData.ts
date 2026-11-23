@@ -1,5 +1,5 @@
 ﻿export type Priority = "HIGH" | "MEDIUM" | "LOW";
-export type TaskStatus = "PENDING" | "QUEUED" | "ASSIGNED" | "EXECUTING" | "COMPLETED" | "CANCELLED";
+export type TaskStatus = "PENDING" | "QUEUED" | "ASSIGNED" | "EXECUTING" | "COMPLETED" | "CANCELLED" | "FAILED";
 export type MQTTStatus = "ONLINE" | "OFFLINE";
 
 export interface Task {

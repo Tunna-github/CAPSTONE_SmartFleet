@@ -30,6 +30,40 @@ The robot accepted EXECUTE_TASK only. Mission failure previously ended the assig
 - Mission failure now retains ACTIVE assignment while the robot is ERROR, preventing a
   ghost load from losing its physical resource lock before Maintenance recovery.
 
+## Recover & Requeue
+
+Maintenance can recover a failed/interrupted task without cancelling the order.
+This requires an ACTIVE assignment, a failed task/mission, an ERROR robot, or an
+Operator cancellation request. COMPLETED/CANCELLED tasks cannot be resurrected.
+Maintenance must explicitly confirm all three: physical stop, removal/accounting of
+the load, and return of that load to the task's ORIGINAL pickup station. The pickup
+must still be active in the task's warehouse. The request includes expectedAssignmentId
+to reject stale confirmations; UI checkboxes are scoped to each assignment.
+
+Recovery atomically ends the old assignment as FAILED, preserves the failed mission
+and its fault history, keeps the old robot in MAINTENANCE, and queues a stop/fence
+command to that robot. The SAME task becomes QUEUED; AssignedAt/StartedAt are reset.
+The safety overlay returns to NORMAL for a new attempt, not for reuse of the old robot.
+Audit includes Maintenance user, physical confirmations, reason, and pre-recovery state.
+
+ScheduledTime is set to at least recovery time + 30 seconds (a later existing schedule
+is preserved). No extra migration is needed beyond TaskInterventions. AUTO tasks become
+eligible at that time and are assigned on the worker's next polling cycle (default 5s).
+No eligible replacement means the task remains QUEUED and is retried on later cycles.
+MANUAL tasks retain their mode and need manual assignment after the cooldown.
+Both dispatch paths reject safety holds, respect the scheduled time, and exclude every
+robot that previously FAILED this task, even if it was restored to AVAILABLE.
+Each retry creates a NEW assignment/mission; old records remain intact. A late
+MISSION_STARTED for a terminal old mission is rejected, never ACKed as executable.
+
+The Robot safety panel exposes Recover & Requeue to Maintenance. The task list now
+preserves FAILED instead of coercing it to PENDING, includes a FAILED filter/badge,
+and polls while visible to display requeue/redispatch changes.
+
+API: POST `/api/v1/task-interventions/{taskId}/recover-requeue` (Maintenance only).
+Body: reason, expectedAssignmentId, physicalSafetyConfirmed=true,
+loadRemovedConfirmed=true, loadReturnedToPickupConfirmed=true.
+
 ## Durable protocol and audit
 
 TaskInterventions is a persistent overlay, avoiding changes to existing status constraints.
@@ -86,13 +120,13 @@ now calls the backend and refreshes persisted data instead of releasing a mock r
 
 ## Verification
 
-- Backend: `dotnet test tests/SmartFleetBE.Tests` (18 passing tests).
+- Backend: `dotnet test tests/SmartFleetBE.Tests` (30 passing tests).
   EF InMemory tests cover policy and state/audit transitions; they do NOT prove PostgreSQL
   constraints, SERIALIZABLE concurrency, real JWT authentication or physical motion.
 - Robot: `python tests/test_robot_safety.py` (6 passing tests) executes actual safety functions with mocked
   motors/camera/MQTT. Both edited Python controllers also pass AST syntax validation.
 - Frontend: `npm run build`, `npx tsc --noEmit`, and `npm run test:web`
-  (3 passing Playwright tests in Edge, one per role), with
+  (5 passing Playwright tests in Edge, covering roles, recovery confirmation and FAILED display), with
   intercepted HTTP responses; these do not contact the real backend, DB, or broker.
 - Live PostgreSQL migration, full Webots motion, and JetRacer hardware validation remain
   deployment/integration checks. Never infer physical stop from a successful HTTP response.

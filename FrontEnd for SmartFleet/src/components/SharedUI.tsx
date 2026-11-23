@@ -80,6 +80,7 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
         EXECUTING: ["rgba(34,211,238,0.12)", "#22d3ee"],
         COMPLETED: ["rgba(34,197,94,0.12)", "#4ade80"],
         CANCELLED: ["rgba(239,68,68,0.12)", "#ef4444"],
+        FAILED: ["rgba(239,68,68,0.16)", "#f87171"],
     };
     return (
         <span className="font-mono text-[10px] font-semibold px-2 py-0.5 rounded flex items-center gap-1.5 w-fit"

@@ -64,6 +64,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
                     $"Task must be QUEUED. Current status: {task.TaskStatus}.");
         }
 
+        if (task.ScheduledTime > DateTime.UtcNow || await _db.TaskInterventions.AnyAsync(c =>
+            c.TaskId == taskId && (c.Paused || c.State != "NORMAL"), cancellationToken))
+            return TransportTaskServiceResult<IReadOnlyCollection<AvailableRobotResponse>>
+                .Conflict("Task is waiting for its scheduled/recovery time or has a safety hold.");
+
         if (task.PayloadWeightKg is not > 0m)
         {
             return TransportTaskServiceResult<
@@ -104,7 +109,13 @@ public sealed class TaskDispatchService : ITaskDispatchService
             string reason = "";
             bool passes = true;
 
-            if (!robot.IsActive)
+            if (await _db.TaskAssignments.AnyAsync(a => a.TaskId == taskId &&
+                a.RobotId == robot.RobotId && a.AssignmentStatus == "FAILED", cancellationToken))
+            {
+                reason = "Previously failed this task; select another robot";
+                passes = false;
+            }
+            else if (!robot.IsActive)
             {
                 reason = "Not active";
                 passes = false;
@@ -365,6 +376,16 @@ public sealed class TaskDispatchService : ITaskDispatchService
                     "Payload exceeds the verified safety limit, " +
                     "or the limit has not been configured.");
         }
+
+        if (task.ScheduledTime > DateTime.UtcNow || await _db.TaskInterventions.AnyAsync(c =>
+            c.TaskId == taskId && (c.Paused || c.State != "NORMAL"), cancellationToken))
+            return TransportTaskServiceResult<ManualAssignTaskResponse>
+                .Conflict("Task is waiting for its scheduled/recovery time or has a safety hold.");
+
+        if (await _db.TaskAssignments.AnyAsync(a => a.TaskId == taskId && a.RobotId == robotId &&
+            a.AssignmentStatus == "FAILED", cancellationToken))
+            return TransportTaskServiceResult<ManualAssignTaskResponse>
+                .Conflict("This robot previously failed this task. Select another robot.");
 
         // STEP 2: CHECK TASK IS NOT ALREADY ASSIGNED
 

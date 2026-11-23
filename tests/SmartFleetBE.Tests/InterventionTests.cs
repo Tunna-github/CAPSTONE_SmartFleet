@@ -4,6 +4,10 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.AspNetCore.SignalR;
+using SmartFleetBE.Hubs;
 using SmartFleetBE;
 using SmartFleetBE.DTOs;
 using SmartFleetBE.Model;
@@ -34,11 +38,15 @@ public sealed class InterventionTests
             Assert.True(nav.ReplaceMap(map).Success);
         }
         var routes = new QrDemoRouteService(nav, env, config, NullLogger<QrDemoRouteService>.Instance);
-        db.TransportTasks.Add(new TransportTask { TaskId = 1, TaskStatus = assigned ? "EXECUTING" : "QUEUED" });
+        db.TransportTasks.Add(new TransportTask { TaskId = 1, TaskStatus = assigned ? "EXECUTING" : "QUEUED",
+            WarehouseId = 1, PickupStationId = 1, DispatchMode = "AUTO", PayloadWeightKg = 1m });
+        db.Stations.Add(new Station { StationId = 1, IsActive = true,
+            Zone = new Zone { ZoneId = 1, WarehouseId = 1 } });
         if (assigned)
         {
             var robot = new Robot { RobotId = 1, RobotCode = "R1", OperationalStatus = "BUSY", ConnectionStatus = "ONLINE",
-                LastTelemetryTime = DateTime.UtcNow };
+                LastTelemetryTime = DateTime.UtcNow, WarehouseId = 1, IsActive = true,
+                RobotType = "PHYSICAL", BatteryPercent = 100m, MaxPayloadWeightKg = 10m };
             var a = new TaskAssignment { AssignmentId = 1, TaskId = 1, Robot = robot, AssignmentStatus = "ACTIVE" };
             db.TaskAssignments.Add(a);
             db.Missions.Add(new Mission { MissionId = 1, Assignment = a, MissionStatus = "NAVIGATING_TO_PICKUP" });
@@ -193,6 +201,190 @@ public sealed class InterventionTests
             Event = "MISSION_COMPLETED", TaskId = 1, AssignmentId = 1, MissionId = 1 }));
         Assert.Equal("ACTIVE", db.TaskAssignments.Single().AssignmentStatus);
         Assert.Equal("BUSY", db.Robots.Single().OperationalStatus);
+    }
+
+    [Theory]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task RecoveryRejectsMissingPhysicalConfirmations(bool stopped, bool unloaded, bool returned)
+    {
+        var (db, service, _) = Fixture();
+        db.TransportTasks.Single().TaskStatus = "FAILED";
+        db.Robots.Single().OperationalStatus = "ERROR";
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.Act(1, "recover-requeue",
+            new("Recovered load", stopped, unloaded, returned, 1), 43, default));
+        Assert.Equal("FAILED", db.TransportTasks.Single().TaskStatus);
+        Assert.Equal("ACTIVE", db.TaskAssignments.Single().AssignmentStatus);
+        Assert.Empty(db.RobotCommandOutbox);
+    }
+
+    [Theory]
+    [InlineData("COMPLETED")]
+    [InlineData("CANCELLED")]
+    [InlineData("QUEUED")]
+    public async Task RecoveryCannotResurrectTerminalOrUnfailedTasks(string status)
+    {
+        var (db, service, _) = Fixture();
+        db.TransportTasks.Single().TaskStatus = status;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.Act(1, "recover-requeue",
+            new("Recovered", true, true, true, 1), 43, default));
+        Assert.Equal(status, db.TransportTasks.Single().TaskStatus);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(999L)]
+    public async Task RecoveryRejectsUnspecifiedOrStaleAssignment(long? expectedAssignment)
+    {
+        var (db, service, _) = Fixture();
+        db.TransportTasks.Single().TaskStatus = "FAILED";
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.Act(1, "recover-requeue",
+            new("Goods returned", true, true, true, expectedAssignment), 43, default));
+        Assert.Equal("ACTIVE", db.TaskAssignments.Single().AssignmentStatus);
+    }
+
+    [Fact]
+    public async Task RecoveryRejectsInactivePickup()
+    {
+        var (db, service, _) = Fixture();
+        db.TransportTasks.Single().TaskStatus = "FAILED";
+        db.Stations.Single().IsActive = false;
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.Act(1, "recover-requeue",
+            new("Goods returned", true, true, true, 1), 43, default));
+        Assert.Equal("FAILED", db.TransportTasks.Single().TaskStatus);
+        Assert.Equal("ACTIVE", db.TaskAssignments.Single().AssignmentStatus);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RecoveredTaskWaitsThirtySecondsThenAutoAssignsAnotherRobot(bool replacementAvailable)
+    {
+        var (db, _, routes) = Fixture();
+        var task = db.TransportTasks.Single();
+        task.TaskStatus = "FAILED";
+        task.StartedAt = DateTime.UtcNow.AddMinutes(-5);
+        task.AssignedAt = task.StartedAt;
+        db.Missions.Single().MissionStatus = "FAILED";
+        db.Missions.Single().FailureReason = "Original device fault";
+        db.Robots.Single().OperationalStatus = "ERROR";
+        db.Robots.Add(new Robot { RobotId = 2, RobotCode = "R2", WarehouseId = 1, RobotType = "PHYSICAL",
+            OperationalStatus = "AVAILABLE", ConnectionStatus = "ONLINE", IsActive = replacementAvailable,
+            BatteryPercent = 80m, MaxPayloadWeightKg = 10m });
+        await db.SaveChangesAsync();
+        var clock = new TestClock();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
+            ["AutoDispatch:VerifiedPayloadLimitKg"] = "10" }).Build();
+        var recovery = new TaskInterventionService(db, routes, config, clock);
+        var now = clock.GetUtcNow().UtcDateTime;
+        await recovery.Act(1, "recover-requeue", new("Goods back at original pickup", true, true, true, 1), 43, default);
+        Assert.Equal("QUEUED", task.TaskStatus);
+        Assert.Equal(now.AddSeconds(30), task.ScheduledTime);
+        Assert.Null(task.StartedAt);
+        Assert.Null(task.AssignedAt);
+        Assert.Equal("FAILED", db.TaskAssignments.Single().AssignmentStatus);
+        Assert.Equal("FAILED", db.Missions.Single().MissionStatus);
+        Assert.Equal("Original device fault", db.Missions.Single().FailureReason);
+        Assert.Equal("MAINTENANCE", db.Robots.Single(r => r.RobotId == 1).OperationalStatus);
+        Assert.False(await recovery.IsHeld(1, default));
+        Assert.Contains("\"LoadReturnedToPickupConfirmed\":true", db.SystemAuditLogs.Single().Description);
+        var lifecycle = new MissionLifecycleService(db, config, routes, recovery);
+        Assert.Equal(MissionEventResult.Rejected, await lifecycle.HandleAsync("R1", new RobotMissionEvent {
+            Event = "MISSION_STARTED", TaskId = 1, AssignmentId = 1, MissionId = 1 }));
+
+        // Restore old robot deliberately: it still must not win the retry with its higher battery.
+        db.Robots.Single(r => r.RobotId == 1).OperationalStatus = "AVAILABLE";
+        await db.SaveChangesAsync();
+        var options = (DbContextOptions<SmartFleetDbContext>)db.GetService<IDbContextOptions>();
+        using var provider = new ServiceCollection().AddScoped(_ => new SmartFleetDbContext(options)).BuildServiceProvider();
+        var factory = provider.GetRequiredService<IServiceScopeFactory>();
+        var dispatcher = new AutoDispatchService(factory, config,
+            new FleetRealtimePublisher(new SinkHub(), factory), NullLogger<AutoDispatchService>.Instance, clock);
+        Assert.False(await dispatcher.TryAssignAsync(1));
+        clock.Advance(29);
+        Assert.False(await dispatcher.TryAssignAsync(1));
+        clock.Advance(1);
+        if (!replacementAvailable)
+        {
+            Assert.False(await dispatcher.TryAssignAsync(1));
+            db.ChangeTracker.Clear();
+            Assert.Equal("QUEUED", db.TransportTasks.Single().TaskStatus);
+            Assert.Empty(db.TaskAssignments.Where(a => a.AssignmentStatus == "ACTIVE"));
+            // An eligible robot arriving later is picked up on a subsequent polling attempt.
+            db.Robots.Single(r => r.RobotId == 2).IsActive = true;
+            await db.SaveChangesAsync();
+            clock.Advance(5);
+        }
+        Assert.True(await dispatcher.TryAssignAsync(1));
+        Assert.False(await dispatcher.TryAssignAsync(1)); // worker retry cannot create a duplicate assignment
+        db.ChangeTracker.Clear();
+        Assert.Equal("ASSIGNED", db.TransportTasks.Single().TaskStatus);
+        Assert.Equal(2, db.TaskAssignments.Single(a => a.AssignmentStatus == "ACTIVE").RobotId);
+        Assert.Equal(2, db.Missions.Count());
+        Assert.Equal(2, db.RobotCommandOutbox.Count()); // old robot stop + new robot execution
+    }
+
+    [Fact]
+    public async Task RecoveryPreservesManualModeAndBlocksEarlyManualAssignment()
+    {
+        var (db, service, _) = Fixture();
+        var task = db.TransportTasks.Single();
+        task.DispatchMode = "MANUAL";
+        task.TaskStatus = "FAILED";
+        await db.SaveChangesAsync();
+        await service.Act(1, "recover-requeue", new("Back at pickup", true, true, true, 1), 43, default);
+        Assert.Equal("MANUAL", task.DispatchMode);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
+            ["AutoDispatch:VerifiedPayloadLimitKg"] = "10" }).Build();
+        var manual = new TaskDispatchService(db, config, NullLogger<TaskDispatchService>.Instance);
+        var result = await manual.AssignManualAsync(1, 1, 42);
+        Assert.Contains("waiting", result.Error!);
+        Assert.Empty(db.TaskAssignments.Where(a => a.AssignmentStatus == "ACTIVE"));
+        task.ScheduledTime = DateTime.UtcNow.AddSeconds(-1);
+        await db.SaveChangesAsync();
+        var oldRobot = await manual.AssignManualAsync(1, 1, 42);
+        Assert.Contains("previously failed", oldRobot.Error!);
+        var options = (DbContextOptions<SmartFleetDbContext>)db.GetService<IDbContextOptions>();
+        using var provider = new ServiceCollection().AddScoped(_ => new SmartFleetDbContext(options)).BuildServiceProvider();
+        var factory = provider.GetRequiredService<IServiceScopeFactory>();
+        var auto = new AutoDispatchService(factory, config, new FleetRealtimePublisher(new SinkHub(), factory),
+            NullLogger<AutoDispatchService>.Instance);
+        Assert.False(await auto.TryAssignAsync(1)); // manual tasks never become AUTO after recovery
+    }
+
+    private sealed class TestClock : TimeProvider
+    {
+        private DateTimeOffset now = DateTimeOffset.UtcNow;
+        public override DateTimeOffset GetUtcNow() => now;
+        public void Advance(int seconds) => now = now.AddSeconds(seconds);
+    }
+
+    private sealed class SinkHub : IHubContext<FleetHub>
+    {
+        public IHubClients Clients { get; } = new SinkClients();
+        public IGroupManager Groups => throw new NotSupportedException();
+    }
+    private sealed class SinkClients : IHubClients
+    {
+        private static readonly IClientProxy Sink = new SinkProxy();
+        public IClientProxy All => Sink;
+        public IClientProxy AllExcept(IReadOnlyList<string> x) => Sink;
+        public IClientProxy Client(string x) => Sink;
+        public IClientProxy Clients(IReadOnlyList<string> x) => Sink;
+        public IClientProxy Group(string x) => Sink;
+        public IClientProxy GroupExcept(string x, IReadOnlyList<string> y) => Sink;
+        public IClientProxy Groups(IReadOnlyList<string> x) => Sink;
+        public IClientProxy User(string x) => Sink;
+        public IClientProxy Users(IReadOnlyList<string> x) => Sink;
+    }
+    private sealed class SinkProxy : IClientProxy
+    {
+        public Task SendCoreAsync(string method, object?[] args, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class TestEnvironment : IWebHostEnvironment

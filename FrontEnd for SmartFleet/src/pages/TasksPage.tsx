@@ -58,8 +58,12 @@ export function TasksPage() {
 
         window.addEventListener("focus", handleWindowFocus);
         document.addEventListener("visibilitychange", handleVisibilityChange);
+        const refreshTimer = window.setInterval(() => {
+            if (document.visibilityState === "visible") void refreshSafely();
+        }, 5000);
 
         return () => {
+            window.clearInterval(refreshTimer);
             window.removeEventListener("focus", handleWindowFocus);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
         };
@@ -101,7 +105,7 @@ export function TasksPage() {
             empty: search.trim() ? "No completed tasks match your search." : "No completed tasks yet.",
         },
     ];
-    const statusOptions = ["ALL", "PENDING", "QUEUED", "ASSIGNED", "EXECUTING", "CANCELLED"];
+    const statusOptions = ["ALL", "PENDING", "QUEUED", "ASSIGNED", "EXECUTING", "FAILED", "CANCELLED"];
     const counts = {
         total: tasks.length,
         pending: tasks.filter((t) => t.status === "PENDING" || t.status === "QUEUED").length,

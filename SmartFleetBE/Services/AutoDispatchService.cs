@@ -14,7 +14,7 @@ public sealed class AutoDispatchService(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration,
     FleetRealtimePublisher realtime,
-    ILogger<AutoDispatchService> logger)
+    ILogger<AutoDispatchService> logger, TimeProvider? clock = null)
 {
     private const decimal MinimumBatteryPercent = 20m;
     private const int MaxAttempts = 3;
@@ -92,7 +92,11 @@ public sealed class AutoDispatchService(
                     return false;
                 }
 
-                var now = DateTime.UtcNow;
+                if (task.DispatchMode != "AUTO" || await db.TaskInterventions.AnyAsync(c =>
+                    c.TaskId == taskId && (c.Paused || c.State != "NORMAL"), cancellationToken))
+                    return false;
+
+                var now = (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime;
                 var weightKg = task.PayloadWeightKg.Value;
 
                 // Do not dispatch future scheduled tasks.
@@ -157,6 +161,10 @@ public sealed class AutoDispatchService(
                         // Robot must be online and free
                         r.ConnectionStatus == "ONLINE" &&
                         r.OperationalStatus == "AVAILABLE" &&
+
+                        // A recovered task must move to another robot, even if a failed one was restored.
+                        !db.TaskAssignments.Any(a => a.TaskId == taskId && a.RobotId == r.RobotId &&
+                            a.AssignmentStatus == "FAILED") &&
 
                         // Minimum battery
                         r.BatteryPercent != null &&
