@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace SmartFleetBE.Services;
 
@@ -18,6 +19,25 @@ public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttSe
                     .OrderBy(c => c.Id).ToListAsync(stoppingToken);
                 foreach (var command in pending)
                 {
+                    using var document = JsonDocument.Parse(command.Payload);
+                    if (document.RootElement.TryGetProperty("commandId", out var id))
+                    {
+                        var commandId = id.GetString();
+                        var current = await db.TaskInterventions.AnyAsync(c => c.CommandId == commandId, stoppingToken);
+                        if (current)
+                            await mqtt.PublishAsync(command.Topic, command.Payload, stoppingToken);
+                        else
+                        {
+                            command.DeliveredAt = DateTime.UtcNow; // Superseded control, never deliver stale motion.
+                            await db.SaveChangesAsync(stoppingToken);
+                        }
+                        // Controls are retried until application acknowledgement, not broker delivery.
+                        continue;
+                    }
+                    var held = await db.TaskInterventions.AnyAsync(c =>
+                        db.TaskAssignments.Any(a => a.AssignmentId == command.AssignmentId && a.TaskId == c.TaskId) &&
+                        (c.Paused || c.State != "NORMAL"), stoppingToken);
+                    if (held) continue;
                     var active = await db.Missions.AnyAsync(m => m.AssignmentId == command.AssignmentId &&
                         m.MissionStatus == "INITIALIZING" && m.Assignment.AssignmentStatus == "ACTIVE", stoppingToken);
 

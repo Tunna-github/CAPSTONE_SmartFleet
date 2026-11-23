@@ -545,6 +545,107 @@ def start_mission(data):
     send_status("MISSION_STARTED", mission)
 
 
+# Safety controls are latched across controller restarts. Only a confirmed HOME
+# return clears this latch; transport EXECUTE_TASK never clears it.
+SAFETY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".smartfleet-safety-" + ROBOT_CODE + ".json")
+safety_hold = os.path.exists(SAFETY_FILE)
+safety_commands = {}
+safety_generation = {}
+if safety_hold:
+    try:
+        with open(SAFETY_FILE, "r", encoding="utf-8") as handle:
+            saved_safety = json.load(handle)
+        safety_generation[saved_safety["taskId"]] = saved_safety.get("generation", 0)
+    except (OSError, ValueError, KeyError):
+        pass  # corrupt state still holds motors
+
+def latch_safety(data):
+    global safety_hold
+    safety_hold = True
+    with open(SAFETY_FILE, "w", encoding="utf-8") as handle:
+        json.dump({"commandId": data.get("commandId"), "taskId": data.get("taskId"),
+                   "generation": data.get("generation", 0)}, handle)
+
+
+def safety_ack(data, event="CONTROL_STOPPED", marker=None):
+    publish(STATUS_TOPIC, {"eventId": str(uuid.uuid4()), "event": event,
+        "taskId": data["taskId"], "assignmentId": data["assignmentId"],
+        "missionId": data["missionId"], "commandId": data["commandId"],
+        "currentArUcoId": marker})
+
+
+def handle_safety_command(data):
+    global mission, pending, current_state, safety_hold
+    command_id = data.get("commandId")
+    if not isinstance(command_id, str) or not command_id:
+        return
+    generation = data.get("generation")
+    if not valid_int(generation) or generation < 1:
+        return
+    task_id = data.get("taskId")
+    if generation < safety_generation.get(task_id, 0):
+        return  # delayed RETURN_HOME must not override a newer Pause
+    # Correlate control with this mission; stale controls must never redirect a new mission.
+    if mission is not None and data.get("missionId") != mission.get("missionId"):
+        return
+    if command_id in safety_commands:
+        event, marker = safety_commands[command_id]
+        safety_ack(data, event, marker)
+        return
+    kind = data.get("command")
+    if kind in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL"):
+        stop_robot()
+        safety_generation[task_id] = generation
+        latch_safety(data)
+        pending = None
+        # Last scanned QR is NOT a fresh position while between waypoints.
+        marker = current_marker if current_marker is not None and visible_marker(current_marker) is not None else None
+        safety_commands[command_id] = ("CONTROL_STOPPED", marker)
+        safety_ack(data, marker=marker)
+        return
+    if kind == "RETURN_HOME":
+        if mission is not None and mission.get("home_command_id") == command_id:
+            return  # retry must not reset a moving home route
+        stop_robot()
+        route = data.get("route")
+        if not safety_hold or not isinstance(route, dict):
+            return
+        waypoints = route.get("waypoints")
+        if not isinstance(waypoints, list) or not waypoints:
+            return
+        if route.get("startArUcoId") != current_marker or visible_marker(current_marker) is None:
+            return  # no fresh camera pose => remain held for physical recovery
+        if waypoints[0].get("arucoId") != current_marker or waypoints[-1].get("arucoId") != route.get("homeArUcoId"):
+            return
+        for i in range(1, len(waypoints)):
+            if waypoints[i].get("travelDirection") != expected_grid_direction(waypoints[i-1], waypoints[i]):
+                return
+        mission = dict(data)
+        safety_generation[task_id] = generation
+        latch_safety(data)
+        mission.update({"waypoints": waypoints, "deliveryArUcoId": route["homeArUcoId"],
+                        "home_command_id": command_id, "phase": "MOVING", "next_index": 1})
+        pending = None
+        safety_hold = False  # persistent disk latch stays until physical HOME
+        if len(waypoints) == 1:
+            finish_home(mission)
+        else:
+            begin_segment(mission)
+
+
+def finish_home(data):
+    global mission, pending, safety_hold, current_state
+    stop_robot()
+    safety_hold = True  # release only when BE ACKs physical home arrival
+    send_reliable("HOME_REACHED", STATUS_TOPIC, {
+        "event": "HOME_REACHED", "taskId": data["taskId"],
+        "assignmentId": data["assignmentId"], "missionId": data["missionId"],
+        "commandId": data["home_command_id"], "currentArUcoId": current_marker,
+    }, STATUS_ACK_TOPIC)
+    data["phase"] = "HOME_ACK"
+    current_state = STATE_IDLE
+
+
 def handle_incoming():
     global ready_acknowledged, ready_event_id, ready_last_sent, pending
     while True:
@@ -555,6 +656,17 @@ def handle_incoming():
         if not isinstance(data, dict):
             continue
         if topic == COMMAND_TOPIC:
+            if data.get("command") in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL", "RETURN_HOME"):
+                try:
+                    handle_safety_command(data)
+                except Exception as ex:
+                    stop_robot()
+                    latch_safety(data)
+                    pending = None
+                    print("[SAFETY HOLD]", ex)
+                continue
+            if safety_hold:
+                continue
             if data.get("command") != "EXECUTE_TASK":
                 continue
             try:
@@ -643,6 +755,13 @@ def reached_marker(data, detected_id):
         # The camera confirmed a real driven edge. Learn the stable yaw frame
         # for future cold-starts at QR2, QR7, or other configured QR markers.
         store_heading_calibration()
+    if data.get("home_command_id"):
+        data["next_index"] = i + 1
+        if data["next_index"] >= len(data["waypoints"]):
+            finish_home(data)
+        else:
+            begin_segment(data)
+        return
     send_progress(data, i)
     data["phase"] = "WAIT_WAYPOINT_ACK"
 
@@ -650,7 +769,10 @@ def reached_marker(data, detected_id):
 def tick_mission():
     global mission, current_state, stable_counter, last_detected_id
     global missing_align_frames, target_yaw_deg, ready_acknowledged
-    global ready_event_id, ready_last_sent
+    global ready_event_id, ready_last_sent, safety_hold
+    if safety_hold and (mission is None or mission.get("phase") != "HOME_ACK"):
+        stop_robot()
+        return
     if mission is None:
         stop_robot()
         return
@@ -672,6 +794,15 @@ def tick_mission():
                              notify_backend=False)
             else:
                 fail_mission("Backend rejected {}: {}".format(kind, reason))
+            return
+        if kind == "HOME_REACHED":
+            safety_commands[data["home_command_id"]] = ("HOME_REACHED", current_marker)
+            safety_hold = False
+            if os.path.exists(SAFETY_FILE):
+                os.remove(SAFETY_FILE)
+            mission = None
+            current_state = STATE_IDLE
+            stop_robot()
             return
         if kind == "MISSION_STARTED":
             # The start is a CAMERA-confirmed QR, not an arbitrary numeric pose.

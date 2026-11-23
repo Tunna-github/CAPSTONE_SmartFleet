@@ -121,6 +121,11 @@ ack_lock = threading.Lock()
 pending_acks = {}
 mqtt_connected = threading.Event()
 shutdown_event = threading.Event()
+# Software safety latch. A restart does not authorize renewed movement.
+_safety_path = os.path.expanduser("~/.smartfleet-safety-hold-" + ROBOT_CODE)
+safety_hold = threading.Event()
+if os.path.exists(_safety_path):
+    safety_hold.set()
 
 velocity_bridge_lock = threading.Lock()
 velocity_bridge = None
@@ -192,7 +197,7 @@ def wait_for_ack(event_id, timeout=10):
 
 
 def send_status(event, task_id, assignment_id, mission_id,
-                reason=None, wait_ack=True):
+                reason=None, wait_ack=True, command_id=None):
     if not mqtt_connected.wait(timeout=10):
         raise RuntimeError("MQTT is not connected")
 
@@ -204,6 +209,8 @@ def send_status(event, task_id, assignment_id, mission_id,
         "assignmentId": assignment_id,
         "missionId": mission_id,
     }
+    if command_id is not None:
+        payload["commandId"] = command_id
     if reason is not None:
         payload["reason"] = reason
 
@@ -350,6 +357,8 @@ finally:
         return self
 
     def command(self, linear, angular):
+        if safety_hold.is_set() and (linear != 0.0 or angular != 0.0):
+            raise RuntimeError("Motion blocked by persistent safety hold")
         if self.proc is None or self.proc.poll() is not None:
             raise RuntimeError("cmd_vel helper is not running")
         line = "{:.6f} {:.6f}\n".format(float(linear), float(angular))
@@ -1018,7 +1027,7 @@ def execute_task(task_id, assignment_id, mission_id):
         except Exception as stop_error:
             print("Could not stop robot:", repr(stop_error), flush=True)
 
-        if not shutdown_event.is_set():
+        if not shutdown_event.is_set() and not safety_hold.is_set():
             try:
                 send_status(
                     "MISSION_FAILED",
@@ -1126,6 +1135,23 @@ def handle_command(msg):
         print("Mission ID:", mission_id, flush=True)
         print("Pattern:", pattern, flush=True)
 
+        if command in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL") and data.get("commandId"):
+            safety_hold.set()
+            with open(_safety_path, "w") as handle:
+                handle.write(str(data["commandId"]))
+            with velocity_bridge_lock:
+                bridge = velocity_bridge
+            if bridge is not None:
+                bridge.stop_motion()
+            stop_robot()
+            send_status("CONTROL_STOPPED", task_id, assignment_id, mission_id,
+                        wait_ack=False, command_id=data["commandId"])
+            return
+        # This physical line follower has no validated route-to-home planner.
+        # RETURN_HOME therefore fails closed; Maintenance must recover it.
+        if safety_hold.is_set():
+            print("Persistent safety hold: physical recovery required", flush=True)
+            return
         if command != "EXECUTE_TASK":
             print("Unsupported command", flush=True)
             return

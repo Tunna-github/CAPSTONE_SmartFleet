@@ -14,13 +14,15 @@ public enum MissionEventResult
 }
 
 public sealed class MissionLifecycleService(SmartFleetDbContext db,
-    IConfiguration configuration, QrDemoRouteService qrDemo)
+    IConfiguration configuration, QrDemoRouteService qrDemo, TaskInterventionService interventions)
 {
     public async Task<MissionEventResult> HandleAsync(
         string robotCode,
         RobotMissionEvent message,
         CancellationToken ct = default)
     {
+        if (message.Event is "CONTROL_STOPPED" or "HOME_REACHED")
+            return await interventions.HandleEvent(robotCode, message, ct);
         // Test pilot: a robot cannot complete a transport task merely by
         // sending MISSION_COMPLETED. The QR route has to reach pickup + drop.
         if (configuration.GetValue<bool>("DemoRoute:Enabled") &&
@@ -47,6 +49,10 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
                 IsolationLevel.Serializable,
                 ct
             );
+
+        // A late completion/start cannot bypass a persistent safety hold.
+        if (await interventions.IsHeld(message.TaskId, ct))
+            return MissionEventResult.Rejected;
 
         // =====================================================
         // 2. LOCK + GET ROBOT
@@ -354,10 +360,9 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
             assignment.AssignmentStatus =
                 message.Event == "MISSION_COMPLETED"
                     ? "COMPLETED"
-                    : "FAILED";
+                    : "ACTIVE"; // Fault recovery retains the physical load/resource lock.
 
-            assignment.EndedAt =
-                now;
+            assignment.EndedAt = message.Event == "MISSION_COMPLETED" ? now : null;
 
             // ---------------------------------------------
             // Task completion / failure

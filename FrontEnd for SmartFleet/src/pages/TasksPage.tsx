@@ -120,9 +120,15 @@ export function TasksPage() {
         setToast({ msg: "Editing is not connected to the backend yet. No changes were saved.", type: "info" });
     };
 
-    const handleCancel = (task: Task) => {
-        cancelTask(task.id);
-        setToast({ msg: `${task.id} cancelled.`, type: "info" });
+    const handleCancel = async (task: Task) => {
+        const reason = window.prompt("Reason for cancellation (if carrying load/faulted, use Robot safety → Request Maintenance cancel):");
+        if (!reason?.trim()) return;
+        try {
+            await cancelTask(task.id, reason.trim());
+            setToast({ msg: `${task.id}: cancellation saved; check Robot safety for return status.`, type: "info" });
+        } catch (error) {
+            setToast({ msg: (error as Error).message, type: "error" });
+        }
     };
 
     const handleDelete = (task: Task) => {
@@ -157,7 +163,7 @@ export function TasksPage() {
     };
 
     const canEdit = (s: string) => s === "PENDING" || s === "QUEUED";
-    const canCancel = (s: string) => s === "PENDING" || s === "QUEUED" || s === "ASSIGNED";
+    const canCancel = (s: string) => ["PENDING", "QUEUED", "CRITICAL", "ASSIGNED", "EXECUTING"].includes(s);
 
     return (
         <div

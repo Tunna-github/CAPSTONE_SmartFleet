@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Task, Robot, LogEntry, TASKS, ROBOTS, INITIAL_LOGS } from "../data/mockData";
 import { getTransportTasks, createTransportTask, deleteTransportTask, type CreateTransportTaskPayload } from "../api/modules/tasks";
 import { useAuth } from "./AuthContext";
+import { intervene } from "../api/modules/interventions";
 
 interface DataContextType {
     tasks: Task[];
@@ -14,7 +15,7 @@ interface DataContextType {
     deleteTask: (task: Task) => Promise<void>;
     refreshTasks: (showErrorToast?: boolean) => Promise<void>;
     updateTaskStatus: (id: string, status: Task["status"]) => void;
-    cancelTask: (id: string) => void;
+    cancelTask: (id: string, reason: string) => Promise<void>;
     toggleMaintenance: (id: string) => void;
     addLog: (log: Omit<LogEntry, "id" | "time">) => void;
     completeTask: (task: Task) => Promise<void>; // ADDED
@@ -124,10 +125,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
         addLog({ level: "INFO", robot: "SYSTEM", message: `Task ${task.id} deleted successfully.` });
     };
 
-    const cancelTask = (id: string) => {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, status: "CANCELLED", robotId: null } : t));
-        setRobots(prev => prev.map(r => r.missionId === id ? { ...r, missionId: null, zone: "Idle — Zone B" } : r));
-        addLog({ level: "WARN", robot: "SYSTEM", message: `Task ${id} cancelled. Robot reassigned.` });
+    const cancelTask = async (id: string, reason: string) => {
+        const task = tasks.find(t => t.id === id);
+        if (!task?.taskId) throw new Error("Task has no persisted backend ID.");
+        await intervene(Number(task.taskId), "cancel", reason);
+        await refreshTasks();
+        addLog({ level: "WARN", robot: "SYSTEM", message: `Cancellation saved for ${id}; robot release requires safety confirmation.` });
     };
 
     // ADDED: completeTask Implementation

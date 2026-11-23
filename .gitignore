@@ -23,3 +23,9 @@ SmartFleetBE/App_Data/navigation-state.json.tmp
 SmartFleetBE/App_Data/demo-route-config.json
 SmartFleetBE/App_Data/qr-demo-state.json
 SmartFleetBE/App_Data/qr-demo-state.json.tmp
+
+# Test output and per-device safety latches
+**/test-results/
+**/playwright-report/
+**/__pycache__/
+Webots_Full_Mission_Controller/.smartfleet-safety-*.json

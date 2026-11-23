@@ -43,6 +43,21 @@ public sealed class QrDemoProgressWorker(
                 var json = args.ApplicationMessage.ConvertPayloadToString();
                 var report = JsonSerializer.Deserialize<QrDemoRouteService.RouteProgressReport>(json, Options);
                 if (report == null || string.IsNullOrWhiteSpace(report.EventId)) return;
+                if (report.Event == "WAYPOINT_REACHED")
+                {
+                    using var guardScope = scopes.CreateScope();
+                    var guardDb = guardScope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
+                    var held = await guardDb.TaskInterventions.AnyAsync(c =>
+                        guardDb.Missions.Any(m => m.MissionId == report.MissionId && m.Assignment.TaskId == c.TaskId) &&
+                        (c.Paused || c.State != "NORMAL"), stoppingToken);
+                    if (held)
+                    {
+                        await publisher.PublishAsync($"smartfleet/robot/{parts[2]}/qr-progress-ack",
+                            JsonSerializer.Serialize(new { eventId = report.EventId, accepted = false,
+                                reason = "Task has a safety intervention." }), stoppingToken);
+                        return;
+                    }
+                }
                 var result = routes.ReceiveProgress(parts[2], report);
                 // Acknowledge pickup location (no package verification): advance
                 // the REAL Mission row from NAVIGATING_TO_PICKUP to NAVIGATING_TO_DELIVERY.
@@ -63,10 +78,14 @@ public sealed class QrDemoProgressWorker(
                                 // status guard prevents duplicate history inserts.
                                 using var scope = scopes.CreateScope();
                                 var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
-                                var mission = await db.Missions.SingleOrDefaultAsync(
+                                await using var transaction = await db.Database.BeginTransactionAsync(
+                                    System.Data.IsolationLevel.Serializable, stoppingToken);
+                                var mission = await db.Missions.Include(m => m.Assignment).SingleOrDefaultAsync(
                                     m => m.MissionId == report.MissionId &&
                                          m.Assignment.Robot.RobotCode == parts[2], stoppingToken);
-                                if (mission is { MissionStatus: "NAVIGATING_TO_PICKUP" })
+                                if (mission is { MissionStatus: "NAVIGATING_TO_PICKUP" } &&
+                                    !await db.TaskInterventions.AnyAsync(c => c.TaskId == mission.Assignment.TaskId &&
+                                        (c.Paused || c.State != "NORMAL"), stoppingToken))
                                 {
                                     var now = DateTime.UtcNow;
                                     mission.MissionStatus = "NAVIGATING_TO_DELIVERY";
@@ -83,6 +102,7 @@ public sealed class QrDemoProgressWorker(
                                     await db.SaveChangesAsync(stoppingToken);
                                     changedAssignmentId = mission.AssignmentId;
                                 }
+                                await transaction.CommitAsync(stoppingToken);
                                 break;
                             }
                             catch (Exception ex) when (IsPgConflict(ex) && attempt < maxQrAttempts)

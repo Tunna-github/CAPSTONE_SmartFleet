@@ -323,6 +323,20 @@ public sealed class QrDemoRouteService
         }
     }
 
+    public object BuildHomeRoute(int start, int home)
+    {
+        var map = _navigation.GetMap();
+        var nodes = ReadNodes(map);
+        if (!nodes.ContainsKey(start) || !nodes.ContainsKey(home))
+            throw new InvalidOperationException("Unknown home/current QR.");
+        var ids = FindPath(map, nodes, start, home);
+        return new { startArUcoId = start, homeArUcoId = home, mapRevision = map.Revision,
+            waypoints = ids.Select((id, i) => new QrWaypoint { ArucoId = id,
+                Row = nodes[id].Row, Col = nodes[id].Col,
+                TravelDirection = i == 0 ? null : DirectionBetween(nodes[ids[i - 1]], nodes[id]),
+                Stage = "RETURN_HOME" }).ToArray() };
+    }
+
     public bool CanComplete(long? missionId, string robotCode)
     {
         if (!missionId.HasValue) return false;

@@ -184,6 +184,7 @@ builder.Services.AddSingleton<QrDemoRouteService>();
 builder.Services.AddSingleton<NavigationCoordinator>();
 
 builder.Services.AddScoped<MissionLifecycleService>();
+builder.Services.AddScoped<TaskInterventionService>();
 
 bool enableMqttWorkers =
     builder.Configuration.GetValue<bool>(

@@ -11,4 +11,6 @@ public sealed class RobotMissionEvent
     public long? MissionId { get; set; }
     public string? EventId { get; set; }
     public string? Reason { get; set; }
+    public string? CommandId { get; set; }
+    public int? CurrentArUcoId { get; set; }
 }
