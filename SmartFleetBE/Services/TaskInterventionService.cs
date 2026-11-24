@@ -127,8 +127,16 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                     // QR demo location counts conservatively as potentially loaded.
                     pickup |= mission != null && routes.GetMission(mission.MissionId)?.PickupReached == true;
                     // After restart a missing demo route snapshot is UNKNOWN, not proof of no load.
-                    pickup |= configuration.GetValue<bool>("DemoRoute:Enabled") &&
-                        mission?.MissionStatus == "NAVIGATING_TO_PICKUP" && routes.GetMission(mission.MissionId) == null;
+                    if (configuration.GetValue<bool>("DemoRoute:Enabled") && mission?.MissionStatus == "NAVIGATING_TO_PICKUP" && routes.GetMission(mission.MissionId) == null)
+                    {
+                        var execution = await db.MissionExecutions.AsNoTracking().SingleOrDefaultAsync(e => e.MissionId == mission.MissionId, ct);
+                        if (execution == null) pickup = true; // Legacy/unknown route is never proof of no load.
+                        else
+                        {
+                            using var payload = JsonDocument.Parse(execution.RoutePayloadJson);
+                            pickup |= execution.NextWaypointIndex > payload.RootElement.GetProperty("pickupWaypointIndex").GetInt32();
+                        }
+                    }
                     var unsafeDevice = await db.RobotIncidents.AnyAsync(i => i.RobotId == robot!.RobotId &&
                         !i.IsResolved && (i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" || i.Severity == "CRITICAL"), ct);
                     var maintenance = await db.RobotMaintenanceRecords.AnyAsync(m => m.RobotId == robot!.RobotId &&

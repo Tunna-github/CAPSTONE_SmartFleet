@@ -75,6 +75,7 @@ apiClient.interceptors.response.use(
                 data?.detail ||
                 data?.title ||
                 data?.error ||
+                (typeof data?.result === "string" ? data.result : null) ||
                 error.message ||
                 "Something went wrong",
             errors: data?.errors,

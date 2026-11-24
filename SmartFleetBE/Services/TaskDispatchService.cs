@@ -56,6 +56,8 @@ public sealed class TaskDispatchService : ITaskDispatchService
         if (!await TaskLocationPolicy.IsValidAsync(_db, taskId, cancellationToken))
             return TransportTaskServiceResult<IReadOnlyCollection<AvailableRobotResponse>>
                 .Conflict("Warehouse, zones or pickup/delivery stations are invalid or inactive.");
+        if (_configuration.GetValue<bool>("DemoRoute:Enabled") && !await TaskLocationPolicy.HasVerificationQrAsync(_db, taskId, cancellationToken))
+            return TransportTaskServiceResult<IReadOnlyCollection<AvailableRobotResponse>>.Conflict("Configure distinct station QR payloads for pickup/delivery verification before assignment.");
 
         if (task.TaskStatus is not (TransportTaskStatuses.Queued or TransportTaskStatuses.Critical))
         {
@@ -248,6 +250,8 @@ public sealed class TaskDispatchService : ITaskDispatchService
         if (!await TaskLocationPolicy.IsValidAsync(_db, taskId, cancellationToken))
             return TransportTaskServiceResult<ManualAssignTaskResponse>
                 .Conflict("Warehouse, zones or pickup/delivery stations are invalid or inactive.");
+        if (_configuration.GetValue<bool>("DemoRoute:Enabled") && !await TaskLocationPolicy.HasVerificationQrAsync(_db, taskId, cancellationToken))
+            return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict("Configure distinct station QR payloads before assignment.");
 
         if (task.TaskStatus is not (TransportTaskStatuses.Queued or TransportTaskStatuses.Critical))
         {
@@ -536,6 +540,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
             pattern = "CIRCLE"
         });
 
+        if (_configuration.GetValue<bool>("DemoRoute:Enabled") && _routes != null)
+        {
+            try { command = await MissionExecutionService.PrepareAsync(_db, _routes, assignment, cancellationToken); }
+            catch (InvalidOperationException ex) { return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict(ex.Message); }
+        }
         _db.RobotCommandOutbox.Add(
             new RobotCommandOutbox
             {

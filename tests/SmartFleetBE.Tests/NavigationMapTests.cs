@@ -138,6 +138,11 @@ public sealed class NavigationMapTests
                 Assert.True(routes.ReceiveProgress(robot.RobotCode, new()
                     { Event = "READY", ArucoId = start, MapRevision = reloaded.GetMap().Revision,
                       HeadingDeg = 0, LocalizationSource = "ARUCO_IMU", ReprojectionErrorPx = 0.1, StableFrames = 5 }).Accepted);
+                if (start == 4 || end == 4)
+                {
+                    Assert.Throws<ArgumentException>(() => routes.ConfigureTask(id, start, end));
+                    continue; // Transfer stations cannot stop inside a reserved intersection.
+                }
                 routes.ConfigureTask(id, start, end);
                 var command = JsonNode.Parse(routes.BuildMqttCommand(new TaskAssignment
                     { AssignmentId = id, TaskId = id, Robot = robot, Mission = new Mission { MissionId = id } }))!;

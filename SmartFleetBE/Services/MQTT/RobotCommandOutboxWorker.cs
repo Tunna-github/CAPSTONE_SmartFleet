@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace SmartFleetBE.Services;
 
 public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttService mqtt,
-    IConfiguration configuration, QrDemoRouteService qrDemo,
+    IConfiguration configuration,
     ILogger<RobotCommandOutboxWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -43,9 +43,8 @@ public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttSe
 
                     if (active) 
                     {
-                        // The existing CIRCLE command becomes a real QR route only
-                        // when this Webots pilot is explicitly enabled.
-                        // NEVER send a CIRCLE fallback for an unconfigured task.
+                        // Publish the frozen, committed route in the Webots adapter.
+                        // Never rebuild a route from a changed robot pose or fall back to CIRCLE.
                         try
                         {
                             string payload = command.Payload;
@@ -54,7 +53,9 @@ public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttSe
                                 var assignment = await db.TaskAssignments.AsNoTracking()
                                     .Include(a => a.Robot).Include(a => a.Mission)
                                     .SingleAsync(a => a.AssignmentId == command.AssignmentId, stoppingToken);
-                                payload = qrDemo.BuildMqttCommand(assignment);
+                                var execution = await db.MissionExecutions.AsNoTracking().SingleOrDefaultAsync(e => e.MissionId == assignment.Mission!.MissionId, stoppingToken);
+                                if (execution == null) throw new InvalidOperationException("Mission has no persisted route. Recover/requeue this legacy assignment before executing.");
+                                payload = execution.RoutePayloadJson;
                             }
                             await mqtt.PublishAsync(command.Topic, payload, stoppingToken);
                             command.DeliveredAt = DateTime.UtcNow;

@@ -1,0 +1,148 @@
+{
+  "date": "2026-11-24",
+  "branch": "feat/task-cancellation",
+  "status": "Implemented and locally validated; not committed/pushed in this change.",
+  "scope": "FE07 pickup/delivery verification and durable mission progress for the current Webots adapter.",
+  "baSources": [
+    {
+      "report": 1,
+      "page": 7,
+      "requirement": "FE07: pickup/delivery confirmation, QR/manual verification and status tracking"
+    },
+    {
+      "report": 3,
+      "page": 7,
+      "requirement": "UC06: Warehouse Operator verifies pickup/delivery at designated stations"
+    },
+    {
+      "report": 3,
+      "pages": "13–17",
+      "requirement": "BR28–31, BR38, BR78, BR85, BR87–89; rule details/numeric retry policy are incomplete"
+    },
+    {
+      "report": 4,
+      "page": 11,
+      "requirement": "MissionWaypoints, DeliveryVerifications, RobotQrScanEvents"
+    },
+    {
+      "report": 5,
+      "page": 5,
+      "requirement": "FE07 test scope includes pickup, QR, delivery and mission completion validation"
+    }
+  ],
+  "implemented": [
+    "Assignment atomically snapshots the route, map revision, station QR expectations and optional package code before publishing.",
+    "AT_PICKUP waits for Operator QR/manual physical-loading confirmation; only then may navigation to delivery continue.",
+    "AT_DELIVERY waits for unloading verification; final robot event is required before task/assignment completion and robot release.",
+    "QR mismatches are logged and keep the robot stopped; manual verification requires a reason and explicit physical confirmation.",
+    "UUID/request fingerprint makes identical retries idempotent; altered payload under the same ID is rejected.",
+    "Serializable transactions, cursor concurrency token, fresh camera/stopped reports, robot health and safety holds guard state transitions.",
+    "Mission route/cursor, ordered waypoint arrivals, scan events, attempts, final verification, status history and audit actor/time/state persist to DB.",
+    "GET mission list/detail and Operator verification UI show persisted progress, results and history; Admin/Maintenance cannot submit verification.",
+    "Recovery reads durable pickup evidence after restart; legacy unknown assignments remain fail-closed."
+  ],
+  "policyChoices": {
+    "expectedQr": "Stations.QrCodePayload snapshotted at dispatch; ArUco navigation IDs are separate.",
+    "package": "When a task has PackageCode, QR-mode verification must also match that package code.",
+    "manualRole": "Warehouse Operator, following UC06; reason and physical-transfer confirmation required.",
+    "maxQrAttempts": "Verification:MaxQrAttempts, default 3, configurable 1–20; numeric default is an implementation choice, not a number specified by BA.",
+    "stationFreshness": "Stopped camera report within 15 seconds and received after backend process start.",
+    "stationPlacement": "Pickup/delivery stops must be outside reserved intersections."
+  },
+  "validation": {
+    "backend": {
+      "total": 91,
+      "passed": 91,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    "postgresSubset": {
+      "total": 9,
+      "passed": 9,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    "python": {
+      "passed": 31,
+      "failed": 0
+    },
+    "playwright": {
+      "passed": 20,
+      "failed": 0,
+      "apiMocked": true
+    },
+    "build": "Backend 0 errors/0 warnings; TypeScript and Vite build passed. Vite retains a >500 kB chunk-size warning.",
+    "liveApiChecks": {
+      "count": 18,
+      "passed": true
+    },
+    "webotsApiMqttPostgres": {
+      "passed": true,
+      "maximumWaitDisplacementM": 1.0288533645198593e-15,
+      "time": 131.136,
+      "api": {
+        "passed": true,
+        "reached": 3,
+        "verified": 2,
+        "attempts": 3,
+        "active": 0,
+        "events": [
+          "ASSIGNED",
+          "WRONG_QR_REJECTED",
+          "PICKUP_VERIFIED_ONCE",
+          "DELIVERY_VERIFIED",
+          "COMPLETED"
+        ],
+        "intersections": [
+          {
+            "intersectionArUcoId": 1,
+            "activeRobotCode": null,
+            "activeRobotEntered": false,
+            "blockedPendingPhysicalClearance": false,
+            "lastServedRobotId": 91,
+            "approachingCount": 0,
+            "waitingCount": 0,
+            "insideCount": 0,
+            "totalRelevantCount": 0,
+            "waitingRobotCodes": [],
+            "approachingRobots": [],
+            "approachingBySourceArUco": {}
+          }
+        ]
+      }
+    },
+    "fullBackendProcessRestart": {
+      "passed": true,
+      "historyCount": 6,
+      "duplicate": true
+    }
+  },
+  "postgresScenarios": [
+    "happy path and premature completion rejection",
+    "QR/package mismatch and manual fallback",
+    "lost-response replay after service restart",
+    "wrong robot, ordering, revision and event-ID reuse",
+    "early/stale/offline/held physical confirmation rejection",
+    "carrying-state persistence and frozen station payload",
+    "authorization contract",
+    "concurrent confirmations",
+    "injected storage failure rollback"
+  ],
+  "migration": {
+    "path": "Database/20261124_mission_verification.sql",
+    "appliedToLocalConfiguredDatabase": true,
+    "historicalData": "Preserved; no proof was fabricated for old completed missions. No operational task was created/cancelled/reset for testing."
+  },
+  "deployment": {
+    "backend": "Rebuilt/restarted on 7166/5122",
+    "webots": "Matching driver copied to installed controller and main world reloaded; R01/R02 localized.",
+    "controllerSha256": "6844db3c76b419b36889db2c26135ad2d2c807bfc747ab2185d259933977b4ea"
+  },
+  "limitations": [
+    "The legacy JetRacer/ROS CIRCLE adapter has not been ported or hardware-tested for this handshake.",
+    "Persistence retains evidence; navigation epoch changes/reconnects still stop for Maintenance recovery. Automatic physical resume after restart remains separate work.",
+    "Station-to-ArUco commissioning must match the real layout; general warehouse/station CRUD and map-version management remain in the broader backlog.",
+    "UI accepts keyboard/USB scanner payloads. No phone-camera scanner or physical load sensor is implemented.",
+    "These tests do not mark all 152 planned acceptance cases as passed; broader performance, multi-robot, hardware and soak acceptance remain."
+  ]
+}

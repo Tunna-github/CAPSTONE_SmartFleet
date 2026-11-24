@@ -13,7 +13,7 @@ namespace SmartFleetBE.Controllers;
 public sealed class QrDemoRoutingController(
     SmartFleetDbContext db,
     QrDemoRouteService routes,
-    IConfiguration configuration) : ControllerBase
+    IConfiguration configuration, MissionExecutionService execution) : ControllerBase
 {
     public sealed class ConfigureTaskQrRequest
     {
@@ -26,7 +26,9 @@ public sealed class QrDemoRoutingController(
     {
         enabled = configuration.GetValue<bool>("DemoRoute:Enabled"),
         mode = "QR_FLEET_WEBOTS_PILOT",
-        pickupVerificationEnabled = false,
+        pickupVerificationEnabled = true,
+        deliveryVerificationEnabled = true,
+        missionPersistenceEnabled = true,
         intersectionReservationsEnabled = configuration.GetValue<bool>("Navigation:Enabled")
     });
 
@@ -78,13 +80,13 @@ public sealed class QrDemoRoutingController(
     public IActionResult Localizations() => Ok(routes.GetRobotLocalizations());
 
     [HttpGet("missions")]
-    public IActionResult Missions() => Ok(routes.GetMissions());
+    public async Task<IActionResult> Missions(CancellationToken ct) => Ok(await execution.ViewsAsync(ct));
 
     [HttpGet("missions/{missionId:long}")]
-    public IActionResult Mission(long missionId)
+    public async Task<IActionResult> Mission(long missionId, CancellationToken ct)
     {
-        var mission = routes.GetMission(missionId);
-        return mission == null ? NotFound(new { message = "Mission not found in current Backend demo process." })
+        var mission = await execution.ViewAsync(missionId, ct);
+        return mission == null ? NotFound(new { message = "Persisted mission not found." })
             : Ok(mission);
     }
 }

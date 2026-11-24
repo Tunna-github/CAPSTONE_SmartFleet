@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "../api/client";
+import { useAuth } from "../context/AuthContext";
+import MissionVerificationPanel, { type VerificationMission } from "../components/MissionVerificationPanel";
 
 interface Waypoint {
     arucoId: number;
@@ -7,7 +9,7 @@ interface Waypoint {
     col: number;
     stage: string;
 }
-interface Mission {
+interface Mission extends VerificationMission {
     taskId: number;
     missionId: number;
     robotCode: string;
@@ -19,9 +21,12 @@ interface Mission {
     pickupReached: boolean;
     deliveryReached: boolean;
     waypoints: Waypoint[];
+    statusHistory: { newStatus: string; source: string; changedBy?: number; reason: string; changedAt: string }[];
 }
 
 export default function QrMissionMonitorPage() {
+    const { user } = useAuth();
+    const canVerify = user?.roles.includes("Warehouse Operator") ?? false;
     const [missions, setMissions] = useState<Mission[]>([]);
     const [positions, setPositions] = useState<Record<string, number>>({});
     const [localizations, setLocalizations] = useState<Record<string, {
@@ -29,33 +34,30 @@ export default function QrMissionMonitorPage() {
     }>>({});
     const [error, setError] = useState("");
     const [lastUpdated, setLastUpdated] = useState("");
-    useEffect(() => {
-        let stopped = false;
-        async function reload() {
+    const reload = useCallback(async () => {
             try {
                 const [missionResponse, positionResponse, localizationResponse] = await Promise.all([
-                    apiClient.get<Mission[]>("/api/v1/demo-routing/missions"),
+                    apiClient.get<Mission[]>("/api/v1/missions"),
                     apiClient.get<Record<string, number>>("/api/v1/demo-routing/robots/positions"),
                     apiClient.get("/api/v1/demo-routing/robots/localizations").catch(() => ({ data: {} })),
                 ]);
-                if (!stopped) {
                     setMissions(missionResponse.data);
                     setPositions(positionResponse.data);
                     setLocalizations(localizationResponse.data);
                     setLastUpdated(new Date().toLocaleTimeString());
                     setError("");
-                }
             } catch (ex) {
-                if (!stopped) setError((ex as { message?: string }).message ?? "Cannot load demo routes");
+                setError((ex as { message?: string }).message ?? "Cannot load persisted missions");
             }
-        }
+    }, []);
+    useEffect(() => {
         void reload();
         const timer = window.setInterval(() => { void reload(); }, 1500);
-        return () => { stopped = true; window.clearInterval(timer); };
-    }, []);
+        return () => { window.clearInterval(timer); };
+    }, [reload]);
     return (
         <main className="flex-1 overflow-auto p-6" style={{ color: "var(--text-primary)" }}>
-            <h1 className="text-xl font-bold">Webots QR Mission Monitor</h1>
+            <h1 className="text-xl font-bold">Mission progress &amp; delivery verification</h1>
             <p className="text-xs mt-2" style={{ color: "var(--text-faint)" }}>
                 Live route chosen from the Backend QR map, robot waypoint confirmations, and pickup/drop-off progress.
                 Starting QR and heading are localized from camera ArUco pose and IMU.
@@ -80,7 +82,7 @@ export default function QrMissionMonitorPage() {
             </section>
             {missions.length === 0 &&
                 <section className="mt-4 rounded-xl border p-5" style={{ borderColor: "var(--border-medium)" }}>
-                    No routed mission yet. Create a MANUAL task, select Pickup QR and Delivery QR, then assign R01.
+                    No persisted route yet. Create a task with pickup/delivery QR, then dispatch an eligible robot.
                 </section>}
             <div className="grid grid-cols-1 gap-4 mt-4">
                 {missions.map(m => (
@@ -88,7 +90,7 @@ export default function QrMissionMonitorPage() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <h2 className="text-base font-semibold">Mission M{m.missionId} · Task #{m.taskId} · {m.robotCode}</h2>
                             <strong style={{ color: m.deliveryReached ? "#16a34a" : "#0d9488" }}>
-                                {m.deliveryReached ? "DELIVERY REACHED" : m.pickupReached ? "GOING TO DELIVERY" : "GOING TO PICKUP"}
+                                {m.missionStatus}
                             </strong>
                         </div>
                         <div className="mt-3 text-sm">Start: QR{m.startArUcoId} · Pickup: QR{m.pickupArUcoId} · Delivery: QR{m.deliveryArUcoId}</div>
@@ -110,6 +112,10 @@ export default function QrMissionMonitorPage() {
                         <p className="text-xs opacity-60 mt-3">
                             Green means the Backend acknowledged a camera-confirmed waypoint in Webots.
                         </p>
+                        <MissionVerificationPanel mission={m} canVerify={canVerify} onSaved={reload} />
+                        {m.statusHistory?.length > 0 && <details className="text-xs mt-3"><summary>Mission status history</summary>
+                            {m.statusHistory.map((h, index) => <p key={index} className="mt-1">{new Date(h.changedAt).toLocaleString()} · {h.newStatus} · {h.source}{h.changedBy ? ` #${h.changedBy}` : ""} · {h.reason}</p>)}
+                        </details>}
                     </section>
                 ))}
             </div>

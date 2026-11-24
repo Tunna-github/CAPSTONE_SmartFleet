@@ -156,13 +156,19 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
         // Check live completion evidence AFTER terminal duplicate handling.
         // A restart must not reject an already committed completion just because
         // its transient demo route is gone and the robot is retrying its ACK.
-        if (message.Event == "MISSION_COMPLETED" &&
-            (mission.MissionStatus == "INITIALIZING" ||
-             (configuration.GetValue<bool>("DemoRoute:Enabled")
-                ? !qrDemo.CanComplete(mission.MissionId, robotCode)
-                : !await db.DeliveryVerifications.AnyAsync(v => v.MissionId == mission.MissionId &&
-                    v.VerificationStage == "DELIVERY" && v.IsVerified, ct))))
-            return MissionEventResult.Rejected;
+        if (message.Event == "MISSION_COMPLETED")
+        {
+            if (robot.ConnectionStatus != "ONLINE" || robot.OperationalStatus != "BUSY" ||
+                !RobotPresencePolicy.IsFresh(robot, DateTime.UtcNow, configuration)) return MissionEventResult.Rejected;
+            var verifiedStages = await db.DeliveryVerifications.Where(v => v.MissionId == mission.MissionId && v.IsVerified)
+                .Select(v => v.VerificationStage).ToListAsync(ct);
+            if (mission.MissionStatus != "AT_DELIVERY" || !verifiedStages.Contains("PICKUP") || !verifiedStages.Contains("DELIVERY"))
+                return MissionEventResult.Rejected;
+            if (configuration.GetValue<bool>("DemoRoute:Enabled") &&
+                !await db.MissionExecutions.AnyAsync(e => e.MissionId == mission.MissionId &&
+                    e.NextWaypointIndex == db.MissionWaypoints.Count(w => w.MissionId == mission.MissionId), ct))
+                return MissionEventResult.Rejected;
+        }
 
         // =====================================================
         // 7. GET TASK
@@ -192,7 +198,7 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
         if (
             message.Event == "MISSION_STARTED" &&
             mission.MissionStatus is
-                ("NAVIGATING_TO_PICKUP" or "NAVIGATING_TO_DELIVERY") &&
+                ("NAVIGATING_TO_PICKUP" or "AT_PICKUP" or "NAVIGATING_TO_DELIVERY" or "AT_DELIVERY") &&
             task.TaskStatus ==
                 TransportTaskStatuses.Executing
         )
@@ -484,6 +490,8 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
         await db.SaveChangesAsync(ct);
 
         await tx.CommitAsync(ct);
+
+        if (mission.MissionStatus is "COMPLETED" or "FAILED") qrDemo.ForgetMission(mission.MissionId);
 
         return MissionEventResult.Applied;
     }

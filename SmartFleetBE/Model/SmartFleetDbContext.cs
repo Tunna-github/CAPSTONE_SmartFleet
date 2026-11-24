@@ -81,7 +81,7 @@ public partial class SmartFleetDbContext : DbContext
                 .IsUnique().HasFilter("(\"Payload\"::jsonb ->> 'command') = 'EXECUTE_TASK'");
             entity.HasIndex(e => e.DeliveredAt);
             entity.Property(e => e.Topic).HasMaxLength(300);
-            entity.Property(e => e.Payload).HasMaxLength(4000);
+            entity.Property(e => e.Payload).HasColumnType("text");
             entity.HasOne(e => e.Assignment).WithMany().HasForeignKey(e => e.AssignmentId)
                 .OnDelete(DeleteBehavior.Restrict);
         });

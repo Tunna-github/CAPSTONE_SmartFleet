@@ -107,6 +107,7 @@ public sealed class AutoDispatchService(
                     return false;
                 }
                 if (!await TaskLocationPolicy.IsValidAsync(db, taskId, cancellationToken)) return false;
+                if (configuration.GetValue<bool>("DemoRoute:Enabled") && !await TaskLocationPolicy.HasVerificationQrAsync(db, taskId, cancellationToken)) return false;
 
                 if (task.DispatchMode != "AUTO" || await db.TaskInterventions.AnyAsync(c =>
                     c.TaskId == taskId && (c.Paused || c.State != "NORMAL"), cancellationToken))
@@ -398,6 +399,12 @@ public sealed class AutoDispatchService(
                         pattern = "CIRCLE"
                     });
 
+                if (routes != null)
+                {
+                    try { payload = await MissionExecutionService.PrepareAsync(db, routes, assignment, cancellationToken); }
+                    catch (InvalidOperationException ex)
+                    { logger.LogWarning("Task {TaskId} route/verification setup is not ready: {Reason}", taskId, ex.Message); return false; }
+                }
                 db.RobotCommandOutbox.Add(
                     new RobotCommandOutbox
                     {

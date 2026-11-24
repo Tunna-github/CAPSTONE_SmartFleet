@@ -682,7 +682,24 @@ def send_progress(data, index):
     send_reliable("WAYPOINT_REACHED", QR_PROGRESS_TOPIC, {
         "event": "WAYPOINT_REACHED", "missionId": data["missionId"],
         "arucoId": waypoint_id, "waypointIndex": index,
+        "mapRevision": data["mapRevision"], "robotStopped": True,
+        "headingDeg": heading_fusion.heading(get_yaw_deg()),
     }, QR_PROGRESS_ACK_TOPIC, index=index)
+
+
+def poll_verification(data):
+    index = data["next_index"] - 1
+    # A live camera observation is required while confirming physical transfer.
+    if visible_marker(current_marker) is None:
+        stop_robot()
+        return
+    send_reliable("VERIFICATION_STATUS", QR_PROGRESS_TOPIC, {
+        "event": "VERIFICATION_STATUS", "missionId": data["missionId"],
+        "arucoId": current_marker, "waypointIndex": index,
+        "mapRevision": data["mapRevision"], "robotStopped": True,
+        "headingDeg": heading_fusion.heading(get_yaw_deg()),
+    }, QR_PROGRESS_ACK_TOPIC, index=index)
+    data["verification_poll_at"] = time.monotonic() + 2.0
 
 
 def publish_failure(data, reason):
@@ -909,7 +926,8 @@ def handle_incoming():
             if pending is not None and topic == pending["ack_topic"] and \
                     data.get("eventId") == pending["eventId"]:
                 pending["accepted"] = data.get("accepted") is True
-                pending["reason"] = str(data.get("reason", data.get("result", "")))
+                pending["reason"] = str(data.get("action", "STOP") if pending["kind"] == "VERIFICATION_STATUS"
+                                        else data.get("reason", data.get("result", "")))
 
 
 def tick_pending():
@@ -966,7 +984,7 @@ def sf_accept_nav_directive(data):
         if mission is not None:
             print('[TRAFFIC {}] BACKEND EPOCH CHANGED: halting, check intersection lock'.format(ROBOT_CODE))
             fail_mission('Navigation Backend restarted during mission; manual recovery required',
-                         notify_backend=False)
+                         notify_backend=True)
             return
         sf_nav_sequence = -1
     if sf_nav_epoch == epoch and seq <= sf_nav_sequence:
@@ -1291,7 +1309,7 @@ def tick_mission():
     if INTERSECTION_PILOT and sf_reconnected_with_mission:
         stop_robot()
         fail_mission("MQTT connection lost during reserved navigation; manual recovery required",
-                     notify_backend=False)
+                     notify_backend=True)
         return
     if not connected:
         stop_robot()  # fail-closed on MQTT loss; no blind motion
@@ -1327,6 +1345,11 @@ def tick_mission():
             return
         if kind == "WAYPOINT_REACHED":
             data["next_index"] = index + 1
+            if index == data["pickupWaypointIndex"] or index == len(data["waypoints"]) - 1:
+                data["phase"] = "WAIT_VERIFICATION"
+                data["verification_poll_at"] = 0.0
+                stop_robot()
+                return
             if data["next_index"] >= len(data["waypoints"]):
                 if current_marker != data["deliveryArUcoId"]:
                     fail_mission("Last camera marker is not the delivery QR")
@@ -1350,8 +1373,28 @@ def tick_mission():
             ready_event_id = None
             ready_last_sent = 0.0
             return
+        if kind == "VERIFICATION_STATUS":
+            if reason in ("WAIT_PICKUP_VERIFICATION", "WAIT_DELIVERY_VERIFICATION"):
+                data["phase"] = "WAIT_VERIFICATION"
+                stop_robot()
+            elif reason == "CONTINUE" and index == data["pickupWaypointIndex"]:
+                try:
+                    begin_segment(data)
+                except ValueError as ex:
+                    fail_mission(str(ex))
+            elif reason == "COMPLETE" and index == len(data["waypoints"]) - 1 and current_marker == data["deliveryArUcoId"]:
+                send_status("MISSION_COMPLETED", data)
+                data["phase"] = "FINISHING"
+            else:
+                fail_mission("Unexpected verification instruction: " + reason)
+            return
     if pending is not None:
         stop_robot()
+        return
+    if data["phase"] == "WAIT_VERIFICATION":
+        stop_robot()
+        if time.monotonic() >= data.get("verification_poll_at", 0):
+            poll_verification(data)
         return
     if INTERSECTION_PILOT:
         if data["phase"] in ("NAV_WAIT_ACK", "NAV_WAIT_GRANT"):

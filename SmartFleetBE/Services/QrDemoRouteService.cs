@@ -5,8 +5,8 @@ using SmartFleetBE.Navigation;
 
 namespace SmartFleetBE.Services;
 
-// Testing-only route planning. No PostgreSQL schema changes. One Backend process.
-// The existing navigation map is the ONE source of QR nodes and connections.
+// Route planning/localization cache for the Development Webots adapter.
+// MissionExecutionService persists frozen routes and progress; the saved map supplies topology.
 public sealed class QrDemoRouteService
 {
     public sealed class TaskQrSelection
@@ -39,6 +39,7 @@ public sealed class QrDemoRouteService
         public string? LocalizationSource { get; set; }
         public double? ReprojectionErrorPx { get; set; }
         public int StableFrames { get; set; }
+        public bool RobotStopped { get; set; }
     }
 
     public sealed class MissionView
@@ -135,6 +136,25 @@ public sealed class QrDemoRouteService
     }
 
     public bool HasFreshLocalization(string code) => GetRobotLocalizations().ContainsKey(code);
+    public int CurrentMapRevision => _navigation.GetMap().Revision;
+
+    public void RestoreMission(MissionView snapshot, string payload)
+    {
+        lock (_gate) { _missions[snapshot.MissionId] = snapshot; _publishedPayloads[snapshot.MissionId] = payload; }
+    }
+    public void ForgetMission(long missionId)
+    {
+        lock (_gate) { _missions.Remove(missionId); _publishedPayloads.Remove(missionId); }
+    }
+    public void RecordCameraProgress(string code, int arucoId, double? heading, int revision)
+    {
+        if (heading is not { } yaw || !double.IsFinite(yaw) || yaw is < -180 or > 180) return;
+        lock (_gate)
+        {
+            _store.RobotPositions[code] = arucoId; _freshRobotPositions.Add(code);
+            _localizations[code] = new(arucoId, yaw, revision, "ARUCO_IMU", DateTime.UtcNow);
+        }
+    }
 
     public object GetLocalizationMap()
     {
@@ -203,6 +223,9 @@ public sealed class QrDemoRouteService
             throw new ArgumentException("Pickup and delivery must be existing QR ArUco IDs in the saved Backend map.");
         if (pickupId == deliveryId)
             throw new ArgumentException("Pickup and delivery QR markers must differ.");
+        if (map.Cells[nodes[pickupId].Row][nodes[pickupId].Col].IsIntersection ||
+            map.Cells[nodes[deliveryId].Row][nodes[deliveryId].Col].IsIntersection)
+            throw new ArgumentException("Pickup/delivery stations must be outside reserved intersections.");
     }
 
     public void ConfigureTask(long taskId, int pickupId, int deliveryId)
@@ -367,6 +390,7 @@ public sealed class QrDemoRouteService
             assignmentId = assignment.AssignmentId,
             missionId,
             pattern = "WAYPOINT_ROUTE",
+            verificationRequired = true,
             mapRevision = map.Revision,
             startArUcoId = startId,
             pickupArUcoId = pickupId,

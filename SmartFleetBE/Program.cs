@@ -186,6 +186,7 @@ builder.Services.AddSingleton<INavigationMapStore, DatabaseNavigationMapStore>()
 builder.Services.AddSingleton<NavigationCoordinator>();
 
 builder.Services.AddScoped<MissionLifecycleService>();
+builder.Services.AddScoped<MissionExecutionService>();
 builder.Services.AddScoped<TaskInterventionService>();
 builder.Services.AddScoped<RobotHealthMonitor>();
 

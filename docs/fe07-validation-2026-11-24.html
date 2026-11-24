@@ -1,0 +1,68 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FE07 validation</title><style>body{font:16px/1.65 Segoe UI,Arial;background:#f3f6fa;color:#183047;margin:0}main{max-width:1050px;margin:30px auto;background:white;border:1px solid #dce5ef;border-radius:10px;padding:32px}h1,h2{color:#125174}li{margin:8px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf3f8;padding:16px}code{overflow-wrap:anywhere}p{margin:14px 0}@media(max-width:700px){main{padding:18px;margin:10px}} </style><main><h1>FE07 — Kết quả triển khai và kiểm thử</h1><p>24/11/2026 · feat/task-cancellation · Chưa commit/push đợt FE07</p><p>Luồng hiện tại: đến pickup → chờ Operator xác nhận → vận chuyển → đến delivery → chờ xác nhận → robot báo hoàn thành. Tiến độ và bằng chứng được lưu vào PostgreSQL.</p><h2>Phạm vi đã thực hiện</h2><ul><li>Assignment atomically snapshots the route, map revision, station QR expectations and optional package code before publishing.</li><li>AT_PICKUP waits for Operator QR/manual physical-loading confirmation; only then may navigation to delivery continue.</li><li>AT_DELIVERY waits for unloading verification; final robot event is required before task/assignment completion and robot release.</li><li>QR mismatches are logged and keep the robot stopped; manual verification requires a reason and explicit physical confirmation.</li><li>UUID/request fingerprint makes identical retries idempotent; altered payload under the same ID is rejected.</li><li>Serializable transactions, cursor concurrency token, fresh camera/stopped reports, robot health and safety holds guard state transitions.</li><li>Mission route/cursor, ordered waypoint arrivals, scan events, attempts, final verification, status history and audit actor/time/state persist to DB.</li><li>GET mission list/detail and Operator verification UI show persisted progress, results and history; Admin/Maintenance cannot submit verification.</li><li>Recovery reads durable pickup evidence after restart; legacy unknown assignments remain fail-closed.</li></ul><h2>Kết quả kiểm thử</h2><pre>{
+  &quot;backend&quot;: {
+    &quot;total&quot;: 91,
+    &quot;passed&quot;: 91,
+    &quot;failed&quot;: 0,
+    &quot;notExecuted&quot;: 0
+  },
+  &quot;postgresSubset&quot;: {
+    &quot;total&quot;: 9,
+    &quot;passed&quot;: 9,
+    &quot;failed&quot;: 0,
+    &quot;notExecuted&quot;: 0
+  },
+  &quot;python&quot;: {
+    &quot;passed&quot;: 31,
+    &quot;failed&quot;: 0
+  },
+  &quot;playwright&quot;: {
+    &quot;passed&quot;: 20,
+    &quot;failed&quot;: 0,
+    &quot;apiMocked&quot;: true
+  },
+  &quot;build&quot;: &quot;Backend 0 errors/0 warnings; TypeScript and Vite build passed. Vite retains a &gt;500 kB chunk-size warning.&quot;,
+  &quot;liveApiChecks&quot;: {
+    &quot;count&quot;: 18,
+    &quot;passed&quot;: true
+  },
+  &quot;webotsApiMqttPostgres&quot;: {
+    &quot;passed&quot;: true,
+    &quot;maximumWaitDisplacementM&quot;: 1.0288533645198593e-15,
+    &quot;time&quot;: 131.136,
+    &quot;api&quot;: {
+      &quot;passed&quot;: true,
+      &quot;reached&quot;: 3,
+      &quot;verified&quot;: 2,
+      &quot;attempts&quot;: 3,
+      &quot;active&quot;: 0,
+      &quot;events&quot;: [
+        &quot;ASSIGNED&quot;,
+        &quot;WRONG_QR_REJECTED&quot;,
+        &quot;PICKUP_VERIFIED_ONCE&quot;,
+        &quot;DELIVERY_VERIFIED&quot;,
+        &quot;COMPLETED&quot;
+      ],
+      &quot;intersections&quot;: [
+        {
+          &quot;intersectionArUcoId&quot;: 1,
+          &quot;activeRobotCode&quot;: null,
+          &quot;activeRobotEntered&quot;: false,
+          &quot;blockedPendingPhysicalClearance&quot;: false,
+          &quot;lastServedRobotId&quot;: 91,
+          &quot;approachingCount&quot;: 0,
+          &quot;waitingCount&quot;: 0,
+          &quot;insideCount&quot;: 0,
+          &quot;totalRelevantCount&quot;: 0,
+          &quot;waitingRobotCodes&quot;: [],
+          &quot;approachingRobots&quot;: [],
+          &quot;approachingBySourceArUco&quot;: {}
+        }
+      ]
+    }
+  },
+  &quot;fullBackendProcessRestart&quot;: {
+    &quot;passed&quot;: true,
+    &quot;historyCount&quot;: 6,
+    &quot;duplicate&quot;: true
+  }
+}</pre><h2>Quy tắc triển khai</h2><ul><li>expectedQr: Stations.QrCodePayload snapshotted at dispatch; ArUco navigation IDs are separate.</li><li>package: When a task has PackageCode, QR-mode verification must also match that package code.</li><li>manualRole: Warehouse Operator, following UC06; reason and physical-transfer confirmation required.</li><li>maxQrAttempts: Verification:MaxQrAttempts, default 3, configurable 1–20; numeric default is an implementation choice, not a number specified by BA.</li><li>stationFreshness: Stopped camera report within 15 seconds and received after backend process start.</li><li>stationPlacement: Pickup/delivery stops must be outside reserved intersections.</li></ul><h2>BA traceability</h2><ul><li>Report 1 · trang 7 · FE07: pickup/delivery confirmation, QR/manual verification and status tracking</li><li>Report 3 · trang 7 · UC06: Warehouse Operator verifies pickup/delivery at designated stations</li><li>Report 3 · trang 13–17 · BR28–31, BR38, BR78, BR85, BR87–89; rule details/numeric retry policy are incomplete</li><li>Report 4 · trang 11 · MissionWaypoints, DeliveryVerifications, RobotQrScanEvents</li><li>Report 5 · trang 5 · FE07 test scope includes pickup, QR, delivery and mission completion validation</li></ul><h2>Migration và cách sử dụng</h2><p>Migration <code>Database/20261124_mission_verification.sql</code> đã áp dụng. Đăng nhập Warehouse Operator → QR Mission Monitor → quét station/package → xác nhận nhận/giao hàng. README mô tả endpoint, idempotency và policy.</p><h2>Giới hạn nghiệm thu</h2><ul><li>The legacy JetRacer/ROS CIRCLE adapter has not been ported or hardware-tested for this handshake.</li><li>Persistence retains evidence; navigation epoch changes/reconnects still stop for Maintenance recovery. Automatic physical resume after restart remains separate work.</li><li>Station-to-ArUco commissioning must match the real layout; general warehouse/station CRUD and map-version management remain in the broader backlog.</li><li>UI accepts keyboard/USB scanner payloads. No phone-camera scanner or physical load sensor is implemented.</li><li>These tests do not mark all 152 planned acceptance cases as passed; broader performance, multi-robot, hardware and soak acceptance remain.</li></ul></main></html>
