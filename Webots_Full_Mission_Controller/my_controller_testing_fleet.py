@@ -774,6 +774,7 @@ def safety_ack(data, event="CONTROL_STOPPED", marker=None):
 
 def handle_safety_command(data):
     global mission, pending, current_state, safety_hold
+    global sf_nav_request, sf_nav_directive
     command_id = data.get("commandId")
     if not isinstance(command_id, str) or not command_id:
         return
@@ -820,7 +821,9 @@ def handle_safety_command(data):
                 return
         if INTERSECTION_PILOT:
             try:
-                sf_validate_intersection_waypoints(waypoints)
+                if not localization_valid or localization_map is None or route.get("mapRevision") != localization_map["mapRevision"]:
+                    raise ValueError("fresh calibrated map/heading is required for return home")
+                sf_validate_intersection_waypoints(waypoints, allow_stationary=True)
                 if sf_active_intersection is not None:
                     raise ValueError("active intersection reservation requires recovery")
             except ValueError as ex:
@@ -832,6 +835,8 @@ def handle_safety_command(data):
         mission.update({"waypoints": waypoints, "deliveryArUcoId": route["homeArUcoId"],
                         "home_command_id": command_id, "phase": "MOVING", "next_index": 1})
         pending = None
+        sf_nav_request = None
+        sf_nav_directive = None  # A fresh grant for the HOME route is mandatory.
         safety_hold = False  # persistent disk latch stays until physical HOME
         if len(waypoints) == 1:
             finish_home(mission)
@@ -998,8 +1003,8 @@ def sf_accept_nav_ack(data):
     sf_nav_request['reason'] = str(data.get('reason', ''))
 
 
-def sf_validate_intersection_waypoints(waypoints):
-    if not isinstance(waypoints, list) or len(waypoints) < 2:
+def sf_validate_intersection_waypoints(waypoints, allow_stationary=False):
+    if not isinstance(waypoints, list) or len(waypoints) < (1 if allow_stationary else 2):
         raise ValueError('Traffic pilot requires at least two route checkpoints')
     for w in waypoints:
         if type(w.get('isIntersection')) is not bool:
@@ -1253,13 +1258,6 @@ def reached_marker(data, detected_id):
         # The camera confirmed a real driven edge. Learn the stable yaw frame
         # for future cold-starts at QR2, QR7, or other configured QR markers.
         store_heading_calibration()
-    if data.get("home_command_id"):
-        data["next_index"] = i + 1
-        if data["next_index"] >= len(data["waypoints"]):
-            finish_home(data)
-        else:
-            begin_segment(data)
-        return
     if INTERSECTION_PILOT and sf_active_intersection is not None and i > 0 and             data["waypoints"][i - 1]["arucoId"] == sf_active_intersection:
         if data["waypoints"][i].get("isIntersection"):
             raise ValueError("Cannot exit directly into a second intersection")
@@ -1267,6 +1265,13 @@ def reached_marker(data, detected_id):
             ROBOT_CODE, current_marker, sf_active_intersection))
         sf_nav_send("EXIT", data, {"event": "EXIT", "intersectionArUcoId": sf_active_intersection,
                                    "currentArUcoId": current_marker}, sf_active_intersection)
+        return
+    if data.get("home_command_id"):
+        data["next_index"] = i + 1
+        if data["next_index"] >= len(data["waypoints"]):
+            finish_home(data)
+        else:
+            begin_segment(data)
         return
     send_progress(data, i)
     data["phase"] = "WAIT_WAYPOINT_ACK"

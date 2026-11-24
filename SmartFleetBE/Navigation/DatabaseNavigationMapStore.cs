@@ -5,12 +5,18 @@ using SmartFleetBE.Model;
 
 namespace SmartFleetBE.Navigation;
 
+public sealed class MapInUseException : InvalidOperationException
+{
+    public MapInUseException() : base("Cannot edit the map while a robot has an active assignment. Complete or physically recover it first.") { }
+}
+
 /// <summary>Stores the editable QR grid in the active warehouse map's metadata.</summary>
 public sealed class DatabaseNavigationMapStore(
     IServiceScopeFactory scopes, IConfiguration configuration) : INavigationMapStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private int? _warehouseId;
+    public int? SelectedWarehouseId => _warehouseId;
 
     public WarehouseMapDocument LoadOrCreate(WarehouseMapDocument legacyMap)
     {
@@ -45,6 +51,10 @@ public sealed class DatabaseNavigationMapStore(
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
         var warehouseId = WarehouseId(db);
+        using var tx = db.Database.IsRelational()
+            ? db.Database.BeginTransaction(System.Data.IsolationLevel.Serializable) : null;
+        if (db.TaskAssignments.Any(a => a.AssignmentStatus == "ACTIVE" && a.Task.WarehouseId == warehouseId))
+            throw new MapInUseException();
         var row = db.MapConfigurations.SingleOrDefault(m => m.WarehouseId == warehouseId && m.IsActive)
             ?? throw new DbUpdateConcurrencyException("The active warehouse map changed. Reload the map.");
         var metadata = ReadMetadata(row.MapMetadataJson);
@@ -54,6 +64,7 @@ public sealed class DatabaseNavigationMapStore(
         SetMap(row, metadata, map);
         // MapMetadataJson is a concurrency token: a concurrent update cannot be overwritten.
         db.SaveChanges();
+        tx?.Commit();
     }
 
     private int WarehouseId(SmartFleetDbContext db)

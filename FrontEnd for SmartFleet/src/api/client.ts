@@ -15,7 +15,13 @@ export const tokenStorage = {
     setRefresh: (t: string) => localStorage.setItem("smartfleet_refresh_token", t),
     getUser: () => {
         const raw = localStorage.getItem("smartfleet_user");
-        return raw ? JSON.parse(raw) : null;
+        if (!raw) return null;
+        try {
+            const value = JSON.parse(raw);
+            if (!value || typeof value.userId !== "number" || !Array.isArray(value.roles) ||
+                value.roles.some((role: unknown) => typeof role !== "string")) return null;
+            return value;
+        } catch { return null; }
     },
     setUser: (u: unknown) =>
         localStorage.setItem("smartfleet_user", JSON.stringify(u)),

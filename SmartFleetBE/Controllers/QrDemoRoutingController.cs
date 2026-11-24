@@ -25,9 +25,9 @@ public sealed class QrDemoRoutingController(
     public IActionResult Health() => Ok(new
     {
         enabled = configuration.GetValue<bool>("DemoRoute:Enabled"),
-        mode = "ONE_ROBOT_POSITION_BASED_WEBOTS_DEMO",
+        mode = "QR_FLEET_WEBOTS_PILOT",
         pickupVerificationEnabled = false,
-        intersectionReservationsEnabled = false
+        intersectionReservationsEnabled = configuration.GetValue<bool>("Navigation:Enabled")
     });
 
     [HttpPost("tasks/{taskId:long}/qr")]
@@ -38,9 +38,11 @@ public sealed class QrDemoRoutingController(
             return StatusCode(503, new { message = "Enable DemoRoute:Enabled for the local Webots demo." });
         var task = await db.TransportTasks.AsNoTracking()
             .Where(t => t.TaskId == taskId)
-            .Select(t => new { t.TaskId, t.TaskStatus, t.DispatchMode })
+            .Select(t => new { t.TaskId, t.TaskStatus, t.DispatchMode, t.WarehouseId })
             .SingleOrDefaultAsync(ct);
         if (task == null) return NotFound(new { message = "Transport task not found." });
+        if (!routes.SupportsWarehouse(task.WarehouseId))
+            return Conflict(new { message = "Task warehouse does not match the selected navigation map warehouse." });
         if (task.TaskStatus != "QUEUED" || task.DispatchMode != "MANUAL")
             return Conflict(new { message = "For this pilot, choose MANUAL dispatch and configure QR markers while the task is QUEUED." });
         try

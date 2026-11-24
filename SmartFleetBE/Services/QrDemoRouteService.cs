@@ -146,8 +146,12 @@ public sealed class QrDemoRouteService
                     markerYawDeg = p.cell.MarkerYawDeg, markerSizeM = p.cell.MarkerSizeM }).ToArray() };
     }
 
-    public bool CanDispatchTask(long taskId, string code, out string reason)
+    public bool SupportsWarehouse(int warehouseId) => !_navigation.WarehouseId.HasValue || _navigation.WarehouseId == warehouseId;
+
+    public bool CanDispatchTask(long taskId, string code, out string reason, int? warehouseId = null)
     {
+        if (warehouseId.HasValue && !SupportsWarehouse(warehouseId.Value))
+        { reason = "Task/robot warehouse does not match the configured navigation map warehouse."; return false; }
         reason = "Robot needs a fresh camera/IMU localization on the current map.";
         if (!HasFreshLocalization(code)) return false;
         var map = _navigation.GetMap();
@@ -191,7 +195,7 @@ public sealed class QrDemoRouteService
             : null;
     }
 
-    public void ConfigureTask(long taskId, int pickupId, int deliveryId)
+    public void ValidateTaskSelection(int pickupId, int deliveryId)
     {
         var map = _navigation.GetMap();
         var nodes = ReadNodes(map);
@@ -199,14 +203,26 @@ public sealed class QrDemoRouteService
             throw new ArgumentException("Pickup and delivery must be existing QR ArUco IDs in the saved Backend map.");
         if (pickupId == deliveryId)
             throw new ArgumentException("Pickup and delivery QR markers must differ.");
+    }
+
+    public void ConfigureTask(long taskId, int pickupId, int deliveryId)
+    {
+        ValidateTaskSelection(pickupId, deliveryId);
         lock (_gate)
         {
+            _store.TaskRoutes.TryGetValue(taskId, out var previous);
             _store.TaskRoutes[taskId] = new TaskQrSelection
             {
                 PickupArUcoId = pickupId,
                 DeliveryArUcoId = deliveryId
             };
-            SaveLocked();
+            try { SaveLocked(); }
+            catch
+            {
+                if (previous == null) _store.TaskRoutes.Remove(taskId);
+                else _store.TaskRoutes[taskId] = previous;
+                throw;
+            }
         }
     }
 
@@ -291,7 +307,7 @@ public sealed class QrDemoRouteService
         lock (_gate)
             if (_publishedPayloads.TryGetValue(missionId, out var cached))
                 return cached; // MQTT retries must not reset waypoint progress.
-        if (!CanDispatchTask(assignment.TaskId, assignment.Robot.RobotCode, out var localizationReason))
+        if (!CanDispatchTask(assignment.TaskId, assignment.Robot.RobotCode, out var localizationReason, assignment.Robot.WarehouseId))
             throw new InvalidOperationException(localizationReason);
         var map = _navigation.GetMap();
         var nodes = ReadNodes(map);
@@ -434,13 +450,20 @@ public sealed class QrDemoRouteService
         }
     }
 
-    public object BuildHomeRoute(int start, int home)
+    public object BuildHomeRoute(int start, int home, string? robotCode = null)
     {
         var map = _navigation.GetMap();
         var nodes = ReadNodes(map);
         if (!nodes.ContainsKey(start) || !nodes.ContainsKey(home))
             throw new InvalidOperationException("Unknown home/current QR.");
         var ids = FindPath(map, nodes, start, home);
+        if (ids.Any(id => map.Cells[nodes[id].Row][nodes[id].Col].MarkerYawDeg == null ||
+                map.Cells[nodes[id].Row][nodes[id].Col].MarkerSizeM == null) ||
+            map.Cells[nodes[start].Row][nodes[start].Col].IsIntersection || map.Cells[nodes[home].Row][nodes[home].Col].IsIntersection)
+            throw new InvalidOperationException("Home route requires commissioned markers and start/end outside intersections.");
+        if (robotCode != null && _configuration.GetValue<bool>("Navigation:Enabled") &&
+            !_navigation.PrepareUnreservedReturnHome(robotCode))
+            throw new InvalidOperationException("Active intersection ownership requires physical recovery before returning home.");
         return new { startArUcoId = start, homeArUcoId = home, mapRevision = map.Revision,
             waypoints = ids.Select((id, i) => new QrWaypoint { ArucoId = id,
                 Row = nodes[id].Row, Col = nodes[id].Col,

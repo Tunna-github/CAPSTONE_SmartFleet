@@ -115,10 +115,6 @@ export function TaskCreateForm({
         const pickupQr = Number(values.get("pickupArUcoId"));
         const deliveryQr = Number(values.get("deliveryArUcoId"));
         if (qrPilotEnabled) {
-            if (dispatchMode !== "MANUAL") {
-                setError("For the one-robot Webots route pilot, select MANUAL dispatch. AUTO assigns too early for the separate QR setup.");
-                return;
-            }
             if (!qrPoints.some(p => p.id === pickupQr) ||
                 !qrPoints.some(p => p.id === deliveryQr) || pickupQr === deliveryQr) {
                 setError("Select two different pickup/drop QR markers from the saved Backend map.");
@@ -181,21 +177,8 @@ export function TaskCreateForm({
 
                 // NEW: dispatch mode selected by operator
                 dispatchMode,
+                ...(qrPilotEnabled ? { pickupArUcoId: pickupQr, deliveryArUcoId: deliveryQr } : {}),
             });
-            if (qrPilotEnabled) {
-                const taskId = created.taskId;
-                if (!taskId) throw new Error("Task created, but Backend did not return a TaskId for QR configuration.");
-                try {
-                    await apiClient.post(`/api/v1/demo-routing/tasks/${taskId}/qr`, {
-                        pickupArUcoId: pickupQr,
-                        deliveryArUcoId: deliveryQr,
-                    });
-                } catch (routeError) {
-                    const message = (routeError as { message?: string }).message ?? "Unknown QR mapping error";
-                    created = undefined;
-                    throw new Error(`Task #${taskId} was created in PostgreSQL, but QR route setup failed: ${message}. Do NOT assign it until QR configuration is fixed.`);
-                }
-            }
         }
         catch (err) {
             const apiError = err as {
@@ -337,8 +320,8 @@ export function TaskCreateForm({
                     </div>
                     {qrPilotEnabled && (
                         <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: "#0d9488" }}>
-                            <p className="text-[12px] font-semibold">Webots QR Route (one-robot test)</p>
-                            <p className="text-[11px] opacity-70">These QR markers are separate from the PostgreSQL Station IDs above. Start Webots first. Use MANUAL dispatch.</p>
+                            <p className="text-[12px] font-semibold">Robot QR Route</p>
+                            <p className="text-[11px] opacity-70">QR markers and station IDs use separate identifiers. Both route markers are saved before AUTO or MANUAL assignment can begin.</p>
                             {qrPoints.length === 0 && <p className="text-xs text-red-400">No QR markers loaded. Check Backend Warehouse Maps.</p>}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <label className="text-xs">Pickup ArUco QR
@@ -463,9 +446,9 @@ export function TaskCreateForm({
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {[
-                                ["1", "HIGH", "Urgent"],
+                                ["3", "HIGH", "Urgent"],
                                 ["2", "MEDIUM", "Normal"],
-                                ["3", "LOW", "Flexible"],
+                                ["1", "LOW", "Flexible"],
                             ].map(([value, label, hint]) => (
                                 <label
                                     key={value}

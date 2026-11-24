@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class RobotSafetyTests(unittest.TestCase):
     def setUp(self):
         tree = ast.parse((ROOT / "Webots_Full_Mission_Controller/my_controller_testing_fleet.py").read_text(encoding="utf-8-sig"))
-        names = {"latch_safety", "safety_ack", "handle_safety_command", "finish_home", "tick_mission"}
+        names = {"latch_safety", "safety_ack", "handle_safety_command", "finish_home", "tick_mission", "reached_marker", "sf_tick_nav_gate", "sf_validate_intersection_waypoints"}
         code = ast.Module(body=[n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in names], type_ignores=[])
         self.temp = tempfile.TemporaryDirectory()
         self.g = dict(os=os, json=json, uuid=uuid, SAFETY_FILE=os.path.join(self.temp.name, "hold.json"),
@@ -79,6 +79,34 @@ class RobotSafetyTests(unittest.TestCase):
         self.assertFalse(self.g["safety_hold"])
         self.assertIsNone(self.g["mission"])
         self.assertFalse(Path(self.g["SAFETY_FILE"]).exists())
+
+    def test_home_route_exits_reserved_intersection_before_completing(self):
+        self.g.update(INTERSECTION_PILOT=True, sf_active_intersection=1, store_heading_calibration=Mock(),
+                      sf_nav_send=Mock(), ROBOT_CODE="R01", finish_home=Mock())
+        data = dict(self.cmd, home_command_id="home", next_index=2,
+                    waypoints=[dict(arucoId=0), dict(arucoId=1, isIntersection=True), dict(arucoId=2, isIntersection=False)])
+        self.g["reached_marker"](data, 2)
+        self.assertEqual(self.g["sf_nav_send"].call_args.args[0], "EXIT")
+        self.g["finish_home"].assert_not_called()
+        self.assertEqual(data["next_index"], 2)
+
+    def test_exit_ack_releases_traffic_lock_before_home_completion(self):
+        self.g.update(sf_nav_request=dict(accepted=True, kind="EXIT", intersectionId=1),
+                      sf_active_intersection=1, sf_last_hold_log=0, ROBOT_CODE="R01", finish_home=Mock())
+        data = dict(self.cmd, phase="NAV_WAIT_ACK", home_command_id="home", next_index=2,
+                    waypoints=[dict(arucoId=0), dict(arucoId=1), dict(arucoId=2)])
+        self.g["sf_tick_nav_gate"](data)
+        self.assertIsNone(self.g["sf_active_intersection"])
+        self.g["finish_home"].assert_called_once()
+
+    def test_home_at_current_qr_needs_no_motion_under_traffic_protocol(self):
+        self.g["handle_safety_command"](self.cmd)
+        self.g.update(INTERSECTION_PILOT=True, localization_valid=True, localization_map={"mapRevision":5}, sf_active_intersection=None,
+                      sf_nav_request=None, sf_nav_directive=None, finish_home=Mock())
+        route = dict(startArUcoId=0, homeArUcoId=0, mapRevision=5, waypoints=[dict(arucoId=0, isIntersection=False)])
+        self.g["handle_safety_command"](dict(self.cmd, command="RETURN_HOME", commandId="home", generation=2, route=route))
+        self.g["finish_home"].assert_called_once()
+        self.g["begin_segment"].assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

@@ -44,6 +44,7 @@ public sealed class NavigationCoordinator
     private readonly string _configPath;
     private readonly ILogger<NavigationCoordinator> _logger;
     private readonly INavigationMapStore? _mapStore;
+    private readonly bool _preview;
     // Reports must be refreshed by the robot while approaching (e.g. every 1-2s).
     // A lost robot is removed from the *count*, but granted/entered ownership is
     // never released by TTL: physical clearance or EXIT remains necessary.
@@ -108,6 +109,46 @@ public sealed class NavigationCoordinator
 
         // Enforce restart interlock in the persisted file before handling messages.
         SaveLocked();
+    }
+
+    private NavigationCoordinator(WarehouseMapDocument map, TimeSpan ttl, ILogger<NavigationCoordinator> logger)
+    {
+        _preview = true;
+        _configPath = "";
+        _approachTtl = ttl;
+        _logger = logger;
+        _stored = new NavigationStoredState { Map = CopyMap(map) };
+    }
+
+    public (NavigationOperation Result, IntersectionTrafficView? Intersection) PreviewScan(
+        int robotId, string code, RobotArUcoScanReport report)
+    {
+        // Preview owns separate traffic state and never persists or grants a real robot.
+        var preview = new NavigationCoordinator(GetMap(), _approachTtl, _logger);
+        var result = preview.OnScan(robotId, code, report);
+        return (result, report.NextArUcoId.HasValue ? preview.GetIntersection(report.NextArUcoId.Value) : null);
+    }
+
+    public int? WarehouseId => _mapStore?.SelectedWarehouseId;
+
+    public bool PrepareUnreservedReturnHome(string robotCode)
+    {
+        lock (_gate)
+        {
+            if (_intersections.Values.Any(t => string.Equals(t.ActiveRobotCode, robotCode, StringComparison.OrdinalIgnoreCase)))
+                return false; // Granted/entered ownership still requires EXIT or physical recovery.
+            foreach (var traffic in _intersections.Values)
+            {
+                traffic.Waiting.Remove(robotCode);
+                if (traffic.Waiting.Count == 0) traffic.QueueOpenedAtUtc = DateTime.MinValue;
+            }
+            if (_robots.TryGetValue(robotCode, out var robot))
+            {
+                robot.IntersectionId = null; robot.NextArUcoId = null; robot.RequiresFreshRouteReport = true;
+            }
+            SaveLocked();
+            return true;
+        }
     }
 
     public WarehouseMapDocument GetMap()
@@ -645,6 +686,10 @@ public sealed class NavigationCoordinator
             // Persist before changing the map used by route planning and MQTT workers.
             _mapStore?.Save(next, _stored.Map!.Revision);
         }
+        catch (MapInUseException ex)
+        {
+            return NavigationOperation.Fail(ex.Message, true);
+        }
         catch (DbUpdateConcurrencyException)
         {
             var latest = _mapStore!.LoadOrCreate(CopyMap(_stored.Map!));
@@ -674,6 +719,7 @@ public sealed class NavigationCoordinator
 
     private void SaveLocked()
     {
+        if (_preview) return;
         _stored.IntersectionLocks = _intersections.Values
             .Where(item => item.Blocked || item.ActiveRobotCode != null || item.LastServedRobotId != 0)
             .Select(item => new StoredIntersectionLock

@@ -23,13 +23,6 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
     {
         if (message.Event is "CONTROL_STOPPED" or "HOME_REACHED")
             return await interventions.HandleEvent(robotCode, message, ct);
-        // Test pilot: a robot cannot complete a transport task merely by
-        // sending MISSION_COMPLETED. The QR route has to reach pickup + drop.
-        if (configuration.GetValue<bool>("DemoRoute:Enabled") &&
-            message.Event == "MISSION_COMPLETED" &&
-            !qrDemo.CanComplete(message.MissionId, robotCode))
-            return MissionEventResult.Rejected;
-
         // =====================================================
         // 1. VALIDATE EVENT
         // =====================================================
@@ -159,6 +152,17 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
             await tx.RollbackAsync(ct);
             return MissionEventResult.Rejected;
         }
+
+        // Check live completion evidence AFTER terminal duplicate handling.
+        // A restart must not reject an already committed completion just because
+        // its transient demo route is gone and the robot is retrying its ACK.
+        if (message.Event == "MISSION_COMPLETED" &&
+            (mission.MissionStatus == "INITIALIZING" ||
+             (configuration.GetValue<bool>("DemoRoute:Enabled")
+                ? !qrDemo.CanComplete(mission.MissionId, robotCode)
+                : !await db.DeliveryVerifications.AnyAsync(v => v.MissionId == mission.MissionId &&
+                    v.VerificationStage == "DELIVERY" && v.IsVerified, ct))))
+            return MissionEventResult.Rejected;
 
         // =====================================================
         // 7. GET TASK
@@ -381,6 +385,8 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
 
                 task.FailureReason =
                     reason;
+                await OperationalAlertService.RaiseAsync(db, robot, "MISSION_FAILED", "ERROR", reason, now,
+                    task.TaskId, mission.MissionId, ct);
             }
 
             // =================================================

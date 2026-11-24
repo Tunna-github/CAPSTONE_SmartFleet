@@ -1,9 +1,11 @@
 using SmartFleetBE.Model;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace SmartFleetBE.Repositories.Interfaces;
 
 public interface ITransportTaskRepository
 {
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
     Task<IReadOnlyCollection<TransportTask>> GetAllAsync(
         CancellationToken cancellationToken = default);
 
@@ -22,11 +24,13 @@ public interface ITransportTaskRepository
     Task<bool> IsStationActiveInWarehouseAsync(
         int stationId,
         int warehouseId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, string? stationType = null);
 
     Task<bool> HasOperationalDependenciesAsync(
         long taskId,
         CancellationToken cancellationToken = default);
+
+    Task<bool> HasAssignmentsAsync(long taskId, CancellationToken cancellationToken = default);
 
     Task AddAsync(
         TransportTask task,

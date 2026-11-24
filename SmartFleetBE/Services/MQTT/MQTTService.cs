@@ -8,6 +8,7 @@ namespace SmartFleetBE.Services;
 // Separate MQTT connections for commands and fast status ACKs.
 public sealed class MqttService(IConfiguration configuration) : IDisposable
 {
+    public bool IsPublisherConnected => _commandClient.IsConnected || _statusAckClient.IsConnected;
     private readonly IMqttClient _commandClient =
         new MqttClientFactory().CreateMqttClient();
 

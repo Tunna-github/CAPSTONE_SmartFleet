@@ -108,7 +108,14 @@ public sealed class UserRepository : IUserRepository
     public async Task SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {
-        await _dbContext.SaveChangesAsync(
-            cancellationToken);
+        try { await _dbContext.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new InvalidOperationException("User changed concurrently. Reload before retrying.", ex);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+        {
+            throw new InvalidOperationException("Username, email or role assignment already exists. Reload before retrying.", ex);
+        }
     }
 }

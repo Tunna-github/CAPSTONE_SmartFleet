@@ -76,7 +76,9 @@ public partial class SmartFleetDbContext : DbContext
         {
             entity.ToTable("RobotCommandOutbox");
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.AssignmentId).IsUnique();
+            entity.HasIndex(e => e.AssignmentId);
+            entity.HasIndex(e => e.AssignmentId, "UX_RobotCommandOutbox_OneMissionPerAssignment")
+                .IsUnique().HasFilter("(\"Payload\"::jsonb ->> 'command') = 'EXECUTE_TASK'");
             entity.HasIndex(e => e.DeliveredAt);
             entity.Property(e => e.Topic).HasMaxLength(300);
             entity.Property(e => e.Payload).HasMaxLength(4000);
@@ -738,6 +740,7 @@ public partial class SmartFleetDbContext : DbContext
             entity.Property(e => e.ScheduledTime).HasPrecision(3);
             entity.Property(e => e.StartedAt).HasPrecision(3);
             entity.Property(e => e.TaskStatus)
+                .IsConcurrencyToken()
                 .HasMaxLength(30)
                 .IsUnicode(false)
                 .HasDefaultValue("QUEUED");

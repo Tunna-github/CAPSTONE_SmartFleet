@@ -121,13 +121,14 @@ function RootRedirect() {
 }
 
 function RequireRole({ allow }: { allow: Role[] }) {
-  const { role, isLoading } = useAuth()
+  const { role, user, isLoading } = useAuth()
 
   if (isLoading) {
     return <AuthScreen message="Checking current session..." />
   }
 
-  if (!role || !allow.includes(role)) {
+  const names: Record<Role, string> = { admin: "Administrator", operator: "Warehouse Operator", maintenance: "Maintenance Technician" }
+  if (!role || !allow.some(r => user?.roles?.includes(names[r]))) {
     return <Navigate to={role ? roleHome(role) : "/login"} replace />
   }
 
@@ -178,17 +179,20 @@ export default function App() {
               <Route element={<ProtectedLayout />}>
                 <Route path="/profile" element={<UserProfilePage />} />
 
-                <Route element={<RequireRole allow={["operator", "admin"]} />}>
+                <Route element={<RequireRole allow={["operator"]} />}>
                   <Route path="/dashboard" element={<OperatorDashboard />} />
 
                   <Route path="/dashboard/tasks" element={<TasksPage />} />
-                  <Route path="/dashboard/qr-missions" element={<QrMissionMonitorPage />} />
-                  <Route path="/dashboard/navigation" element={<NavigationTrafficPage />} />
 
                   <Route
                     path="/dashboard/analytics"
                     element={<div className="p-6">Analytics (Coming Soon)</div>}
                   />
+                </Route>
+
+                <Route element={<RequireRole allow={["operator", "admin"]} />}>
+                  <Route path="/dashboard/qr-missions" element={<QrMissionMonitorPage />} />
+                  <Route path="/dashboard/navigation" element={<NavigationTrafficPage />} />
                 </Route>
 
                 <Route

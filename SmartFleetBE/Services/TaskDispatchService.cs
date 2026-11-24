@@ -17,7 +17,6 @@ public sealed class TaskDispatchService : ITaskDispatchService
     private readonly SmartFleetDbContext _db;
     private readonly IConfiguration _configuration;
     private readonly QrDemoRouteService? _routes;
-    private readonly FleetRealtimePublisher _realtime;
     private readonly ILogger<TaskDispatchService> _logger;
 
     public TaskDispatchService(
@@ -54,11 +53,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
                 IReadOnlyCollection<AvailableRobotResponse>>
                 .NotFound($"Task {taskId} was not found.");
         }
+        if (!await TaskLocationPolicy.IsValidAsync(_db, taskId, cancellationToken))
+            return TransportTaskServiceResult<IReadOnlyCollection<AvailableRobotResponse>>
+                .Conflict("Warehouse, zones or pickup/delivery stations are invalid or inactive.");
 
-        if (!string.Equals(
-                task.TaskStatus,
-                TransportTaskStatuses.Queued,
-                StringComparison.OrdinalIgnoreCase))
+        if (task.TaskStatus is not (TransportTaskStatuses.Queued or TransportTaskStatuses.Critical))
         {
             return TransportTaskServiceResult<
                 IReadOnlyCollection<AvailableRobotResponse>>
@@ -107,7 +106,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
             m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS")
             .Select(m => m.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
         var incidents = (await _db.RobotIncidents.Where(i => !i.IsResolved &&
-            (i.Severity == "HIGH" || i.Severity == "CRITICAL"))
+            (i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" || i.Severity == "CRITICAL"))
             .Select(i => i.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
         var now = DateTime.UtcNow;
         var robots = new List<AvailableRobotResponse>();
@@ -120,8 +119,12 @@ public sealed class TaskDispatchService : ITaskDispatchService
             if (robot.ConnectionStatus != "ONLINE") reasons.Add("Robot OFFLINE");
             if (robot.OperationalStatus != "AVAILABLE") reasons.Add($"Robot status: {robot.OperationalStatus}");
             if (!RobotPresencePolicy.IsFresh(robot, now, _configuration)) reasons.Add("Heartbeat/telemetry missing or stale");
-            if (_configuration.GetValue<bool>("DemoRoute:Enabled") && _routes?.HasFreshLocalization(robot.RobotCode) != true)
-                reasons.Add("Camera/IMU localization missing, stale, or on an older map");
+            if (_configuration.GetValue<bool>("DemoRoute:Enabled"))
+            {
+                var routeReason = "Camera/IMU localization is unavailable.";
+                if (_routes == null || !_routes.CanDispatchTask(taskId, robot.RobotCode, out routeReason, task.WarehouseId))
+                    reasons.Add(routeReason);
+            }
             if (robot.BatteryPercent == null || robot.BatteryPercent < MinimumBatteryPercent) reasons.Add("Battery must be at least 20%");
             if (robot.MaxPayloadWeightKg < weightKg) reasons.Add("Insufficient payload capacity");
             if (busy.Contains(robot.RobotId)) reasons.Add("Has ACTIVE assignment");
@@ -211,7 +214,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
              current = current.InnerException)
         {
             if (current is Npgsql.PostgresException pg &&
-                (pg.SqlState == "40001" || pg.SqlState == "40P01"))
+                (pg.SqlState == "40001" || pg.SqlState == "40P01" || pg.SqlState == "23505"))
                 return true;
         }
         return false;
@@ -242,11 +245,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
             return TransportTaskServiceResult<ManualAssignTaskResponse>
                 .NotFound($"Task {taskId} was not found.");
         }
+        if (!await TaskLocationPolicy.IsValidAsync(_db, taskId, cancellationToken))
+            return TransportTaskServiceResult<ManualAssignTaskResponse>
+                .Conflict("Warehouse, zones or pickup/delivery stations are invalid or inactive.");
 
-        if (!string.Equals(
-                task.TaskStatus,
-                TransportTaskStatuses.Queued,
-                StringComparison.OrdinalIgnoreCase))
+        if (task.TaskStatus is not (TransportTaskStatuses.Queued or TransportTaskStatuses.Critical))
         {
             return TransportTaskServiceResult<ManualAssignTaskResponse>
                 .Conflict(
@@ -314,7 +317,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
         if (_configuration.GetValue<bool>("DemoRoute:Enabled"))
         {
             var reason = "Camera/IMU localization is unavailable.";
-            if (_routes == null || !_routes.CanDispatchTask(taskId, robot.RobotCode, out reason))
+            if (_routes == null || !_routes.CanDispatchTask(taskId, robot.RobotCode, out reason, task.WarehouseId))
                 return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict(reason);
         }
 
@@ -404,7 +407,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
         bool severeIncident = await _db.RobotIncidents.AnyAsync(
             i => i.RobotId == robotId &&
                  !i.IsResolved &&
-                 (i.Severity == "HIGH" ||
+                 (i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" ||
                   i.Severity == "CRITICAL"),
             cancellationToken);
 

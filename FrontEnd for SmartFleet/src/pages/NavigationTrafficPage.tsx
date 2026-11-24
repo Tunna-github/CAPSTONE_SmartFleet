@@ -75,7 +75,7 @@ export default function NavigationTrafficPage() {
     try {
       await simulateNavigationScan(robotCode, from, to);
       await refreshTraffic();
-      setSimResult(`${robotCode.trim()} reported QR${from} -> QR${to}. No movement command was sent.`);
+      setSimResult(`${robotCode.trim()} previewed QR${from} -> QR${to}. Live traffic and robot commands were unchanged.`);
     } catch (error) {
       setSimError(navigationErrorMessage(error));
     } finally {

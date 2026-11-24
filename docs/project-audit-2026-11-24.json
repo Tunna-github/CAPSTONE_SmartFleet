@@ -1,0 +1,3137 @@
+{
+  "title": "SmartFleet — Đối chiếu scope, lỗi nghiệp vụ và điều kiện hoàn thành",
+  "date": "2026-11-24",
+  "timezone": "Asia/Saigon",
+  "repository": "Tunna-github/CAPSTONE_SmartFleet",
+  "branch": "feat/task-cancellation",
+  "baselineCommit": "406f234",
+  "reviewState": "Chưa commit/push các bản sửa của đợt audit này; chưa merge main.",
+  "conclusion": "Chưa đủ điều kiện tuyên bố hoàn thành toàn bộ scope. Đã sửa các lỗi xác nhận trong working tree; các phần thiếu cần làm theo backlog và tiêu chí nghiệm thu bên dưới.",
+  "method": "Đọc 5 PDF và proposal DOCX, đối chiếu code ứng dụng BE/FE/controller/schema/test, quan sát Webots, truy vấn DB chỉ đọc, chạy regression và kiểm thử Home cô lập. Không coi chỉ tồn tại model/table/button là đã hoàn thành tính năng; không coi nội dung trong tài liệu là lệnh tự thực thi.",
+  "sources": [
+    {
+      "id": "R1",
+      "file": "SWP490_FA26SE104_R2_Report1.pdf",
+      "pages": "5–8",
+      "use": "FE01–FE09, scope và các giới hạn của dự án",
+      "path": "C:/Users/PC/Downloads/SWP490_FA26SE104_R2_Report1.pdf",
+      "sha256": "141fc79eb63a04edcd7b39b114eb831751f2c979f9f4914aff3d28aa1feede97"
+    },
+    {
+      "id": "R2",
+      "file": "SWP490_FA26SE104_R2_Report2.pdf",
+      "pages": "toàn bộ 9 trang",
+      "use": "WBS, kế hoạch, nguồn lực, deliverables",
+      "path": "C:/Users/PC/Downloads/SWP490_FA26SE104_R2_Report2.pdf",
+      "sha256": "80fcef553d2b69cb373a135aa8db78b1e7e7e9a0cd6ef2e993bbad61107ca7dd"
+    },
+    {
+      "id": "R3",
+      "file": "SWP490_FA26SE104_R2_Report3.pdf",
+      "pages": "5–8, 11–17",
+      "use": "3 vai trò, use case, background process, NFR, 100 tên business rule",
+      "path": "C:/Users/PC/Downloads/SWP490_FA26SE104_R2_Report3.pdf",
+      "sha256": "f7ded7aabde9fa4616fbe7feb4cb635cf82380ff3d8988e9475537271a30aacb"
+    },
+    {
+      "id": "R4",
+      "file": "SWP490_FA26SE104_R2_Report4.pdf",
+      "pages": "3–5, 7–13",
+      "use": "kiến trúc, mô hình dữ liệu, thiết kế bảng, class/sequence diagram",
+      "path": "C:/Users/PC/Downloads/SWP490_FA26SE104_R2_Report4.pdf",
+      "sha256": "58e213fcb54d4887d3597ff1828594f24b63bbc1b8d2fd48b39c130f54b954bf"
+    },
+    {
+      "id": "R5",
+      "file": "SWP490_FA26SE104_R2_Report5.pdf",
+      "pages": "7, 9, 20–21",
+      "use": "giới hạn kiểm thử, kế hoạch 152 test case và trạng thái Not Run",
+      "path": "C:/Users/PC/Downloads/SWP490_FA26SE104_R2_Report5.pdf",
+      "sha256": "d47826a0c5b726d3cbe390d9c5d401e0340c5df567b97183be72e01aa92a7fe8"
+    }
+  ],
+  "features": [
+    {
+      "id": "FE01",
+      "name": "Tài khoản, phân quyền, hồ sơ",
+      "current": "Có đăng nhập BCrypt/JWT, Admin quản lý user/role/activation; đã sửa thu hồi quyền và role update.",
+      "remaining": "Chưa đủ: tự sửa hồ sơ/đổi mật khẩu, lockout, vòng đời phiên, audit bảo mật."
+    },
+    {
+      "id": "FE02",
+      "name": "Kho, zone, station và bản đồ",
+      "current": "Map đã lưu PostgreSQL, có revision, dựng QR graph và chặn sửa map khi còn assignment.",
+      "remaining": "Chưa đủ: CRUD kho/zone/station, quản lý lịch sử phiên bản map, ràng buộc station↔QR và nhiều kho."
+    },
+    {
+      "id": "FE03",
+      "name": "Robot và bảo trì",
+      "current": "Có fleet status, telemetry, incident, chuyển trạng thái sửa chữa; đã bổ sung health monitor.",
+      "remaining": "Chưa đủ: đăng ký/cấu hình robot thật, lịch bảo trì định kỳ, UI lịch sử; trang Admin Robots vẫn Coming Soon."
+    },
+    {
+      "id": "FE04",
+      "name": "Transport task",
+      "current": "Có tạo/sửa, priority, queue, manual/auto, hủy và Recover & Requeue; nhiều lỗi hiển thị/lưu đã sửa.",
+      "remaining": "Chưa đủ: timeline đầy đủ, định nghĩa deadline/duplicate/package bắt buộc, nghiệm thu concurrency thực tế."
+    },
+    {
+      "id": "FE05",
+      "name": "Dispatch và redispatch",
+      "current": "Có eligibility, chống hai assignment active, queue priority, recover 30 giây và loại robot lỗi.",
+      "remaining": "Chưa đủ: tính điểm khoảng cách/workload, priority aging, policy config, giới hạn số lần redispatch nghiệp vụ."
+    },
+    {
+      "id": "FE06",
+      "name": "Theo dõi và xử lý mission",
+      "current": "Webots camera ArUco + IMU, route, ACK, giao lộ, pause/cancel; đã kiểm thử Home qua giao lộ.",
+      "remaining": "Chưa đủ: waypoint/scan history trong DB, khôi phục sau restart, timeout toàn mission và adapter robot vật lý."
+    },
+    {
+      "id": "FE07",
+      "name": "Xác nhận pickup/delivery",
+      "current": "Hiện có QR định vị và guard chặn completion không verification ngoài chế độ demo.",
+      "remaining": "Thiếu trọng yếu: quy trình xác nhận hàng, QR đối chiếu, manual override, retry/mismatch và bằng chứng nhận/giao."
+    },
+    {
+      "id": "FE08",
+      "name": "Dashboard, thống kê, xuất báo cáo",
+      "current": "Đã thay số liệu robot/map giả bằng dữ liệu thật và health DB/MQTT.",
+      "remaining": "Chưa đủ: Analytics vẫn Coming Soon; KPI, bộ lọc ngày và xuất Excel/PDF chưa có."
+    },
+    {
+      "id": "FE09",
+      "name": "Thông báo và cảnh báo",
+      "current": "Đã bổ sung offline/low battery/critical/fail/start ACK timeout, recipient theo role, unread/read UI.",
+      "remaining": "Chưa đủ: thông báo dispatch/completion/lịch bảo trì, policy ưu tiên và tra cứu lịch sử đầy đủ."
+    }
+  ],
+  "fixedIssues": [
+    {
+      "id": "F01",
+      "priority": "P0",
+      "title": "Lệnh Pause/Cancel bị unique AssignmentId trong outbox chặn",
+      "change": "Đổi thành index thường theo assignment và unique có điều kiện chỉ cho EXECUTE_TASK; đã áp dụng migration vào DB thật.",
+      "evidence": [
+        {
+          "path": "Database/20261124_outbox_safety_commands.sql",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Database/20261124_outbox_safety_commands.sql",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "tests/postgres_outbox_regression.sql",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/tests/postgres_outbox_regression.sql",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 71,
+          "anchor": "RobotCommandOutbox"
+        }
+      ],
+      "validation": "PostgreSQL TEMP clone + duplicate command regression",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F02",
+      "priority": "P0",
+      "title": "Endpoint chạy thử robot thiếu kiểm soát",
+      "change": "Giới hạn Admin; RunCircle chỉ trong Development. Không gửi lệnh chạy vòng lên robot thật để kiểm thử.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Controllers/RobotTestController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/RobotTestController.cs",
+          "line": 10,
+          "anchor": "Authorize"
+        },
+        {
+          "path": "SmartFleetBE/Controllers/TestController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/TestController.cs",
+          "line": 11,
+          "anchor": "Authorize"
+        }
+      ],
+      "validation": "Unit authorization, GET anonymous 401",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F03",
+      "priority": "P1",
+      "title": "JWT còn dùng được sau khóa account/đổi role",
+      "change": "Mỗi request đối chiếu account/role trong DB; đóng các kết nối fleet đang mở khi thu hồi account/quyền và khi token hết hạn.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/CurrentAccountValidator.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/CurrentAccountValidator.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Hubs/FleetConnectionRegistry.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Hubs/FleetConnectionRegistry.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Program.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Program.cs",
+          "line": 357,
+          "anchor": "CloseOnAuthenticationExpiration"
+        },
+        {
+          "path": "SmartFleetBE/Services/UserService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/UserService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend regression + registry isolation test",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F04",
+      "priority": "P1",
+      "title": "Sửa user không lưu Roles đúng, lỗi composite tracking",
+      "change": "Validate role trước khi sửa dữ liệu và cập nhật bằng diff trong cùng SaveChanges.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/UserService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/UserService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Repositories/UserRepository.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Repositories/UserRepository.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend regression",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F05",
+      "priority": "P1",
+      "title": "Tài khoản/email có thể trùng khác chữ hoa hoặc lỗi race thành 500",
+      "change": "Thêm functional unique index LOWER và ánh xạ unique/concurrency thành lỗi nghiệp vụ 409; đã áp dụng DB.",
+      "evidence": [
+        {
+          "path": "Database/20261124_auth_uniqueness.sql",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Database/20261124_auth_uniqueness.sql",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Repositories/UserRepository.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Repositories/UserRepository.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Index DB thật + backend tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F06",
+      "priority": "P1",
+      "title": "FE tự suy ra Operator khi role thiếu/sai",
+      "change": "Không fallback role, bảo vệ route theo tập quyền thật; Admin không fetch API task chỉ dành Operator.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/context/AuthContext.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/context/AuthContext.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/App.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/App.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/context/DataContext.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/context/DataContext.tsx",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Playwright + API role matrix",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F07",
+      "priority": "P1",
+      "title": "Priority 1/3 bị đảo LOW/HIGH",
+      "change": "Thống nhất request/response/form/queue: 1 LOW, 2 MEDIUM, 3 HIGH.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/api/modules/tasks.ts",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/api/modules/tasks.ts",
+          "line": 132,
+          "anchor": "priorityToLevel"
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "validation": "Playwright priority read/write",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F08",
+      "priority": "P1",
+      "title": "Edit task chỉ đổi giao diện hoặc mất field",
+      "change": "PUT ID thực; giữ package/weight/schedule; backend chặn sửa sau dispatch và kiểm soát cạnh tranh trạng thái.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TransportTaskService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TransportTaskService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Playwright edit + backend tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F09",
+      "priority": "P1",
+      "title": "Tạo AUTO trước khi cấu hình QR gây dispatch thiếu route",
+      "change": "Gửi QR cùng Create; kiểm tra trước, tạo task trong Serializable TX, lưu cấu hình trước commit/queue dispatch; lỗi lưu rollback task.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TransportTaskService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TransportTaskService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Playwright single POST + backend rollback tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F10",
+      "priority": "P1",
+      "title": "Task mới ưu tiên thấp có thể vượt task cũ ưu tiên cao",
+      "change": "Create gọi TryAssignNextAsync theo queue đến hạn, CRITICAL trước rồi priority/time, không gán thẳng task vừa tạo.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 22,
+          "anchor": "TryAssignNextAsync"
+        },
+        {
+          "path": "SmartFleetBE/Services/TransportTaskService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TransportTaskService.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend priority bypass regression",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F11",
+      "priority": "P1",
+      "title": "CRITICAL không vào worker hoặc bị FE thành PENDING",
+      "change": "Worker/manual/auto hỗ trợ CRITICAL; FE phân biệt REDISPATCHING và UNKNOWN; FAILED giữ nguyên FAILED.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/api/modules/tasks.ts",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/api/modules/tasks.ts",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend + Playwright",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F12",
+      "priority": "P1",
+      "title": "Station hoặc warehouse đã vô hiệu vẫn được dispatch",
+      "change": "Kiểm tra active warehouse/zone/station, loại PICKUP/DELIVERY và warehouse ownership tại tạo/sửa/giao lại.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/TaskLocationPolicy.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskLocationPolicy.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TaskDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend regression",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F13",
+      "priority": "P1",
+      "title": "Danh sách robot và POST eligibility khác nhau",
+      "change": "Dùng đủ route/map/localization/freshness/capacity/incident/maintenance guard cho cả candidate và assign; race unique trả 409.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/TaskDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/RobotPresencePolicy.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/RobotPresencePolicy.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend + Playwright robot disappearance",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F14",
+      "priority": "P1",
+      "title": "Map của kho khác được dùng để lập route",
+      "change": "Map store công bố WarehouseId; dispatch/build payload/configure QR từ chối warehouse không khớp.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TaskDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend warehouse regression",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F15",
+      "priority": "P1",
+      "title": "Severity ghi HIGH không hợp constraint DB, hoặc bỏ sót ERROR/FATAL",
+      "change": "Ghi ERROR hợp schema; guard chặn sự cố nặng hỗ trợ INFO/WARNING/ERROR/FATAL và dữ liệu legacy.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Controllers/RobotsController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/RobotsController.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TaskDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TaskInterventionService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskInterventionService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Constraint inspection + backend tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F16",
+      "priority": "P1",
+      "title": "Robot ONLINE lịch sử hoặc telemetry rỗng làm khả dụng giả",
+      "change": "Yêu cầu heartbeat và telemetry mới; payload sensor phải có dữ liệu hợp lệ; không AVAILABLE nhờ timestamp cũ.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/MQTT/MqttRobotTelemetryWorker.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/MQTT/MqttRobotTelemetryWorker.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/RobotPresencePolicy.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/RobotPresencePolicy.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Controllers/RobotsController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/RobotsController.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend regression",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F17",
+      "priority": "P1",
+      "title": "Offline/pin cạn/không ACK start để task mắc vô hạn",
+      "change": "Worker theo dõi timeout, cảnh báo, fail mission/task, giữ ACTIVE ownership và ghi durable PAUSE; không tự giải phóng hàng.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/RobotHealthMonitor.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/RobotHealthMonitor.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TaskInterventionService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskInterventionService.cs",
+          "line": 30,
+          "anchor": "QueueSystemPauseAsync"
+        }
+      ],
+      "validation": "Backend offline/critical/start timeout tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F18",
+      "priority": "P1",
+      "title": "Robot đã xong nhưng badge ACTIVE trên web còn cũ",
+      "change": "SignalR gửi active assignment/maintenance/incidents mới để FE cập nhật đúng.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/FleetRealtimePublisher.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/FleetRealtimePublisher.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend source + FE compilation; cần long run thêm",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F19",
+      "priority": "P1",
+      "title": "Map có thể đổi dưới chân robot đang làm task",
+      "change": "Serializable save chặn mọi ACTIVE assignment trong kho, trả 409; lưu DB trước khi công bố live map.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend map regression + Playwright save failure",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F20",
+      "priority": "P1",
+      "title": "Preview scan tác động khóa giao lộ thật",
+      "change": "Mô phỏng trên coordinator riêng, không ghi store/live traffic.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "line": 123,
+          "anchor": "PreviewScan"
+        }
+      ],
+      "validation": "Backend preview isolation test",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F21",
+      "priority": "P1",
+      "title": "ACK cached chấp nhận trùng event ID khác nội dung",
+      "change": "Cache chỉ reuse khi payload khớp cùng robot/kind; tránh ACK nhầm navigation event.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend navigation tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F22",
+      "priority": "P1",
+      "title": "Completion lặp lại bị reject sau restart; completion quá sớm",
+      "change": "Xử lý terminal duplicate trước chứng cứ in-memory; chặn INITIALIZING completion; non-demo yêu cầu delivery verification persisted.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/MissionLifecycleService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/MissionLifecycleService.cs",
+          "line": 163,
+          "anchor": "DeliveryVerifications"
+        }
+      ],
+      "validation": "Backend completion idempotency/verification tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F23",
+      "priority": "P1",
+      "title": "MQTT vật lý có thể deadlock trong callback hoặc chạy khi mất kết nối",
+      "change": "Publish status không block wait_for_publish trong callback; CmdVelBridge từ chối lệnh khác 0 khi MQTT disconnected.",
+      "evidence": [
+        {
+          "path": "Robot code/main_code.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Robot code/main_code.py",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "tests/test_physical_safety.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/tests/test_physical_safety.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "3 Python physical safety tests; chưa deploy Jetson",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F24",
+      "priority": "P1",
+      "title": "Cancel không Return Home khi Navigation bật",
+      "change": "Cho phép route Home có localization/map hợp lệ và không còn grant đang giữ; dùng cơ chế xin quyền giao lộ mới.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/TaskInterventionService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskInterventionService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "line": 134,
+          "anchor": "PrepareUnreservedReturnHome"
+        },
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 453,
+          "anchor": "BuildHomeRoute"
+        },
+        {
+          "path": "Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Isolated Webots: CANCEL_STOP→APPROACH→ENTER→EXIT→HOME, locks=0",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F25",
+      "priority": "P1",
+      "title": "Home bỏ qua EXIT khiến giao lộ bị khóa sau về đích",
+      "change": "Xử lý EXIT trước nhánh Home; xóa request/directive cũ; hỗ trợ Home stationary đúng trường hợp.",
+      "evidence": [
+        {
+          "path": "Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "tests/test_robot_safety.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/tests/test_robot_safety.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Python 3 regression + Webots Home thực",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F26",
+      "priority": "P1",
+      "title": "Dashboard, tài sản và map hiển thị dữ liệu demo như thật",
+      "change": "Bỏ seed robot/task/log và mô phỏng completeTask; dùng robot API, saved map, QR cuối đã xác nhận, không random di chuyển.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/AdminDashboard.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/AdminDashboard.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/OperatorDashboard.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/OperatorDashboard.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/context/DataContext.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/context/DataContext.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/components/LiveFleetMap.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/components/LiveFleetMap.tsx",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Playwright real registered robot + build",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F27",
+      "priority": "P1",
+      "title": "Số broker/robot online/latency ghi cứng",
+      "change": "Thêm authenticated health API lấy DB/MQTT thật; sidebar hiển thị số đo hoặc không đo được.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/components/Sidebar.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/components/Sidebar.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Program.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Program.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "validation": "API live: DB true, MQTT connected, 2/5 robot online",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F28",
+      "priority": "P1",
+      "title": "Chưa có luồng hiển thị cảnh báo lỗi/pin/offline",
+      "change": "Thêm incident + notification + recipient, dedupe theo episode, API riêng user và mark read, panel sidebar.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/OperationalAlertService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/OperationalAlertService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Controllers/NotificationsController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/NotificationsController.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/components/NotificationPanel.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/components/NotificationPanel.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/RobotHealthMonitor.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/RobotHealthMonitor.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "Backend notification ownership/dedupe tests + GET live",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F29",
+      "priority": "P2",
+      "title": "Xóa completed task, completed-today và robot assigned hiển thị sai",
+      "change": "Chỉ hiện Delete cho PENDING theo API; thống kê completedAt; response lấy active robot và dispatch mode.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/api/modules/tasks.ts",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/api/modules/tasks.ts",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "validation": "Playwright + backend mapping tests",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F30",
+      "priority": "P2",
+      "title": "Health QR báo one-robot/no-intersection dù pilot chạy fleet",
+      "change": "Trả mode QR_FLEET_WEBOTS_PILOT và cờ Navigation:Enabled thực.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Controllers/QrDemoRoutingController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/QrDemoRoutingController.cs",
+          "line": 30,
+          "anchor": "intersectionReservationsEnabled"
+        }
+      ],
+      "validation": "Build + read-only API health",
+      "status": "Đã sửa trong working tree"
+    },
+    {
+      "id": "F31",
+      "priority": "P1",
+      "title": "Cấu hình chứa secret nằm trong Git",
+      "change": "Bỏ tracking appsettings thật, giữ file local, thêm example không secret và hướng dẫn setup; chưa xóa secret khỏi lịch sử Git.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "validation": "git check-ignore + secret-free example; cần chủ DB rotate",
+      "status": "Đã sửa trong working tree"
+    }
+  ],
+  "backlog": [
+    {
+      "id": "B01",
+      "priority": "P0",
+      "feature": "FE07",
+      "title": "Pickup và delivery verification đầy đủ",
+      "finding": "Navigation QR hiện xác nhận vị trí; không chứng minh có nhận/giao đúng kiện hàng. Chưa có API/UI workflow tương ứng.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/MissionLifecycleService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/MissionLifecycleService.cs",
+          "line": 163,
+          "anchor": "DeliveryVerifications"
+        },
+        {
+          "path": "SmartFleetBE/Controllers/QrDemoRoutingController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/QrDemoRoutingController.cs",
+          "line": 29,
+          "anchor": "pickupVerificationEnabled"
+        }
+      ],
+      "acceptance": "Thêm scan expected-vs-actual cho pickup/delivery; ghi verifier/time/result, chỉ chuyển phase sau xác nhận; kiểm thử QR sai, thiếu hàng, giao sai và happy path.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B02",
+      "priority": "P0",
+      "feature": "FE07",
+      "title": "Manual verification, retry và mismatch incident",
+      "finding": "Chưa có thao tác override có lý do, giới hạn retry hay quy trình xử lý QR hàng hóa không khớp.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 19,
+          "anchor": "DeliveryVerification"
+        },
+        {
+          "path": "SmartFleetBE/Controllers/QrDemoRoutingController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/QrDemoRoutingController.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Nghiệm thu manual override theo role, reason bắt buộc, lịch sử immutable, timestamp và retry limit được BA phê duyệt.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B03",
+      "priority": "P0",
+      "feature": "FE06",
+      "title": "Lưu waypoint/QR scan/progress bền vững",
+      "finding": "Mission view chủ yếu trong dictionary; baseline DB MissionWaypoints/RobotQrScanEvents đều 0.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 87,
+          "anchor": "_missions"
+        },
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 27,
+          "anchor": "MissionWaypoint"
+        }
+      ],
+      "acceptance": "Persist ordered route/scan/progress và đọc lại sau restart; kiểm thử restart lúc pickup/carrying/intersection, không tự chạy bằng state đoán.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B04",
+      "priority": "P0",
+      "feature": "FE03/FE06",
+      "title": "Quy trình release/resume hold sau bảo trì",
+      "finding": "Pause giữ tài nguyên đúng; chưa có giao thức explicit resume/unlatch được robot ACK sau xác nhận vật lý.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/TaskInterventionService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskInterventionService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "Robot code/main_code.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Robot code/main_code.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Làm lệnh release có authorization và audit, validate physical recovery, device ACK, rồi mới cho robot trở lại eligible; lệnh cũ không tự chạy lại.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B05",
+      "priority": "P0",
+      "feature": "NFR",
+      "title": "Rotate DB credential và JWT key từng có trong Git",
+      "finding": "Bỏ tracking hiện tại không thu hồi credential đã xuất hiện trong lịch sử. Không in secret trong báo cáo.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chủ hạ tầng rotate DB/password/JWT key, xác nhận credential cũ vô hiệu; nếu cần rewrite history phải phối hợp cả nhóm trước.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B06",
+      "priority": "P1",
+      "feature": "FE01",
+      "title": "Tự sửa profile và đổi password",
+      "finding": "Profile hiện chỉ đọc; Admin sửa user không thay thế self-service profile.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/UserProfilePage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/UserProfilePage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/AuthService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AuthService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "User sửa trường cho phép và đổi mật khẩu có old-password validation, audit và test quyền chéo account.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B07",
+      "priority": "P1",
+      "feature": "FE01",
+      "title": "Password complexity và account lockout",
+      "finding": "Auth kiểm tra BCrypt nhưng chưa có bộ đếm đăng nhập sai/lockout persisted; rule chỉ có tên nên ngưỡng phải thống nhất.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/AuthService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AuthService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chốt policy BR39/41; validate cả create/reset, lockout theo tài khoản, test hết khóa và thông báo không lộ account.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B08",
+      "priority": "P1",
+      "feature": "FE01",
+      "title": "Vòng đời session, logout/refresh/revoke",
+      "finding": "Đã revoke role/account; chưa có session logout/revoke và refresh lifecycle hoàn chỉnh.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/AuthService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AuthService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 33,
+          "anchor": "RefreshToken"
+        }
+      ],
+      "acceptance": "Thu hồi phiên có hiệu lực, refresh rotation nếu dùng, token hết hạn/logout bị từ chối; không coi xóa localStorage là server logout.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B09",
+      "priority": "P1",
+      "feature": "FE01",
+      "title": "Audit log chung và màn tra cứu",
+      "finding": "Cancel/force đã có audit; login/user/role/map/status chưa đồng nhất và chưa có API/UI audit viewer.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 49,
+          "anchor": "SystemAuditLog"
+        },
+        {
+          "path": "SmartFleetBE/Services/UserService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/UserService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Ghi actor/time/action/target/result/state phù hợp; truy vấn theo quyền/date, bảo vệ log khỏi sửa.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B10",
+      "priority": "P1",
+      "feature": "FE02",
+      "title": "Warehouse/Zone/Station CRUD",
+      "finding": "Controllers hiện không có CRUD tương ứng; editor map không thay thế catalog kho/trạm.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/TaskLocationPolicy.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskLocationPolicy.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/App.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/App.tsx",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Có API/UI tạo/sửa/deactivate và validate unique zone/kho, station một zone, loại trạm, quyền Admin; không xóa dữ liệu đang được tham chiếu.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B11",
+      "priority": "P1",
+      "feature": "FE02",
+      "title": "Ràng buộc station với vị trí QR",
+      "finding": "Task form dùng station ID và QR selection độc lập; có thể chọn station nghiệp vụ không tương ứng QR vật lý.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Nguồn station↔QR/coordinate thống nhất; UI chọn station tải QR đúng; server reject mapping lệch.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B12",
+      "priority": "P1",
+      "feature": "FE02",
+      "title": "Map version history/activate/rollback",
+      "finding": "Có current map + revision, chưa có lịch sử phiên bản để xem lại/activate có kiểm soát.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 21,
+          "anchor": "MapConfiguration"
+        }
+      ],
+      "acceptance": "Lưu bản cũ immutable, một active version/kho; rollback tạo version mới có audit, không thay map khi đang có nhiệm vụ.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B13",
+      "priority": "P1",
+      "feature": "FE02",
+      "title": "Đồng nhất graph với ERD và nhiều kho",
+      "finding": "Runtime dùng map JSON; QrCheckpoints/QrCheckpointLinks baseline trống. Map selection hiện một warehouse cấu hình.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/DatabaseNavigationMapStore.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 21,
+          "anchor": "MapConfigurations"
+        }
+      ],
+      "acceptance": "Chốt canonical storage và migration/adapter; map độc lập mỗi kho, kiểm thử link/QR trùng, đường một chiều theo đặc tả đã duyệt.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B14",
+      "priority": "P1",
+      "feature": "FE03",
+      "title": "Đăng ký và sửa cấu hình robot",
+      "finding": "Admin Robots vẫn Coming Soon; hiện API chỉ fleet/status/resolve incident.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/App.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/App.tsx",
+          "line": 231,
+          "anchor": "Admin Robots"
+        },
+        {
+          "path": "SmartFleetBE/Controllers/RobotsController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/RobotsController.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "acceptance": "CRUD/config có mã duy nhất, warehouse/payload/device identity, validate tài nguyên đang dùng và test quyền.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B15",
+      "priority": "P1",
+      "feature": "FE03",
+      "title": "Lịch bảo trì định kỳ và lịch sử UI",
+      "finding": "Maintenance route trỏ RobotsPage; API records chỉ GET, chưa lập lịch/start/complete quy trình đầy đủ.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/App.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/App.tsx",
+          "line": 218,
+          "anchor": "/dashboard/maintenance"
+        },
+        {
+          "path": "SmartFleetBE/Controllers/MaintenanceRecordsController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/MaintenanceRecordsController.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Tạo lịch, đến hạn cảnh báo, record bắt đầu/kết thúc/kỹ thuật viên/chi phí nếu scope chốt; khôi phục available theo freshness + hold guard.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B16",
+      "priority": "P1",
+      "feature": "FE04",
+      "title": "Timeline task/assignment/mission cho người dùng",
+      "finding": "Có history model, chưa cung cấp timeline đầy đủ để xem ai giao/hủy/recover và thất bại lần nào.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TasksPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 53,
+          "anchor": "TaskStatusHistory"
+        }
+      ],
+      "acceptance": "API/UI timeline theo task, liên kết assignment cũ/mới, role access và thứ tự thời gian ổn định.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B17",
+      "priority": "P1",
+      "feature": "FE04",
+      "title": "Package required và deadline rõ nghĩa",
+      "finding": "Package hiện optional; ScheduledTime là earliest start chứ chưa phải deadline theo BR63/64.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/TaskCreationPage.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/TransportTaskService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TransportTaskService.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "acceptance": "BA định nghĩa các trường bắt buộc/deadline; server và UI cùng validate, test quá hạn và timezone, migration không làm sai lịch sử.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B18",
+      "priority": "P1",
+      "feature": "FE04",
+      "title": "Business request idempotency",
+      "finding": "Unique tracking code không ngăn cùng yêu cầu bị submit lại do retry/double click.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/TransportTaskService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TransportTaskService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Repositories/TransportTaskRepository.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Có idempotency key nghiệp vụ, cùng key trả cùng task, concurrent create không tạo đôi; định nghĩa duplicate trước khi chặn nội dung giống nhau.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B19",
+      "priority": "P1",
+      "feature": "FE05",
+      "title": "Scoring khoảng cách/workload và cân bằng tải",
+      "finding": "Auto hiện chủ yếu battery cao trước, RobotId tie; không có trọng số distance/workload theo proposal.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 30,
+          "anchor": "OrderByDescending"
+        }
+      ],
+      "acceptance": "Policy được BA chốt, score giải thích được, test robot xa pin cao vs robot gần; ghi lý do lựa chọn và không vượt eligibility.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B20",
+      "priority": "P1",
+      "feature": "FE05",
+      "title": "Priority aging và dispatch policy config",
+      "finding": "Chưa có aging/policy CRUD; cấu hình appsettings không phải màn quản trị policy và audit.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/App.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/App.tsx",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Task chờ lâu có cơ chế chống starvation, policy validate/permission/version/audit và test thay policy không phá queue.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B21",
+      "priority": "P1",
+      "feature": "FE05",
+      "title": "Giới hạn số lần redispatch nghiệp vụ",
+      "finding": "MaxAttempts trong service là retry transaction, không phải số lần giao lại nhiệm vụ.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 20,
+          "anchor": "MaxAttempts"
+        },
+        {
+          "path": "SmartFleetBE/Services/TaskInterventionService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskInterventionService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Đếm attempt qua assignment history; quá ngưỡng chuyển exception cần xử lý, không loop giao lại vô hạn; retry concurrency không tăng nhầm nghiệp vụ.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B22",
+      "priority": "P1",
+      "feature": "FE06",
+      "title": "Server timeout toàn mission/segment",
+      "finding": "Đã có start ACK timeout; chưa có watchdog bền vững cho mọi phase đang chạy và stalled progress.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/RobotHealthMonitor.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/RobotHealthMonitor.cs",
+          "line": 35,
+          "anchor": "ackTimeout"
+        },
+        {
+          "path": "SmartFleetBE/Services/MissionLifecycleService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/MissionLifecycleService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chốt thời hạn phase và pause behavior; timeout giữ ownership/hàng, cảnh báo, recover rõ ràng và không fail nhầm khi pause hợp lệ.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B23",
+      "priority": "P1",
+      "feature": "FE06",
+      "title": "Unknown/off-route/blocked route có workflow",
+      "finding": "Pilot có guard; chưa đủ detection/history/reroute và quy trình vận hành cho các case BR79–83.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Navigation/NavigationCoordinator.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chốt hành vi dừng an toàn, thông báo, route version/ACK; test scan lạ, lệch đường, block tạm thời, không yêu cầu advanced SLAM ngoài scope.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B24",
+      "priority": "P1",
+      "feature": "FE06",
+      "title": "Adapter JetRacer/ROS thực tế",
+      "finding": "Source vật lý còn line-follow và hành vi fixed/timed; không tương đương WAYPOINT_ROUTE + NAV_CONTROL + ArUco/IMU của Webots.",
+      "evidence": [
+        {
+          "path": "Robot code/main_code.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Robot code/main_code.py",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Port protocol/pose/hold ACK sang thiết bị mục tiêu và chạy hardware-in-loop; không dùng kết quả Webots để tuyên bố hardware hoàn thành.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B25",
+      "priority": "P1",
+      "feature": "FE06",
+      "title": "Home station theo robot/kho và physical return",
+      "finding": "Home hiện theo config chung; Nav Home chỉ thực thi khi camera/map/grant hợp lệ. Robot vật lý chưa có Home planner tương đương.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/TaskInterventionService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/TaskInterventionService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 453,
+          "anchor": "BuildHomeRoute"
+        }
+      ],
+      "acceptance": "Cấu hình station Home theo thiết bị/kho, test không có pose hoặc đang giữ grant vẫn held; physical route recovery có xác nhận.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B26",
+      "priority": "P1",
+      "feature": "FE08",
+      "title": "Analytics/KPI và bộ lọc thời gian",
+      "finding": "Route Analytics vẫn Coming Soon; chưa có thống kê cycle time/utilization/verification/maintenance đầy đủ.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/App.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/App.tsx",
+          "line": 189,
+          "anchor": "Analytics"
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/OperatorDashboard.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/OperatorDashboard.tsx",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Query từ dữ liệu persisted với định nghĩa KPI/date range/timezone được duyệt, quyền role và test đối chiếu DB.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B27",
+      "priority": "P1",
+      "feature": "FE08",
+      "title": "Export Excel/PDF có phân quyền",
+      "finding": "Chưa có API/UI report export; không thể nghiệm thu FE08/BR99–100.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/App.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/App.tsx",
+          "line": 189,
+          "anchor": "Analytics"
+        }
+      ],
+      "acceptance": "Xuất dữ liệu thật theo filter, validate từ/đến, kiểm tra quyền, file mở được và tổng khớp dashboard.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B28",
+      "priority": "P1",
+      "feature": "FE09",
+      "title": "Notification đủ các sự kiện scope",
+      "finding": "Mới có lỗi/offline/pin/start ACK; còn thiếu dispatch, completion và scheduled maintenance.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Services/OperationalAlertService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/OperationalAlertService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/MissionLifecycleService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/MissionLifecycleService.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/AutoDispatchService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/AutoDispatchService.cs",
+          "line": 2,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chốt role nhận từng event, tạo trong cùng transaction/outbox, test dedupe và không gửi người không có quyền.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B29",
+      "priority": "P2",
+      "feature": "FE09",
+      "title": "Tìm kiếm/retention và ưu tiên cảnh báo",
+      "finding": "Danh sách mới nhất giới hạn 100; chưa có policy toàn diện cho priority, retention, pagination.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Controllers/NotificationsController.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Controllers/NotificationsController.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/src/components/NotificationPanel.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/components/NotificationPanel.tsx",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Pagination ổn định, lọc severity/date/read, index phù hợp, retention có chính sách và không mất incident đang mở.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B30",
+      "priority": "P1",
+      "feature": "NFR",
+      "title": "Môi trường clone mới có thể chạy lại",
+      "finding": "README đã cải thiện nhưng chưa có Docker/compose/CI và quy trình DB bootstrap thống nhất từ migration; world/assets còn ngoài repo.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Một máy mới dựng BE/FE/DB/broker/world từ tài liệu, không cần secret cũ; CI build/test và seed test có chủ đích.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B31",
+      "priority": "P1",
+      "feature": "NFR",
+      "title": "Bảo mật giao tiếp khi triển khai mạng",
+      "finding": "Broker localhost anonymous dùng cho dev; chưa đủ identity/ACL/TLS/replay policy cho robot mạng thật.",
+      "evidence": [
+        {
+          "path": "Robot code/main_code.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Robot code/main_code.py",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Webots_Full_Mission_Controller/my_controller_testing_fleet.py",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chốt môi trường triển khai, per-device credentials/ACL, TLS khi qua mạng không tin cậy và thử robot giả/command replay.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B32",
+      "priority": "P1",
+      "feature": "QA",
+      "title": "Đối chiếu đủ 152 planned test case",
+      "finding": "Report5 ghi Not Run và tham chiếu hai Excel chưa có trong repo/Downloads; test code hiện tại không tự ánh xạ thành 152 case.",
+      "evidence": [
+        {
+          "path": "tests/SmartFleetBE.Tests/BusinessRegressionTests.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/tests/SmartFleetBE.Tests/BusinessRegressionTests.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "FrontEnd for SmartFleet/tests/business-regression.spec.ts",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/tests/business-regression.spec.ts",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Khôi phục Excel/traceability, gắn requirement→case→evidence; case thiếu feature giữ Blocked/Not Run, không sửa thành Pass cho đủ số.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B33",
+      "priority": "P1",
+      "feature": "QA",
+      "title": "Concurrency/reconnect/restart và physical safety acceptance",
+      "finding": "EF InMemory không chứng minh constraint/locking PostgreSQL; Playwright dùng mock API; Home test riêng không thay end-to-end tất cả flow.",
+      "evidence": [
+        {
+          "path": "tests/SmartFleetBE.Tests/BusinessRegressionTests.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/tests/SmartFleetBE.Tests/BusinessRegressionTests.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "tests/postgres_outbox_regression.sql",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/tests/postgres_outbox_regression.sql",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "tests/test_robot_safety.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/tests/test_robot_safety.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chạy PG concurrency thật, MQTT duplicate/out-of-order, backend/broker restart, 2 robot tranh giao lộ, low battery/carrying load và manual recovery.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B34",
+      "priority": "P1",
+      "feature": "QA",
+      "title": "NFR đo hiệu năng, ổn định, backup/restore",
+      "finding": "Chưa có bằng chứng tải/soak/recovery với ngưỡng BA duyệt; đã bỏ số latency/throughput giả.",
+      "evidence": [
+        {
+          "path": "FrontEnd for SmartFleet/src/pages/OperatorDashboard.tsx",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/FrontEnd for SmartFleet/src/pages/OperatorDashboard.tsx",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Chốt threshold Report3/5, đo thực và ghi môi trường; phục hồi DB+map+mission có bằng chứng, không tự đặt chuẩn công nghiệp ngoài scope.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B35",
+      "priority": "P1",
+      "feature": "DOC",
+      "title": "SRS phải có điều kiện và thông báo đủ chi tiết",
+      "finding": "Report3 nhiều phần placeholder, 100 BR chủ yếu chỉ là tên; không đủ oracle nghiệm thu đầy đủ.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Viết pre/post-condition, state machine, auth matrix, validation/message và exception cho 4 main flow rồi review BA.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B36",
+      "priority": "P1",
+      "feature": "DOC",
+      "title": "Cập nhật diagram/ERD và test report theo code thực",
+      "finding": "Report4 có ProductsView/ProductsController sequence không liên quan; bảng QR/verification thiết kế chưa chạy; Report5 chưa ghi kết quả.",
+      "evidence": [
+        {
+          "path": "SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Model/SmartFleetDbContext.cs",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "SmartFleetBE/Services/QrDemoRouteService.cs",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/SmartFleetBE/Services/QrDemoRouteService.cs",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Thay diagram sai, sequence đủ dispatch/cancel/recover/verification; ERD và triển khai khớp, evidence thực gắn test report.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    },
+    {
+      "id": "B37",
+      "priority": "P2",
+      "feature": "DOC",
+      "title": "Kế hoạch và cấu hình sản phẩm nhất quán",
+      "finding": "Report2 có số man-day và template chưa khớp; ROS2/ROS Melodic, prototype vs physical chưa thống nhất trong bộ tài liệu.",
+      "evidence": [
+        {
+          "path": "README.md",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/README.md",
+          "line": 1,
+          "anchor": null
+        },
+        {
+          "path": "Robot code/main_code.py",
+          "absolutePath": "C:/CAPSTONE/CAPSTONE_SmartFleet/Robot code/main_code.py",
+          "line": 1,
+          "anchor": null
+        }
+      ],
+      "acceptance": "Nhóm chốt baseline kỹ thuật/effort/milestone, ghi amendment và tiêu chí simulator/hardware riêng.",
+      "status": "Còn thiếu / cần hoàn thiện"
+    }
+  ],
+  "scopeDecisions": [
+    {
+      "id": "D01",
+      "topic": "FAILED task nhưng assignment vẫn ACTIVE",
+      "decision": "Được giữ có chủ đích khi chưa xác nhận hàng/robot an toàn, phù hợp yêu cầu chống Ghost Load của người dùng. Không reset AVAILABLE hay requeue tự động chỉ vì task FAILED. Maintenance xác nhận hàng về pickup → QUEUED → chờ 30 giây → robot khác đủ điều kiện. Badge mission/assignment cần phân biệt rõ.",
+      "source": "Yêu cầu người dùng trong chat, ưu tiên hơn mô tả auto-requeue khái quát trong SRS."
+    },
+    {
+      "id": "D02",
+      "topic": "ROS2 và thiết bị đích",
+      "decision": "Proposal/SRS ghi ROS2; code robot thực tế là ROS Melodic, simulator là TurtleBot/Webots. Cần BA phê duyệt thay đổi nền tảng hoặc làm adapter đúng mục tiêu; simulator không tự chứng minh JetRacer đạt nghiệm thu.",
+      "source": "Proposal DOCX, R1/R3/R4; Robot code/main_code.py."
+    },
+    {
+      "id": "D03",
+      "topic": "Supervisor role",
+      "decision": "Bộ SRS hiện có 3 human roles: Admin, Warehouse Operator, Maintenance Technician. Supervisor xuất hiện trong yêu cầu thảo luận cancellation; cần chốt có thêm role hay ánh xạ Admin. Không tự coi Supervisor CRUD là scope bắt buộc đã duyệt.",
+      "source": "R3 trang 5–7; yêu cầu bổ sung của người dùng."
+    },
+    {
+      "id": "D04",
+      "topic": "Truck Visits",
+      "decision": "Có bảng/BR98 nhưng không rõ trong FE01–FE09 và use case chính; cần xác nhận giữ/loại bằng amendment. Không xây thêm trucking feature khi chưa định nghĩa.",
+      "source": "R3 BR98; R4 schema."
+    },
+    {
+      "id": "D05",
+      "topic": "QR navigation khác QR verification",
+      "decision": "Nhìn thấy QR tại delivery chỉ chứng minh vị trí. Phải có nhận/giao kiện hàng và kết quả verification để hoàn thành FE07; chế độ demo hiện chưa đáp ứng.",
+      "source": "R1 FE07; R3 BR28–31/87–89; R5 verification tests."
+    },
+    {
+      "id": "D06",
+      "topic": "Map lưu DB khác quản lý version đầy đủ",
+      "decision": "Current map JSON/revision đã lưu DB và dùng route; chưa đồng nghĩa có MapVersion history, rollback, CRUD kho/trạm, hay tự sinh world Webots theo editor. World vật lý phải được commissioning khớp map.",
+      "source": "R1 FE02; R4 ERD; code map store."
+    },
+    {
+      "id": "D07",
+      "topic": "Giới hạn scope",
+      "decision": "Không yêu cầu full WMS/inventory, chế tạo robot/firmware mới, advanced SLAM hoàn chỉnh, triển khai kho công nghiệp quy mô lớn hay chứng nhận an toàn công nghiệp để gọi là đủ scope capstone.",
+      "source": "R1 trang 8; R5 giới hạn trang 7."
+    },
+    {
+      "id": "D08",
+      "topic": "LiDAR clear simulation và E-Stop",
+      "decision": "--sim-lidar=true là giả lập kiểm thử, không chứng minh cảm biến chống va chạm thật. Pause phần mềm đóng băng task/tài nguyên; không tuyên bố là nút emergency stop phần cứng đạt chứng nhận.",
+      "source": "Controller args thực tế và giới hạn platform trong R1/R5."
+    }
+  ],
+  "businessRules": [
+    {
+      "id": "BR-01",
+      "title": "Valid Email Format",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-02",
+      "title": "Unique User Account",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-03",
+      "title": "Valid User Authentication",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-04",
+      "title": "Administrator Only",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-05",
+      "title": "Warehouse Operator Only",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-06",
+      "title": "Maintenance Record Access",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-07",
+      "title": "Valid Warehouse and Stations",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-08",
+      "title": "Different Pickup and Delivery Stations",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-09",
+      "title": "Valid Task Priority",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-10",
+      "title": "Valid Payload Weight",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-11",
+      "title": "Automatic Task Queuing",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-12",
+      "title": "Task Modification and Cancellation",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-13",
+      "title": "Task Assignment Eligibility",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-14",
+      "title": "Manual and Automatic Task Assignment",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-15",
+      "title": "Single Active Assignment per Task",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-16",
+      "title": "Single Active Assignment per Robot",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-17",
+      "title": "Warehouse Assignment Consistency",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-18",
+      "title": "Robot Availability Validation",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-19",
+      "title": "Minimum Battery for Task Assignment",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-20",
+      "title": "Robot Maintenance Restriction",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-21",
+      "title": "Robot Payload Capacity",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-22",
+      "title": "Assignment Status Synchronization",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-23",
+      "title": "Valid Mission Execution",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-24",
+      "title": "Mission Execution Status",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-25",
+      "title": "QR-Based Robot Localization",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-26",
+      "title": "QR-Based Navigation Direction",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-27",
+      "title": "QR Recognition During Mission",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-28",
+      "title": "QR Verification Purpose",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B01",
+        "B02"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-29",
+      "title": "Pickup QR Verification",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B01",
+        "B02"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-30",
+      "title": "Mandatory Delivery Verification",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B01",
+        "B02"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-31",
+      "title": "Mission Completion Validation",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B01",
+        "B02"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-32",
+      "title": "Mission Event Validation",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-33",
+      "title": "Mission Failure Handling",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-34",
+      "title": "Robot Availability After Completion",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-35",
+      "title": "Critical Battery Warning",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-36",
+      "title": "Critical Battery Recovery",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-37",
+      "title": "Task Reassignment After Low Battery",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-38",
+      "title": "Task and Mission Status History",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-39",
+      "title": "Password Complexity",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B07",
+        "B08",
+        "B09"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-40",
+      "title": "Hashed Password Storage",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B07",
+        "B08",
+        "B09"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-41",
+      "title": "Account Lockout After Failed Logins",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B07",
+        "B08",
+        "B09"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-42",
+      "title": "Token Expiration",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B07",
+        "B08",
+        "B09"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-43",
+      "title": "Mandatory Role Assignment",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-44",
+      "title": "Deactivated Account Restriction",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-45",
+      "title": "Dashboard Access by Role",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B32"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-46",
+      "title": "Audit Logging of Critical Actions",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B07",
+        "B08",
+        "B09"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-47",
+      "title": "Unique Zone Name per Warehouse",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-48",
+      "title": "Station Belongs to One Zone",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-49",
+      "title": "Station Type Restriction",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-50",
+      "title": "Active Warehouse Map Version",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B12",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-51",
+      "title": "Warehouse Deactivation Restriction",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-52",
+      "title": "Valid Checkpoint Coordinates",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-53",
+      "title": "Unique QR Code per Checkpoint",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-54",
+      "title": "Unique Robot Code",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B14"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-55",
+      "title": "Robot Belongs to One Warehouse",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-56",
+      "title": "Valid Robot Status Transition",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-57",
+      "title": "Robot Heartbeat Timeout",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-58",
+      "title": "Offline Robot Assignment Restriction",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-59",
+      "title": "Robot Deletion Restriction",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B10",
+        "B11",
+        "B13"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-60",
+      "title": "Telemetry Recording Interval",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-61",
+      "title": "Telemetry Retention Period",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-62",
+      "title": "Unique Task Code",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-63",
+      "title": "Required Package Information",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-64",
+      "title": "Valid Task Deadline",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-65",
+      "title": "Priority-Based Queue Ordering",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-66",
+      "title": "Priority Aging for Waiting Tasks",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B20"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-67",
+      "title": "Duplicate Task Prevention",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-68",
+      "title": "Task Locked After Mission Start",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-69",
+      "title": "Cancellation Reason Required",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-70",
+      "title": "Dispatch Policy Configuration",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-71",
+      "title": "Robot Scoring Criteria",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-72",
+      "title": "Robot Workload Balancing",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-73",
+      "title": "Assignment Acknowledgement Timeout",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-74",
+      "title": "Maximum Reassignment Attempts",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-75",
+      "title": "Manual Assignment Override Logging",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B19",
+        "B20",
+        "B21",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-76",
+      "title": "Assignment History Retention",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B16",
+        "B17",
+        "B18"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-77",
+      "title": "Route Must Use Valid Segments",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-78",
+      "title": "Ordered Waypoint Sequence",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-79",
+      "title": "Unknown QR Handling",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-80",
+      "title": "Duplicate QR Scan Filtering",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-81",
+      "title": "Off-Route Detection",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-82",
+      "title": "Blocked Route Rerouting",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-83",
+      "title": "Mission Timeout",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-84",
+      "title": "Mission Cancellation Handling",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-85",
+      "title": "QR Scan Event Logging",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-86",
+      "title": "Emergency Stop Handling",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B03",
+        "B04",
+        "B22",
+        "B23",
+        "B24"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-87",
+      "title": "Delivery Verification Timestamp",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B01",
+        "B02"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-88",
+      "title": "Failed Verification Handling",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B01",
+        "B02"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-89",
+      "title": "Verification Retry Limit",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B01",
+        "B02"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-90",
+      "title": "Notification Recipient by Role",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B28",
+        "B29"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-91",
+      "title": "Duplicate Notification Prevention",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B28",
+        "B29"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-92",
+      "title": "Notification Read Status",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B28",
+        "B29"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-93",
+      "title": "Critical Alert Priority",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B28",
+        "B29"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-94",
+      "title": "Incident Recording Requirement",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-95",
+      "title": "Incident Severity Classification",
+      "status": "Có triển khai/đã sửa; cần nghiệm thu tích hợp",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-96",
+      "title": "Maintenance Completion Restores Availability",
+      "status": "Một phần / giới hạn prototype",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-97",
+      "title": "Scheduled Maintenance Warning",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B04",
+        "B15",
+        "B25",
+        "B33"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-98",
+      "title": "Truck Visit Time Validity",
+      "status": "Cần xác nhận scope (D04)",
+      "backlog": [
+        "B32",
+        "B35"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-99",
+      "title": "Report Date Range Validation",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B26",
+        "B27"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    },
+    {
+      "id": "BR-100",
+      "title": "Export Permission",
+      "status": "Thiếu hoặc chưa đủ luồng/chi tiết policy",
+      "backlog": [
+        "B26",
+        "B27"
+      ],
+      "note": "SRS chỉ nêu tên rule; trạng thái này là đối chiếu code, không thay kết quả acceptance test."
+    }
+  ],
+  "validation": {
+    "backend": {
+      "passed": 82,
+      "failed": 0,
+      "skipped": 0,
+      "kind": "xUnit; phần lớn EF InMemory, không thay PG integration",
+      "evidence": "C:\\Users\\PC\\AppData\\Local\\SmartFleet\\audit-20261124\\test-results\\scope-audit.trx"
+    },
+    "python": {
+      "passed": 23,
+      "failed": 0,
+      "kind": "ArUco/IMU, controller safety AST/extracted methods và physical safety regression"
+    },
+    "frontend": {
+      "passed": 17,
+      "failed": 0,
+      "kind": "Playwright với API mock; tsc --noEmit và Vite build thành công; build còn cảnh báo chunk >500 kB"
+    },
+    "api": {
+      "checks": 14,
+      "passed": true,
+      "details": [
+        {
+          "role": "anonymous",
+          "path": "/api/v1/robots",
+          "status": 401,
+          "expected": 401
+        },
+        {
+          "role": "anonymous",
+          "path": "/api/Test",
+          "status": 401,
+          "expected": 401
+        },
+        {
+          "role": "anonymous",
+          "path": "/api/v1/system/health",
+          "status": 401,
+          "expected": 401
+        },
+        {
+          "role": "Administrator",
+          "path": "/api/v1/users",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "role": "Warehouse Operator",
+          "path": "/api/v1/users",
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "role": "Warehouse Operator",
+          "path": "/api/v1/transport-tasks",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "role": "Administrator",
+          "path": "/api/v1/transport-tasks",
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "role": "Maintenance Technician",
+          "path": "/api/v1/transport-tasks",
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "role": "Maintenance Technician",
+          "path": "/api/v1/maintenance-records",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "role": "Warehouse Operator",
+          "path": "/api/v1/maintenance-records",
+          "status": 403,
+          "expected": 403
+        },
+        {
+          "role": "Warehouse Operator",
+          "path": "/api/v1/demo-routing/robots/localizations",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "localizedRobots": [
+            "R01",
+            "R02"
+          ]
+        },
+        {
+          "enabled": true,
+          "mode": "QR_FLEET_WEBOTS_PILOT",
+          "pickupVerificationEnabled": false,
+          "intersectionReservationsEnabled": true
+        },
+        {
+          "role": "Maintenance Technician",
+          "path": "/api/v1/robots/batteries",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "role": "Warehouse Operator",
+          "path": "/api/v1/system/health",
+          "status": 200,
+          "expected": 200
+        },
+        {
+          "databaseConnected": true,
+          "robotCount": 5,
+          "onlineRobotCount": 2,
+          "mqtt": "CONNECTED",
+          "measuredAtUtc": "2026-11-24T15:34:13.6735099Z"
+        },
+        {
+          "role": "Maintenance Technician",
+          "path": "/api/v1/notifications",
+          "status": 200,
+          "expected": 200
+        }
+      ]
+    },
+    "postgres": "Đã thử constraint thật bằng TEMP clone của RobotCommandOutbox, nhiều safety commands/assignment được nhận và EXECUTE_TASK trùng bị reject; ROLLBACK, không sửa task thật.",
+    "webotsHome": {
+      "passed": true,
+      "distanceToHomeM": 0.08474347382831098,
+      "time": 56.96,
+      "state": {
+        "home": true,
+        "finalReady": 7,
+        "events": [
+          "CANCEL_STOP_SENT",
+          "HOME_SENT",
+          "APPROACH:True",
+          "ENTER:True",
+          "EXIT:True",
+          "HOME_REACHED"
+        ],
+        "locks": 0
+      }
+    },
+    "limitations": "Chưa chạy acceptance toàn bộ 152 case, chưa kiểm thử tải/soak đầy đủ, chưa chạy robot JetRacer thật, chưa chứng minh mọi race/restart. Các thay đổi account/map/safety đã kiểm thử local; không tuyên bố production-ready."
+  },
+  "databaseBaseline": {
+    "note": "Snapshot baseline trước khi health monitor mới phát sinh cảnh báo; là bằng chứng lịch sử trong đợt audit, không khẳng định số hàng hiện tại bất biến.",
+    "completedMissionsWithoutDeliveryVerification": 39,
+    "zeroRowTables": [
+      "DeliveryVerifications",
+      "MissionWaypoints",
+      "RobotQrScanEvents",
+      "QrCheckpoints",
+      "QrCheckpointLinks"
+    ],
+    "savedMap": {
+      "warehouseId": 1,
+      "mapId": 1,
+      "revision": 5,
+      "commissionedQrMarkers": 9,
+      "qrCorridors": 12
+    },
+    "liveHealthAfterRestart": {
+      "databaseConnected": true,
+      "robotCount": 5,
+      "onlineRobotCount": 2,
+      "mqtt": "CONNECTED",
+      "measuredAtUtc": "2026-11-24T15:34:13.6735099Z"
+    },
+    "migrationsApplied": [
+      "Database/20261124_outbox_safety_commands.sql",
+      "Database/20261124_auth_uniqueness.sql"
+    ],
+    "safety": "Không reset AVAILABLE/QUEUED hoặc hủy real task để làm xanh test. Restart backend khi ACTIVE assignment = 0; test Home dùng broker riêng 1884 và robot R91, không ghi operational DB."
+  },
+  "acceptanceOrder": [
+    "1. Khóa baseline BA: state machine của 4 flow, ROS/hardware, mapping station↔QR, Supervisor/Truck và điều kiện verification.",
+    "2. Đóng P0: FE07 verification; persistent mission/history; quy trình release/resume sau Maintenance; rotate credential đã lộ.",
+    "3. Hoàn thiện FE02/FE03 CRUD và maintenance; FE05 scoring/aging/policy/attempt limit; FE04 timeline/idempotency.",
+    "4. Hoàn thiện Analytics/export và notifications; đồng bộ ERD/diagrams/test matrix cùng code thực.",
+    "5. Chạy integration PostgreSQL/MQTT/2 robots/restart, hardware-in-loop, NFR và acceptance theo 3 roles, gắn bằng chứng vào từng case Report5."
+  ],
+  "completionGates": [
+    "4 main flows có happy path, alternative và failure path được chứng minh bằng DB/API/UI/robot; không mock để thay acceptance.",
+    "Không có assignment mới đè robot còn giữ hàng, không tự free intersection/resource khi chưa xác nhận an toàn.",
+    "Task hoàn thành có pickup/delivery verification hợp lệ và history xem lại được sau restart.",
+    "Mọi FE01–FE09 có API/UI/dữ liệu thật hoặc có amendment loại khỏi scope được duyệt.",
+    "152 planned cases được trace requirement/evidence, feature chưa có để Blocked/Not Run; các P0/P1 đã xử lý hoặc có quyết định chấp thuận rõ.",
+    "Một máy mới dựng được hệ thống theo tài liệu; secrets không nằm trong source và credential cũ đã thu hồi."
+  ]
+}

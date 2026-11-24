@@ -1,6 +1,7 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { TaskCreateForm } from "./TaskCreationPage";
-import { getAvailableRobotsForTask, assignRobotToTask, type AvailableRobot, type ManualAssignTaskResponse } from "../api/modules/tasks";
+import { getAvailableRobotsForTask, assignRobotToTask, getTransportTaskDetailsById, updateTransportTask, priorityToLevel,
+    type TransportTaskDetails, type AvailableRobot, type ManualAssignTaskResponse } from "../api/modules/tasks";
 import { useData } from "../context/DataContext";
 import { Priority, Task } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
@@ -22,6 +23,10 @@ export function TasksPage() {
     const [assignTarget, setAssignTarget] = useState<Task | null>(null);
     const [editTarget, setEditTarget] = useState<Task | null>(null);
     const [editState, setEditState] = useState<EditState>({ delivery: "", priority: "MEDIUM" });
+    const [editDetails, setEditDetails] = useState<TransportTaskDetails | null>(null);
+    const [editError, setEditError] = useState("");
+    const [editBusy, setEditBusy] = useState(false);
+    const editInFlight = useRef(false);
     const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const deleteInFlight = useRef(false);
@@ -105,23 +110,50 @@ export function TasksPage() {
             empty: search.trim() ? "No completed tasks match your search." : "No completed tasks yet.",
         },
     ];
-    const statusOptions = ["ALL", "PENDING", "QUEUED", "ASSIGNED", "EXECUTING", "FAILED", "CANCELLED"];
+    const statusOptions = ["ALL", "PENDING", "QUEUED", "CRITICAL", "ASSIGNED", "EXECUTING", "REDISPATCHING", "FAILED", "CANCELLED", "UNKNOWN"];
     const counts = {
         total: tasks.length,
-        pending: tasks.filter((t) => t.status === "PENDING" || t.status === "QUEUED").length,
+        pending: tasks.filter((t) => ["PENDING", "QUEUED", "CRITICAL"].includes(t.status)).length,
         executing: tasks.filter((t) => t.status === "EXECUTING" || t.status === "ASSIGNED").length,
         completed: tasks.filter((t) => t.status === "COMPLETED").length,
     };
 
     // ── Actions ──
-    const openEdit = (task: Task) => {
+    const openEdit = async (task: Task) => {
         setEditTarget(task);
-        setEditState({ delivery: task.delivery, priority: task.priority });
+        setEditDetails(null);
+        setEditError("");
+        setEditBusy(true);
+        try {
+            if (!task.taskId) throw new Error("Reload this task before editing.");
+            const details = await getTransportTaskDetailsById(task.taskId);
+            setEditDetails(details);
+            setEditState({ delivery: String(details.deliveryStationId ?? ""), priority: task.priority });
+        } catch (error) { setEditError((error as Error).message); }
+        finally { setEditBusy(false); }
     };
 
-    const confirmEdit = () => {
-        if (!editTarget) return;
-        setToast({ msg: "Editing is not connected to the backend yet. No changes were saved.", type: "info" });
+    const confirmEdit = async () => {
+        if (!editTarget?.taskId || !editDetails || editInFlight.current) return;
+        const deliveryId = Number(editState.delivery);
+        if (!Number.isInteger(deliveryId) || deliveryId <= 0) {
+            setEditError("Delivery station ID must be a positive integer."); return;
+        }
+        editInFlight.current = true;
+        setEditBusy(true);
+        setEditError("");
+        try {
+            await updateTransportTask(editTarget.taskId, {
+                warehouseId: editDetails.warehouseId!, pickupStationId: editDetails.pickupStationId!,
+                deliveryStationId: deliveryId, priorityLevel: priorityToLevel(editState.priority),
+                packageCode: editDetails.packageCode ?? null, itemDescription: editDetails.itemDescription ?? null,
+                payloadWeightKg: editDetails.payloadWeightKg ?? null, scheduledTime: editDetails.scheduledTime ?? null,
+            });
+            setEditTarget(null);
+            await refreshTasks();
+            setToast({ msg: "Task updated in the database.", type: "success" });
+        } catch (error) { setEditError((error as Error).message); }
+        finally { setEditBusy(false); editInFlight.current = false; }
     };
 
     const handleCancel = async (task: Task) => {
@@ -351,7 +383,7 @@ export function TasksPage() {
                                             <td className="px-4 py-3"><StatusBadge status={task.status} /></td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-1.5">
-                                                    {task.status === "QUEUED" && task.taskId != null && !task.robotId && (
+                                                    {["QUEUED", "CRITICAL"].includes(task.status) && task.taskId != null && !task.robotId && (
                                                         <button type="button" onClick={() => setAssignTarget(task)} aria-label={`Assign robot to task ${task.id}`}
                                                             className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-cyan-400/10 text-cyan-600 dark:text-cyan-300 transition-all hover:-translate-y-0.5 hover:brightness-125 hover:shadow-md active:translate-y-0 active:scale-95 duration-200">
                                                             ASSIGN
@@ -385,7 +417,7 @@ export function TasksPage() {
                                                             CANCEL
                                                         </button>
                                                     )}
-                                                    {(task.status === "COMPLETED" || task.status === "CANCELLED") && (
+                                                    {task.status === "PENDING" && (
                                                         <button
                                                             onClick={() => handleDelete(task)}
                                                             aria-label={`Delete task ${task.id}`}
@@ -442,8 +474,9 @@ export function TasksPage() {
 
             {/* ══ Edit Task Modal ══ */}
             {editTarget && (
-                <ModalShell title="Edit Transport Task" sub={`Modifying ${editTarget.id}`} onClose={() => setEditTarget(null)} width={500}>
-                    <form onSubmit={(event) => { event.preventDefault(); confirmEdit(); }}>
+                <ModalShell title="Edit Transport Task" sub={`Modifying ${editTarget.id}`} busy={editBusy} onClose={() => setEditTarget(null)} width={500}>
+                    <form onSubmit={(event) => { event.preventDefault(); void confirmEdit(); }}>
+                        {editError && <p role="alert" className="px-6 pt-4 text-red-400">{editError}</p>}
                         <div
                             className="px-6 py-3 flex gap-6"
                             style={{ background: "rgba(99,102,241,0.06)", borderBottom: "1px solid rgba(99,102,241,0.15)" }}
@@ -466,10 +499,10 @@ export function TasksPage() {
                             </div>
                             <InputField
                                 autoFocus
-                                label="Delivery Station / Destination"
+                                label="Delivery Station ID"
                                 value={editState.delivery}
                                 onChange={(v) => setEditState((s) => ({ ...s, delivery: v }))}
-                                placeholder="e.g. Delivery Station D1"
+                                placeholder="Enter the database delivery station ID"
                             />
                             <PriorityPicker
                                 value={editState.priority}
@@ -495,6 +528,7 @@ export function TasksPage() {
                             </button>
                             <button
                                 type="submit"
+                                disabled={editBusy || !editDetails}
                                 className="flex-[2] py-2.5 rounded-lg text-[13px] font-bold transition-all hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110 active:scale-95 active:translate-y-0 duration-200"
                                 style={{
                                     background: "linear-gradient(135deg,#22d3ee,#3b82f6)",

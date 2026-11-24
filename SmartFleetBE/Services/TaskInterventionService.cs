@@ -25,8 +25,20 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         await db.TaskInterventions.AnyAsync(x => x.TaskId == taskId &&
             (x.Paused || x.State != "NORMAL"), ct);
 
+    // The health monitor uses its existing transaction so state + durable stop
+    // either commit together or both roll back. Existing interventions are preserved.
+    public async Task QueueSystemPauseAsync(TaskAssignment assignment, string reason, DateTime now, CancellationToken ct)
+    {
+        var control = await db.TaskInterventions.SingleOrDefaultAsync(c => c.TaskId == assignment.TaskId, ct);
+        if (control is { Paused: true } || control != null && control.State != "NORMAL") return;
+        if (control == null) { control = new TaskIntervention { TaskId = assignment.TaskId }; db.TaskInterventions.Add(control); }
+        Audit("SYSTEM_PAUSE", assignment.TaskId, null, reason, assignment, control, now);
+        control.Paused = true; control.UpdatedAt = now;
+        Queue(control, assignment, "PAUSE_TASK", now);
+    }
+
     public async Task<object> Act(long taskId, string action, InterventionRequest request,
-        int userId, CancellationToken ct)
+        int? userId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length > 400)
             throw new ArgumentException("A reason of 1..400 characters is required.");
@@ -68,7 +80,8 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                     !request.LoadReturnedToPickupConfirmed)
                     throw new InvalidOperationException("Maintenance must confirm physical stop, load removal, and return of the load to this task's original pickup station.");
                 if (!await db.Stations.AnyAsync(s => s.StationId == task.PickupStationId &&
-                    s.Zone.WarehouseId == task.WarehouseId && s.IsActive, ct))
+                    s.Zone.WarehouseId == task.WarehouseId && s.Zone.IsActive && s.Zone.Warehouse.IsActive &&
+                    s.StationType == "PICKUP" && s.IsActive, ct))
                     throw new InvalidOperationException("Original pickup station is missing or inactive.");
                 assignment.AssignmentStatus = "FAILED";
                 assignment.EndedAt = now;
@@ -117,7 +130,7 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                     pickup |= configuration.GetValue<bool>("DemoRoute:Enabled") &&
                         mission?.MissionStatus == "NAVIGATING_TO_PICKUP" && routes.GetMission(mission.MissionId) == null;
                     var unsafeDevice = await db.RobotIncidents.AnyAsync(i => i.RobotId == robot!.RobotId &&
-                        !i.IsResolved && (i.Severity == "HIGH" || i.Severity == "CRITICAL"), ct);
+                        !i.IsResolved && (i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" || i.Severity == "CRITICAL"), ct);
                     var maintenance = await db.RobotMaintenanceRecords.AnyAsync(m => m.RobotId == robot!.RobotId &&
                         (m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS"), ct);
                     var fresh = robot!.LastTelemetryTime.HasValue &&
@@ -175,7 +188,7 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                 "Intervention saved. Robot command pending acknowledgement; robot is not available for dispatch." };
     }
 
-    private void CancelTask(TransportTask task, string reason, int userId, DateTime now)
+    private void CancelTask(TransportTask task, string reason, int? userId, DateTime now)
     {
         if (task.TaskStatus == "CANCELLED") return;
         db.TaskStatusHistories.Add(new TaskStatusHistory { TaskId = task.TaskId,
@@ -253,12 +266,11 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
             {
                 c.State = "CANCELLED_HOLD"; // No pose/route => retain ACTIVE assignment.
                 if (configuration.GetValue<bool>("DemoRoute:Enabled") &&
-                    !configuration.GetValue<bool>("Navigation:Enabled") &&
                     e.CurrentArUcoId.HasValue && configuration.GetValue<int?>("Cancellation:HomeArUcoId") is int home)
                 {
                     try
                     {
-                        var route = routes.BuildHomeRoute(e.CurrentArUcoId.Value, home);
+                        var route = routes.BuildHomeRoute(e.CurrentArUcoId.Value, home, code);
                         c.State = "RETURNING_HOME";
                         Queue(c, a, "RETURN_HOME", now, route);
                     }
@@ -274,7 +286,7 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
             // Keep robot unavailable if health changed on the return journey.
             var fault = a.Robot.ConnectionStatus != "ONLINE" ||
                 a.Robot.OperationalStatus != "BUSY" || await db.RobotIncidents.AnyAsync(i =>
-                    i.RobotId == a.RobotId && !i.IsResolved && (i.Severity == "HIGH" || i.Severity == "CRITICAL"), ct) ||
+                    i.RobotId == a.RobotId && !i.IsResolved && (i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" || i.Severity == "CRITICAL"), ct) ||
                 await db.RobotMaintenanceRecords.AnyAsync(m => m.RobotId == a.RobotId &&
                     (m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS"), ct);
             FinishAssignment(a, fault ? "MAINTENANCE" : "AVAILABLE", null, "Robot confirmed home after cancellation.", now);

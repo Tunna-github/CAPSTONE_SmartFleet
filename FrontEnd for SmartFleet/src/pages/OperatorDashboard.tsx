@@ -4,7 +4,7 @@ import { getRobots, type RobotInfo } from "../api/modules/robots";
 import { LogEntry } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
 import { MetricCard } from "../components/SharedUI";
-import { WarehouseGrid } from "../components/WarehouseGrid";
+import LiveFleetMap from "../components/LiveFleetMap";
 
 function HeartbeatRow({ robots }: { robots: RobotInfo[] }) {
     if (robots.length === 0) {
@@ -110,7 +110,7 @@ function LogPanel({ logs }: { logs: LogEntry[] }) {
 }
 
 export function OperatorDashboard() {
-    const { tasks, logs, addLog } = useData();
+    const { tasks, logs, refreshTasks } = useData();
     const [dbRobots, setDbRobots] = useState<RobotInfo[]>([]);
     const [clock, setClock] = useState(() => new Date().toLocaleTimeString("en-GB", { hour12: false }));
     const [tick, setTick] = useState(0);
@@ -139,56 +139,20 @@ export function OperatorDashboard() {
         return () => clearInterval(interval);
     }, [loadBackendRobots]);
 
-    // Simulate incoming MQTT logs
     useEffect(() => {
-        const t = setInterval(() => {
-            const activeRobots = dbRobots.filter(r => r.connectionStatus === "ONLINE");
-            if (activeRobots.length > 0) {
-                const rb = activeRobots[Math.floor(Math.random() * activeRobots.length)];
-                const messages = [
-                    `Position telemetry OK — Sector 4B`,
-                    `Battery level ${rb.batteryPercent ?? "N/A"}% — nominal`,
-                    `Heartbeat received — latency ${Math.floor(Math.random() * 20 + 5)}ms`,
-                ];
-                addLog({ level: "INFO", robot: rb.robotCode, message: messages[Math.floor(Math.random() * messages.length)] });
-            }
-        }, 6000);
-        return () => clearInterval(t);
-    }, [dbRobots, addLog]);
+        void refreshTasks().catch(() => {});
+        const timer = window.setInterval(() => void refreshTasks().catch(() => {}), 5000);
+        return () => window.clearInterval(timer);
+    }, [refreshTasks]);
 
     const onlineCount = dbRobots.filter(r => r.connectionStatus === "ONLINE").length;
-    const lowBatCount = dbRobots.filter(r => (r.batteryPercent ?? 100) <= 20).length;
+    const lowBatCount = dbRobots.filter(r => (r.batteryPercent ?? 100) < 20).length;
     const activeTaskCount = tasks.filter(t => t.status === "EXECUTING" || t.status === "ASSIGNED").length;
     const pendingTaskCount = tasks.filter(t => t.status === "PENDING" || t.status === "QUEUED").length;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const completedTodayCount = tasks.filter(t =>
-        t.status === "COMPLETED" &&
-        t.created && t.created.startsWith(todayStr)
-    ).length;
-
-    // Map dbRobots to match WarehouseGrid format if needed, or fallback
-    const stationPoints = [
-        { x: 9, y: 6 }, { x: 13, y: 6 }, { x: 17, y: 6 },
-        { x: 9, y: 9 }, { x: 13, y: 9 }, { x: 17, y: 9 },
-        { x: 9, y: 12 }, { x: 13, y: 12 }, { x: 17, y: 12 },
-    ];
-    const gridRobots = dbRobots.map((rb, idx) => {
-        const from = stationPoints[idx % stationPoints.length]!;
-        const to = stationPoints[(idx + 3) % stationPoints.length]!;
-        return {
-        id: rb.robotCode,
-        x: from.x,
-        y: from.y,
-        tx: to.x,
-        ty: to.y,
-        battery: rb.batteryPercent ?? 100,
-        mqtt: rb.connectionStatus as "ONLINE" | "OFFLINE",
-        missionId: rb.hasActiveAssignment ? `Task` : null,
-        zone: "Sector 4B",
-        color: rb.connectionStatus === "ONLINE" ? "#22d3ee" : "#ef4444"
-        };
-    });
+    const now = new Date();
+    const completedTodayCount = tasks.filter(t => t.status === "COMPLETED" && t.completedAt &&
+        new Date(t.completedAt).toDateString() === now.toDateString()).length;
 
     return (
         <div className="flex flex-col h-full overflow-y-auto transition-colors" style={{ background: "var(--background)" }}>
@@ -201,7 +165,7 @@ export function OperatorDashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-4 px-4 py-2 rounded-xl transition-colors" style={{ background: "var(--surface-2)", border: "1px solid var(--border-subtle)" }}>
-                        {[{ label: "API", ok: true }, { label: "DB", ok: true }, { label: "MQTT", ok: true }, { label: "MAP", ok: true }].map(s => (
+                        {[{ label: "Service health not measured", ok: false }].map(s => (
                             <div key={s.label} className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: s.ok ? "#22c55e" : "#ef4444" }} />
                                 <span className="font-mono text-[10px]" style={{ color: s.ok ? "var(--text-faint)" : "#ef4444" }}>{s.label}</span>
@@ -216,7 +180,7 @@ export function OperatorDashboard() {
                 <MetricCard label="Tasks in Queue" value={`${pendingTaskCount}`} sub={`${activeTaskCount} executing · ${pendingTaskCount} pending`} trend="2 high priority" trendUp={false} accentColor="#818cf8" glowColor="#6366f1" iconEl={<Icon d={IC.tasks} size={18} />} />
                 <MetricCard label="Battery Low Alerts" value={`${lowBatCount}`} sub="Robots below 20% battery" trend="Critical" trendUp={false} accentColor="#f87171" glowColor="#ef4444" iconEl={<Icon d={IC.battery} size={18} />} />
                 <MetricCard label="Today's Completion" value={`${completedTodayCount}`} sub="tasks completed today" trend="On target" trendUp={true} accentColor="#34d399" glowColor="#10b981" iconEl={<Icon d={IC.check} size={18} />} />
-                <MetricCard label="MQTT Throughput" value="142" sub="messages / second · 14ms avg" trend="Normal" trendUp={true} accentColor="#a78bfa" glowColor="#7c3aed" iconEl={<Icon d={IC.activity} size={18} />} />
+                <MetricCard label="MQTT Throughput" value="—" sub="No measured broker throughput" trend="Normal" trendUp={true} accentColor="#a78bfa" glowColor="#7c3aed" iconEl={<Icon d={IC.activity} size={18} />} />
             </div>
 
             <div className="flex-1 flex gap-0 min-h-0">
@@ -224,7 +188,7 @@ export function OperatorDashboard() {
                 <div className="flex flex-col min-w-0" style={{ flex: "0 0 70%", borderRight: "1px solid var(--border-subtle)" }}>
                     <div className="shrink-0 flex items-center justify-between px-4 py-2.5 transition-colors" style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
                         <div className="flex items-center gap-3">
-                            <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>Live Warehouse Grid — Sector 4B</span>
+                            <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>Warehouse Map — Confirmed QR Positions</span>
                             <span className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ background: "rgba(34,211,238,0.1)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.2)" }}>
                                 <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#22d3ee" }} />LIVE · {tick}
                             </span>
@@ -236,7 +200,7 @@ export function OperatorDashboard() {
                         </div>
                     </div>
                     <div className="flex-1 overflow-hidden relative" style={{ background: "var(--surface-3)", minHeight: "400px" }}>
-                        <WarehouseGrid robots={gridRobots} />
+                        <LiveFleetMap robots={dbRobots} />
                     </div>
                     <div className="shrink-0 px-4 py-3 transition-colors" style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
                         <div className="flex items-center justify-between mb-2">
@@ -254,7 +218,7 @@ export function OperatorDashboard() {
                     <div className="shrink-0 px-4 py-3 transition-colors" style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
                         <div className="flex items-center justify-between mb-3">
                             <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>MQTT Connectivity</span>
-                            <span className="font-mono text-[9px] px-2 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" }}>BROKER ONLINE</span>
+                            <span className="font-mono text-[9px] px-2 py-0.5 rounded-full" style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" }}>BROKER HEALTH UNKNOWN</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             {dbRobots.map(rb => {
@@ -304,8 +268,8 @@ export function OperatorDashboard() {
                     {/* Event Log */}
                     <div className="flex-1 flex flex-col min-h-[300px] px-4 py-3">
                         <div className="flex items-center justify-between mb-2 shrink-0">
-                            <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>Event Log</span>
-                            <span className="font-mono text-[9px]" style={{ color: "var(--text-dimmest)" }}>Auto-streaming</span>
+                            <span className="text-[12px] font-semibold" style={{ color: "var(--text-primary)" }}>Recent actions</span>
+                            <span className="font-mono text-[9px]" style={{ color: "var(--text-dimmest)" }}>This session</span>
                         </div>
                         <div className="flex-1"><LogPanel logs={logs} /></div>
                     </div>

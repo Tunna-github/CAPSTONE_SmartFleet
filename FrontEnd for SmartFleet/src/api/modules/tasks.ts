@@ -28,6 +28,8 @@ export interface CreateTransportTaskPayload {
 
     // NEW
     dispatchMode?: DispatchMode;
+    pickupArUcoId?: number;
+    deliveryArUcoId?: number;
 }
 
 // =====================================================
@@ -49,6 +51,7 @@ interface TransportTaskApiModel {
     payloadWeightKg?: number | null;
     scheduledTime?: string | null;
     createdAt?: string;
+    completedAt?: string | null;
     assignedRobotId?: string | null;
     robotId?: string | null;
 }
@@ -104,14 +107,14 @@ function unwrapApiResponse<T>(payload: ApiResult<T>): T {
 
 function normalizePriority(value: unknown): Priority {
     if (typeof value === "number") {
-        if (value <= 1) return "HIGH";
+        if (value <= 1) return "LOW";
         if (value === 2) return "MEDIUM";
-        return "LOW";
+        return "HIGH";
     }
 
     const normalized = String(value ?? "").toUpperCase();
 
-    if (normalized === "1" || normalized === "HIGH") {
+    if (normalized === "3" || normalized === "HIGH") {
         return "HIGH";
     }
 
@@ -119,16 +122,16 @@ function normalizePriority(value: unknown): Priority {
         return "MEDIUM";
     }
 
-    if (normalized === "3" || normalized === "LOW") {
+    if (normalized === "1" || normalized === "LOW") {
         return "LOW";
     }
 
     return "MEDIUM";
 }
 
-function priorityToLevel(priority: Priority): number {
-    if (priority === "HIGH") return 1;
-    if (priority === "LOW") return 3;
+export function priorityToLevel(priority: Priority): number {
+    if (priority === "HIGH") return 3;
+    if (priority === "LOW") return 1;
     return 2;
 }
 
@@ -142,12 +145,14 @@ function normalizeStatus(value: unknown): TaskStatus {
         normalized === "EXECUTING" ||
         normalized === "COMPLETED" ||
         normalized === "FAILED" ||
+        normalized === "CRITICAL" ||
+        normalized === "REDISPATCHING" ||
         normalized === "CANCELLED"
     ) {
         return normalized;
     }
 
-    return "PENDING";
+    return "UNKNOWN";
 }
 
 function normalizeCreated(value: unknown): string {
@@ -228,6 +233,8 @@ function normalizeTask(
         robotId: robotId ? String(robotId) : null,
         status: normalizeStatus(item.taskStatus),
         created: normalizeCreated(item.createdAt),
+        createdAt: item.createdAt,
+        completedAt: item.completedAt,
     };
 }
 

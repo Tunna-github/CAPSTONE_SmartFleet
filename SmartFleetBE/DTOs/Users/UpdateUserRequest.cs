@@ -19,4 +19,7 @@ public sealed class UpdateUserRequest
 
     [StringLength(20)]
     public string? PhoneNumber { get; set; }
+
+    [MinLength(1)]
+    public List<string>? Roles { get; set; }
 }

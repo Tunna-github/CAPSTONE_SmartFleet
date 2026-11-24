@@ -79,6 +79,9 @@ export function RobotsPage() {
                     connectionStatus: updated.connectionStatus ?? robot.connectionStatus,
                     operationalStatus: updated.operationalStatus ?? robot.operationalStatus,
                     isActive: updated.isActive ?? robot.isActive,
+                    hasActiveAssignment: updated.hasActiveAssignment ?? robot.hasActiveAssignment,
+                    hasActiveMaintenance: updated.hasActiveMaintenance ?? robot.hasActiveMaintenance,
+                    openIncidents: updated.openIncidents ?? robot.openIncidents,
                 }
                 : robot
         ));

@@ -3,12 +3,14 @@ using SmartFleetBE.DTOs.Users;
 using SmartFleetBE.Model;
 using SmartFleetBE.Repositories.Interfaces;
 using SmartFleetBE.Services.Interfaces;
+using SmartFleetBE.Hubs;
 
 namespace SmartFleetBE.Services;
 
 public sealed class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly FleetConnectionRegistry? _connections;
 
     private static readonly string[] AllowedRoles =
     {
@@ -18,9 +20,10 @@ public sealed class UserService : IUserService
     };
 
     public UserService(
-        IUserRepository userRepository)
+        IUserRepository userRepository, FleetConnectionRegistry? connections = null)
     {
         _userRepository = userRepository;
+        _connections = connections;
     }
 
     public async Task<UserResponse?> GetByIdAsync(
@@ -156,6 +159,10 @@ public sealed class UserService : IUserService
                 "Email already exists.");
         }
 
+        var requestedRoles = request.Roles == null ? null : await ResolveRolesAsync(request.Roles, cancellationToken);
+        var rolesChanged = requestedRoles != null && !user.UserRoles.Select(r => r.RoleId).ToHashSet()
+            .SetEquals(requestedRoles.Select(r => r.RoleId));
+
         user.Username = username;
         user.Email = email;
         user.FullName = request.FullName.Trim();
@@ -166,10 +173,13 @@ public sealed class UserService : IUserService
                 ? null
                 : request.PhoneNumber.Trim();
 
+        if (requestedRoles != null) ApplyRoles(user, requestedRoles);
         user.UpdatedAt = DateTime.UtcNow;
 
         await _userRepository.SaveChangesAsync(
             cancellationToken);
+
+        if (rolesChanged) _connections?.RevokeUser(userId);
 
         return await GetByIdAsync(
             userId,
@@ -197,6 +207,8 @@ public sealed class UserService : IUserService
         await _userRepository.SaveChangesAsync(
             cancellationToken);
 
+        if (!isActive) _connections?.RevokeUser(userId);
+
         return await GetByIdAsync(
             userId,
             cancellationToken);
@@ -221,30 +233,29 @@ public sealed class UserService : IUserService
             request.Roles,
             cancellationToken);
 
-        _userRepository.RemoveUserRoles(
-            user.UserRoles.ToList());
-
-        user.UserRoles.Clear();
-
-        foreach (var role in roles)
-        {
-            user.UserRoles.Add(
-                new UserRole
-                {
-                    UserId = user.UserId,
-                    RoleId = role.RoleId,
-                    Role = role
-                });
-        }
+        ApplyRoles(user, roles);
 
         user.UpdatedAt = DateTime.UtcNow;
 
         await _userRepository.SaveChangesAsync(
             cancellationToken);
 
+        _connections?.RevokeUser(userId);
+
         return await GetByIdAsync(
             userId,
             cancellationToken);
+    }
+
+    private void ApplyRoles(User user, IReadOnlyCollection<Role> roles)
+    {
+        var desired = roles.Select(r => r.RoleId).ToHashSet();
+        var removed = user.UserRoles.Where(r => !desired.Contains(r.RoleId)).ToList();
+        _userRepository.RemoveUserRoles(removed);
+        foreach (var role in removed) user.UserRoles.Remove(role);
+        var retained = user.UserRoles.Select(r => r.RoleId).ToHashSet();
+        foreach (var role in roles.Where(r => !retained.Contains(r.RoleId)))
+            user.UserRoles.Add(new UserRole { UserId = user.UserId, RoleId = role.RoleId, Role = role });
     }
 
     private async Task<IReadOnlyCollection<Role>> ResolveRolesAsync(

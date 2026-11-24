@@ -16,6 +16,8 @@ public sealed class TransportTaskResponse
 
     public int PriorityLevel { get; set; }
     public string TaskStatus { get; set; } = string.Empty;
+    public string DispatchMode { get; set; } = string.Empty;
+    public string? AssignedRobotId { get; set; }
 
     public string? PackageCode { get; set; }
     public string? ItemDescription { get; set; }

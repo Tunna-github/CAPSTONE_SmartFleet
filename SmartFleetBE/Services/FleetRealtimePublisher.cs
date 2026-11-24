@@ -22,7 +22,11 @@ public sealed class FleetRealtimePublisher(
                 r.BatteryPercent, r.BatteryVoltage,
                 r.CurrentCoordX, r.CurrentCoordY, r.CurrentHeading,
                 r.LastHeartbeatTime, r.LastTelemetryTime,
-                r.UpdatedAt, r.IsActive
+                r.UpdatedAt, r.IsActive,
+                HasActiveAssignment = r.TaskAssignments.Any(a => a.AssignmentStatus == "ACTIVE"),
+                HasActiveMaintenance = r.RobotMaintenanceRecords.Any(m => m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS"),
+                OpenIncidents = r.RobotIncidents.Where(i => !i.IsResolved).Select(i => new {
+                    i.IncidentId, i.RobotId, i.IncidentType, i.Severity, i.Description, i.CreatedAt }).ToList()
             }).SingleOrDefaultAsync(ct);
         if (robot != null)
             await hub.Clients.All.SendAsync("RobotUpdated", robot, ct);

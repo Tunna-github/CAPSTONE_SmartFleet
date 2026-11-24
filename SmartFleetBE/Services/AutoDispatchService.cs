@@ -19,6 +19,22 @@ public sealed class AutoDispatchService(
     private const decimal MinimumBatteryPercent = 20m;
     private const int MaxAttempts = 3;
 
+    public async Task<bool> TryAssignNextAsync(CancellationToken cancellationToken = default)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
+        var now = (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        var due = await db.TransportTasks.AsNoTracking().Where(t => t.DispatchMode == "AUTO" &&
+            (t.TaskStatus == TransportTaskStatuses.Queued || t.TaskStatus == TransportTaskStatuses.Critical) &&
+            (t.ScheduledTime == null || t.ScheduledTime <= now))
+            .OrderByDescending(t => t.TaskStatus == TransportTaskStatuses.Critical)
+            .ThenByDescending(t => t.PriorityLevel).ThenBy(t => t.ScheduledTime)
+            .ThenBy(t => t.CreatedAt).ThenBy(t => t.TaskId).Select(t => t.TaskId).ToListAsync(cancellationToken);
+        foreach (var id in due)
+            if (await TryAssignAsync(id, cancellationToken)) return true;
+        return false;
+    }
+
     public async Task<bool> TryAssignAsync(
         long taskId,
         CancellationToken cancellationToken = default)
@@ -71,8 +87,7 @@ public sealed class AutoDispatchService(
                         cancellationToken);
 
                 if (task is null ||
-                    task.TaskStatus !=
-                        TransportTaskStatuses.Queued)
+                    task.TaskStatus is not (TransportTaskStatuses.Queued or TransportTaskStatuses.Critical))
                 {
                     logger.LogInformation(
                         "AUTO DISPATCH skipped Task {TaskId}: " +
@@ -91,6 +106,7 @@ public sealed class AutoDispatchService(
 
                     return false;
                 }
+                if (!await TaskLocationPolicy.IsValidAsync(db, taskId, cancellationToken)) return false;
 
                 if (task.DispatchMode != "AUTO" || await db.TaskInterventions.AnyAsync(c =>
                     c.TaskId == taskId && (c.Paused || c.State != "NORMAL"), cancellationToken))
@@ -198,7 +214,7 @@ public sealed class AutoDispatchService(
                             i.RobotId == r.RobotId &&
                             !i.IsResolved &&
                             (
-                                i.Severity == "HIGH" ||
+                                i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" ||
                                 i.Severity == "CRITICAL"
                             )))
                     .OrderByDescending(r => r.BatteryPercent)
@@ -208,7 +224,7 @@ public sealed class AutoDispatchService(
                 var routes = configuration.GetValue<bool>("DemoRoute:Enabled")
                     ? scope.ServiceProvider.GetService<QrDemoRouteService>() : null;
                 var robot = candidates.FirstOrDefault(r => !configuration.GetValue<bool>("DemoRoute:Enabled") ||
-                    (routes != null && routes.CanDispatchTask(taskId, r.RobotCode, out _)));
+                    (routes != null && routes.CanDispatchTask(taskId, r.RobotCode, out _, task.WarehouseId)));
 
                 if (robot is null)
                 {

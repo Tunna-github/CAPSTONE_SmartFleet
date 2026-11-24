@@ -241,6 +241,9 @@ def send_status(event, task_id, assignment_id, mission_id,
             "MQTT publish failed with code {}".format(result.rc)
         )
 
+    # Control ACKs can originate in the MQTT callback; it must not wait for its own PUBACK.
+    if not wait_ack:
+        return None
     result.wait_for_publish(timeout=10)
     if not result.is_published():
         if wait_ack:
@@ -359,6 +362,9 @@ finally:
     def command(self, linear, angular):
         if safety_hold.is_set() and (linear != 0.0 or angular != 0.0):
             raise RuntimeError("Motion blocked by persistent safety hold")
+        if not mqtt_connected.is_set() and (linear != 0.0 or angular != 0.0):
+            self.stop_motion()
+            raise RuntimeError("Motion blocked because MQTT connection was lost")
         if self.proc is None or self.proc.poll() is not None:
             raise RuntimeError("cmd_vel helper is not running")
         line = "{:.6f} {:.6f}\n".format(float(linear), float(angular))

@@ -105,14 +105,14 @@ public sealed class ScheduledAutoDispatchWorker(
             .Where(t =>
                 t.DispatchMode == "AUTO" &&
 
-                t.TaskStatus ==
-                    TransportTaskStatuses.Queued &&
+                (t.TaskStatus == TransportTaskStatuses.Queued || t.TaskStatus == TransportTaskStatuses.Critical) &&
 
                 (
                     t.ScheduledTime == null ||
                     t.ScheduledTime <= utcNow
                 ))
-            .OrderByDescending(t => t.PriorityLevel)
+            .OrderByDescending(t => t.TaskStatus == TransportTaskStatuses.Critical)
+            .ThenByDescending(t => t.PriorityLevel)
             .ThenBy(t => t.ScheduledTime)
             .ThenBy(t => t.CreatedAt)
             .ThenBy(t => t.TaskId)

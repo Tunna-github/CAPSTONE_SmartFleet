@@ -111,7 +111,8 @@ public sealed class NavigationController(
             .SingleOrDefaultAsync(ct);
         if (robot == null)
             return NotFound(new { message = "Unknown or inactive robot code." });
-        var result = coordinator.OnScan(robot.RobotId, robot.RobotCode, report);
+        var preview = simulate ? coordinator.PreviewScan(robot.RobotId, robot.RobotCode, report) : default;
+        var result = simulate ? preview.Result : coordinator.OnScan(robot.RobotId, robot.RobotCode, report);
         if (!result.Success) return Error(result);
         if (!simulate)
         {
@@ -125,7 +126,7 @@ public sealed class NavigationController(
                 return StatusCode(503, new { message = "Scan recorded, but MQTT publish failed." });
             }
         }
-        var intersection = report.NextArUcoId.HasValue
+        var intersection = simulate ? preview.Intersection : report.NextArUcoId.HasValue
             ? coordinator.GetIntersection(report.NextArUcoId.Value) : null;
         return Ok(new
         {

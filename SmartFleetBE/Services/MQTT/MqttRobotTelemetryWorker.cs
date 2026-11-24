@@ -289,8 +289,11 @@ public sealed class MqttRobotTelemetryWorker(
     private static bool Range(decimal? v, decimal min, decimal max)
         => !v.HasValue || (v.Value >= min && v.Value <= max);
 
-    private static bool Valid(RobotTelemetryEvent x)
-        => Range(x.BatteryPercent, 0, 100) &&
+    public static bool Valid(RobotTelemetryEvent x)
+        => (x.BatteryPercent.HasValue || x.BatteryVoltage.HasValue || x.PositionX.HasValue ||
+            x.PositionY.HasValue || x.Heading.HasValue || x.LinearVelocity.HasValue ||
+            x.AngularVelocity.HasValue || x.CpuTemperature.HasValue || x.WifiSignalDbm.HasValue) &&
+           Range(x.BatteryPercent, 0, 100) &&
            Range(x.BatteryVoltage, 0, 999) &&
            Range(x.PositionX, -9999999, 9999999) &&
            Range(x.PositionY, -9999999, 9999999) &&

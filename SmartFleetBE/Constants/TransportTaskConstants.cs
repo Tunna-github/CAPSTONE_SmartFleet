@@ -4,6 +4,7 @@ public static class TransportTaskStatuses
 {
     public const string Pending = "PENDING";
     public const string Queued = "QUEUED";
+    public const string Critical = "CRITICAL";
     public const string Assigned = "ASSIGNED";
     public const string Executing = "EXECUTING";
     public const string Completed = "COMPLETED";

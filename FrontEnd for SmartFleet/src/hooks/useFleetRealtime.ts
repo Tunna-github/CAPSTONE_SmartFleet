@@ -26,6 +26,9 @@ export interface RobotUpdated {
     connectionStatus?: string;
     operationalStatus?: RobotInfo["operationalStatus"];
     isActive?: boolean;
+    hasActiveAssignment?: boolean;
+    hasActiveMaintenance?: boolean;
+    openIncidents?: RobotInfo["openIncidents"];
 }
 
 /** Front LiDAR scan result broadcast by the backend. */

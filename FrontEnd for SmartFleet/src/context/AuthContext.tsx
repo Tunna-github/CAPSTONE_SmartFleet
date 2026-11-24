@@ -30,8 +30,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  *   "Administrator"
  * We map them to frontend role keys.
  */
-function pickRole(roles: string[] | undefined): Role {
-    if (!roles || roles.length === 0) return "operator";
+function pickRole(roles: string[] | undefined): Role | null {
+    if (!roles || roles.length === 0) return null;
     const normalized = roles.map((r) => r.toLowerCase().trim());
 
     if (normalized.some((r) => r.includes("admin") || r.includes("administrator"))) {
@@ -43,7 +43,7 @@ function pickRole(roles: string[] | undefined): Role {
     if (normalized.some((r) => r.includes("operator") || r.includes("warehouse"))) {
         return "operator";
     }
-    return "operator";
+    return null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     const role: Role | null = user ? pickRole(user.roles) : null;
-    const isAuthenticated = !!user;
+    const isAuthenticated = !!user && role !== null;
 
     useEffect(() => {
         let isMounted = true;

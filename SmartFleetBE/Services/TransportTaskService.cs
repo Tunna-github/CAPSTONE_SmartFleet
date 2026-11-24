@@ -5,6 +5,7 @@ using SmartFleetBE.Model;
 using SmartFleetBE.Repositories.Interfaces;
 using SmartFleetBE.Services.Interfaces;
 using SmartFleetBE.Services.Results;
+using Microsoft.EntityFrameworkCore;
 
 namespace SmartFleetBE.Services;
 
@@ -14,17 +15,19 @@ public sealed class TransportTaskService : ITransportTaskService
     private readonly AutoDispatchService _autoDispatch;
     private readonly IConfiguration _configuration;
     private readonly ILogger<TransportTaskService> _logger;
+    private readonly QrDemoRouteService? _routes;
 
     public TransportTaskService(
         ITransportTaskRepository transportTaskRepository,
         AutoDispatchService autoDispatchService,
         IConfiguration configuration,
-        ILogger<TransportTaskService> logger)
+        ILogger<TransportTaskService> logger, QrDemoRouteService? routes = null)
     {
         _repository = transportTaskRepository;
         _autoDispatch = autoDispatchService;
         _configuration = configuration;
         _logger = logger;
+        _routes = routes;
     }
 
     // =====================================================
@@ -139,6 +142,17 @@ public sealed class TransportTaskService : ITransportTaskService
                 .ValidationFailed(validationError);
         }
 
+        var qrPilot = _configuration.GetValue<bool>("DemoRoute:Enabled");
+        if (qrPilot)
+        {
+            if (_routes == null || !_routes.SupportsWarehouse(request.WarehouseId) ||
+                request.PickupArUcoId == null || request.DeliveryArUcoId == null)
+                return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(
+                    "Select pickup and delivery QR markers for this navigation warehouse.");
+            try { _routes.ValidateTaskSelection(request.PickupArUcoId.Value, request.DeliveryArUcoId.Value); }
+            catch (ArgumentException ex) { return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(ex.Message); }
+        }
+
         // STEP 5: CREATE TASK
 
         var now = DateTime.UtcNow;
@@ -175,6 +189,8 @@ public sealed class TransportTaskService : ITransportTaskService
             ScheduledTime = request.ScheduledTime
         };
 
+        await using (var creation = await _repository.BeginTransactionAsync(cancellationToken))
+        {
         await _repository.AddAsync(
             task, cancellationToken);
 
@@ -205,6 +221,20 @@ public sealed class TransportTaskService : ITransportTaskService
 
         await _repository.SaveChangesAsync(
             cancellationToken);
+        // Configure the route before the QUEUED row becomes visible to AUTO's
+        // worker. A file/DB failure rolls back creation; no half-configured task
+        // can be assigned between two frontend requests.
+        if (qrPilot)
+        {
+            try { _routes!.ConfigureTask(task.TaskId, request.PickupArUcoId!.Value, request.DeliveryArUcoId!.Value); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(
+                    "Task was not created: QR route storage failed. Retry after fixing storage.");
+            }
+        }
+        await creation.CommitAsync(cancellationToken);
+        }
 
         _logger.LogInformation(
             "Task {TaskId} created: Mode={Mode}, " +
@@ -243,14 +273,12 @@ public sealed class TransportTaskService : ITransportTaskService
                 try
                 {
                     bool assigned =
-                        await _autoDispatch.TryAssignAsync(
-                            task.TaskId,
-                            cancellationToken);
+                        await _autoDispatch.TryAssignNextAsync(cancellationToken);
 
                     _logger.LogInformation(
-                        "Immediate AUTO dispatch Task {TaskId}: {Result}.",
+                        "Immediate AUTO queue pass after creating Task {TaskId}: {Result}.",
                         task.TaskId,
-                        assigned ? "ASSIGNED" : "QUEUED");
+                        assigned ? "DISPATCHED_NEXT_ELIGIBLE" : "QUEUED");
                 }
                 catch (OperationCanceledException)
                     when (cancellationToken.IsCancellationRequested)
@@ -307,17 +335,18 @@ public sealed class TransportTaskService : ITransportTaskService
                     $"Transport task {taskId} was not found.");
         }
 
-        if (!string.Equals(
-                task.TaskStatus,
-                TransportTaskStatuses.Pending,
-                StringComparison.OrdinalIgnoreCase))
+        if (task.TaskStatus is not (TransportTaskStatuses.Pending or TransportTaskStatuses.Queued) ||
+            await _repository.HasAssignmentsAsync(taskId, cancellationToken))
         {
             return TransportTaskServiceResult<TransportTaskResponse>
                 .Conflict(
-                    "Only a PENDING task can be edited. " +
-                    "Tasks in the dispatch lifecycle require " +
-                    "the appropriate status workflow.");
+                    "Only an unassigned PENDING or QUEUED task can be edited. " +
+                    "Previously dispatched tasks must use the recovery workflow.");
         }
+
+        if (request.PayloadWeightKg is not > 0m)
+            return TransportTaskServiceResult<TransportTaskResponse>
+                .ValidationFailed("PayloadWeightKg must be greater than zero.");
 
         var validationError = await ValidateLocationAsync(
             request.WarehouseId,
@@ -345,7 +374,12 @@ public sealed class TransportTaskService : ITransportTaskService
         task.PayloadWeightKg = request.PayloadWeightKg;
         task.ScheduledTime = request.ScheduledTime;
 
-        await _repository.SaveChangesAsync(cancellationToken);
+        try { await _repository.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateConcurrencyException)
+        {
+            return TransportTaskServiceResult<TransportTaskResponse>
+                .Conflict("Task changed during editing. Reload before trying again.");
+        }
 
         var updated = await _repository.GetByIdAsync(
             taskId, cancellationToken);
@@ -428,19 +462,19 @@ public sealed class TransportTaskService : ITransportTaskService
         }
 
         if (!await _repository.IsStationActiveInWarehouseAsync(
-                pickupStationId, warehouseId, cancellationToken))
+                pickupStationId, warehouseId, cancellationToken, "PICKUP"))
         {
             return $"Pickup station {pickupStationId} does not " +
                    $"exist, is inactive, or does not belong " +
-                   $"to warehouse {warehouseId}.";
+                   $"to warehouse {warehouseId}, or is not a PICKUP station.";
         }
 
         if (!await _repository.IsStationActiveInWarehouseAsync(
-                deliveryStationId, warehouseId, cancellationToken))
+                deliveryStationId, warehouseId, cancellationToken, "DELIVERY"))
         {
             return $"Delivery station {deliveryStationId} does not " +
                    $"exist, is inactive, or does not belong " +
-                   $"to warehouse {warehouseId}.";
+                   $"to warehouse {warehouseId}, or is not a DELIVERY station.";
         }
 
         return null;
@@ -472,6 +506,8 @@ public sealed class TransportTaskService : ITransportTaskService
 
             PriorityLevel = task.PriorityLevel,
             TaskStatus = task.TaskStatus,
+            DispatchMode = task.DispatchMode,
+            AssignedRobotId = task.TaskAssignments.FirstOrDefault(a => a.AssignmentStatus == "ACTIVE")?.Robot?.RobotCode,
 
             PackageCode = task.PackageCode,
             ItemDescription = task.ItemDescription,

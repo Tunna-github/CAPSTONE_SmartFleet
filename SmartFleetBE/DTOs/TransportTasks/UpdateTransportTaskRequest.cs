@@ -24,6 +24,7 @@ public sealed class UpdateTransportTaskRequest
     [StringLength(500)]
     public string? ItemDescription { get; set; }
 
+    [Required]
     [Range(typeof(decimal), "0.01", "999999.99")]
     public decimal? PayloadWeightKg { get; set; }
 

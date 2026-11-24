@@ -80,6 +80,41 @@ public sealed class NavigationMapTests
     }
 
     [Fact]
+    public void TrafficPreviewNeverMutatesLiveQueues()
+    {
+        var nav = Coordinator(); Assert.True(nav.ReplaceMap(QrMap(nav)).Success);
+        var preview = nav.PreviewScan(1, "R01", new() { CurrentArUcoId = 3, NextArUcoId = 4 });
+        Assert.True(preview.Result.Success); Assert.Equal(1, preview.Intersection!.WaitingCount);
+        Assert.Equal(0, nav.GetIntersection(4)!.TotalRelevantCount);
+    }
+
+    [Fact]
+    public void ActiveAssignmentBlocksMapEditsOutsideIntersections()
+    {
+        using var provider = Database();
+        var store = provider.GetRequiredService<INavigationMapStore>();
+        var nav = Coordinator(store: store);
+        using var scope = provider.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
+        db.TaskAssignments.Add(new TaskAssignment { TaskId = 1, AssignmentStatus = "ACTIVE", AssignmentType = "MANUAL",
+            Task = new TransportTask { TaskId = 1, WarehouseId = 1, TaskStatus = "EXECUTING", TaskTrackingCode = "T1" } });
+        // This fixture validates only the guard; unused relational fields are not needed.
+        db.Entry(db.TaskAssignments.Local.Single()).Property(a => a.RobotId).CurrentValue = 1;
+        db.Robots.Add(new Robot { RobotId = 1, RobotCode = "R01", RobotType = "PHYSICAL", Model = "Test",
+            ControlSoftware = "Test", MqttClientIdentifier = "test-r01", ConnectionStatus = "ONLINE", OperationalStatus = "BUSY" });
+        db.SaveChanges();
+        var before = nav.GetMap().Revision; var result = nav.ReplaceMap(QrMap(nav));
+        Assert.False(result.Success); Assert.True(result.Conflict); Assert.Equal(before, nav.GetMap().Revision);
+    }
+
+    [Fact]
+    public void QrDispatchCannotUseAnotherWarehousesMap()
+    {
+        using var provider = Database(); var nav = Coordinator(store: provider.GetRequiredService<INavigationMapStore>());
+        var routes = Routes(nav);
+        Assert.False(routes.CanDispatchTask(1, "R2", out var reason, 2)); Assert.Contains("warehouse", reason);
+    }
+
+    [Fact]
     public void DatabaseMapSurvivesMissingLocalFileAndAllQrPairsCanBeRouted()
     {
         using var provider = Database();
@@ -99,7 +134,7 @@ public sealed class NavigationMapTests
             {
                 if (start == end) continue;
                 var id = start * 9 + end + 1;
-                var robot = new Robot { RobotCode = $"TEST-{id}" };
+                var robot = new Robot { RobotCode = $"TEST-{id}", WarehouseId = 1 };
                 Assert.True(routes.ReceiveProgress(robot.RobotCode, new()
                     { Event = "READY", ArucoId = start, MapRevision = reloaded.GetMap().Revision,
                       HeadingDeg = 0, LocalizationSource = "ARUCO_IMU", ReprojectionErrorPx = 0.1, StableFrames = 5 }).Accepted);

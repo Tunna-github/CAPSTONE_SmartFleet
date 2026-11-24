@@ -3,6 +3,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth, type Role } from "../context/AuthContext";
 import RobotSafetyPanel from "./RobotSafetyPanel";
+import NotificationPanel from "./NotificationPanel";
+import { useEffect, useState } from "react";
+import { apiClient } from "../api/client";
 
 export function Sidebar({
     role,
@@ -19,6 +22,16 @@ export function Sidebar({
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
     const { user } = useAuth();
+    const [health, setHealth] = useState<{ mqtt?: string; onlineRobotCount?: number; robotCount?: number } | null>(null);
+    useEffect(() => {
+        let disposed = false;
+        const refresh = async () => {
+            try { const { data } = await apiClient.get("/api/v1/system/health"); if (!disposed) setHealth(data); }
+            catch { if (!disposed) setHealth(null); }
+        };
+        void refresh(); const timer = window.setInterval(() => void refresh(), 10000);
+        return () => { disposed = true; window.clearInterval(timer); };
+    }, [user?.userId]);
     const userName = user?.fullName || user?.username || "SmartFleet User";
     const userInitials = userName.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "SF";
 
@@ -84,7 +97,7 @@ export function Sidebar({
                                 SmartFleet
                             </div>
                             <div className="text-[10px] font-mono" style={{ color: "#22d3ee" }}>
-                                WMS · v2.4.1
+                                Fleet Management
                             </div>
                         </div>
                     )}
@@ -106,7 +119,7 @@ export function Sidebar({
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 py-3 px-2 overflow-y-auto overflow-x-hidden space-y-0.5">
+            <nav className="flex-1 min-h-0 py-3 px-2 overflow-y-auto overflow-x-hidden space-y-0.5">
                 {!isCollapsed && (
                     <div className="px-2 pb-2 pt-1 whitespace-nowrap">
                         <span
@@ -155,6 +168,7 @@ export function Sidebar({
             </div>
 
             {/* Broker widget (Hidden when collapsed) */}
+            <NotificationPanel collapsed={isCollapsed} />
             {!isCollapsed && (
                 <div
                     className="mx-3 mb-3 rounded-xl p-3 transition-all hover:-translate-y-0.5 hover:shadow-md duration-300 whitespace-nowrap"
@@ -164,16 +178,12 @@ export function Sidebar({
                         <span className="text-[10px] font-semibold font-mono" style={{ color: "var(--text-faint)" }}>
                             BROKER STATUS
                         </span>
-                        <span className="flex items-center gap-1 text-[10px] font-mono" style={{ color: "#22c55e" }}>
-                            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#22c55e" }} />
-                            LIVE
+                        <span className="flex items-center gap-1 text-[10px] font-mono" style={{ color: health?.mqtt === "CONNECTED" ? "#22c55e" : "var(--text-faint)" }}>
+                            {health?.mqtt ?? "UNKNOWN"}
                         </span>
                     </div>
                     {[
-                        { k: "Robots online", v: "5 / 8", c: "#22d3ee" },
-                        { k: "Msgs/sec", v: "142", c: "#a78bfa" },
-                        { k: "Avg latency", v: "14 ms", c: "#34d399" },
-                        { k: "Errors today", v: "2", c: "#f87171" },
+                        { k: "Robots online", v: health?.robotCount !== undefined ? `${health.onlineRobotCount} / ${health.robotCount}` : "—", c: "#22d3ee" },
                     ].map(({ k, v, c }) => (
                         <div key={k} className="flex items-center justify-between py-0.5">
                             <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>{k}</span>

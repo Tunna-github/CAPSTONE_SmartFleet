@@ -31,6 +31,10 @@ public sealed class CreateTransportTaskRequest
     public decimal? PayloadWeightKg { get; set; }
 
     public DateTime? ScheduledTime { get; set; }
+    [Range(0, 49)]
+    public int? PickupArUcoId { get; set; }
+    [Range(0, 49)]
+    public int? DeliveryArUcoId { get; set; }
 
     // Safe default for existing clients.
     // MANUAL: create QUEUED task, operator assigns later.

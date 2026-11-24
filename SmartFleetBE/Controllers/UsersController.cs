@@ -169,6 +169,10 @@ public sealed class UsersController : ControllerBase
                 message = ex.Message
             });
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
 

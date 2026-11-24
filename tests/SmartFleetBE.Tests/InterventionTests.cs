@@ -18,7 +18,7 @@ namespace SmartFleetBE.Tests;
 
 public sealed class InterventionTests
 {
-    private static (SmartFleetDbContext db, TaskInterventionService service, QrDemoRouteService routes) Fixture(bool assigned = true, bool home = false)
+    private static (SmartFleetDbContext db, TaskInterventionService service, QrDemoRouteService routes) Fixture(bool assigned = true, bool home = false, bool navigation = false)
     {
         var options = new DbContextOptionsBuilder<SmartFleetDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString(), o => o.EnableNullChecks(false))
@@ -26,22 +26,24 @@ public sealed class InterventionTests
         var db = new SmartFleetDbContext(options);
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             { ["Mqtt:EnableWorkers"] = "true", ["DemoRoute:Enabled"] = home.ToString(),
-                ["Cancellation:HomeArUcoId"] = "0" }).Build();
+                ["Cancellation:HomeArUcoId"] = "0", ["Navigation:Enabled"] = navigation.ToString() }).Build();
         var env = new TestEnvironment();
         var nav = new NavigationCoordinator(env, config, NullLogger<NavigationCoordinator>.Instance);
         if (home)
         {
             var map = nav.GetMap();
-            map.Cells[1][1] = new WarehouseMapCell { Type = "qr", ArucoId = 0, Label = "HOME" };
-            map.Cells[1][2] = new WarehouseMapCell { Type = "qr", ArucoId = 1, Label = "PICKUP" };
+            map.Cells[1][1] = new WarehouseMapCell { Type = "qr", ArucoId = 0, Label = "HOME", MarkerYawDeg = 0, MarkerSizeM = 0.04 };
+            map.Cells[1][2] = new WarehouseMapCell { Type = "qr", ArucoId = 1, Label = "PICKUP", MarkerYawDeg = 0, MarkerSizeM = 0.04 };
             map.Links = [["HOME", "PICKUP"]];
             Assert.True(nav.ReplaceMap(map).Success);
         }
         var routes = new QrDemoRouteService(nav, env, config, NullLogger<QrDemoRouteService>.Instance);
         db.TransportTasks.Add(new TransportTask { TaskId = 1, TaskStatus = assigned ? "EXECUTING" : "QUEUED",
-            WarehouseId = 1, PickupStationId = 1, DispatchMode = "AUTO", PayloadWeightKg = 1m });
-        db.Stations.Add(new Station { StationId = 1, IsActive = true,
-            Zone = new Zone { ZoneId = 1, WarehouseId = 1 } });
+            WarehouseId = 1, PickupStationId = 1, DeliveryStationId = 2, DispatchMode = "AUTO", PayloadWeightKg = 1m });
+        db.Warehouses.Add(new Warehouse { WarehouseId = 1, IsActive = true });
+        db.Stations.Add(new Station { StationId = 1, IsActive = true, StationType = "PICKUP",
+            Zone = new Zone { ZoneId = 1, WarehouseId = 1, IsActive = true } });
+        db.Stations.Add(new Station { StationId = 2, ZoneId = 1, IsActive = true, StationType = "DELIVERY" });
         if (assigned)
         {
             var robot = new Robot { RobotId = 1, RobotCode = "R1", OperationalStatus = "BUSY", ConnectionStatus = "ONLINE",
@@ -154,10 +156,12 @@ public sealed class InterventionTests
         Assert.Equal("CANCEL_REQUESTED", control.State);
     }
 
-    [Fact]
-    public async Task HomeArrivalReleasesOnlyAfterCorrelatedCameraConfirmation()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HomeArrivalReleasesOnlyAfterCorrelatedCameraConfirmation(bool navigation)
     {
-        var (db, service, _) = Fixture(home: true);
+        var (db, service, _) = Fixture(home: true, navigation: navigation);
         db.Missions.Single().MissionStatus = "INITIALIZING";
         await db.SaveChangesAsync();
         await service.Act(1, "cancel", new("Wrong SKU"), 42, default);
@@ -252,7 +256,7 @@ public sealed class InterventionTests
     {
         var (db, service, _) = Fixture();
         db.TransportTasks.Single().TaskStatus = "FAILED";
-        db.Stations.Single().IsActive = false;
+        db.Stations.Single(s => s.StationId == 1).IsActive = false;
         await db.SaveChangesAsync();
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.Act(1, "recover-requeue",
             new("Goods returned", true, true, true, 1), 43, default));

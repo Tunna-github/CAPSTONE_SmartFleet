@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using SmartFleetBE.Constants;
 using SmartFleetBE.Model;
+using SmartFleetBE.Services;
 
 namespace SmartFleetBE.Controllers;
 
@@ -19,10 +20,12 @@ namespace SmartFleetBE.Controllers;
 public sealed class RobotsController : ControllerBase
 {
     private readonly SmartFleetDbContext _db;
+    private readonly IConfiguration _configuration;
 
-    public RobotsController(SmartFleetDbContext db)
+    public RobotsController(SmartFleetDbContext db, IConfiguration configuration)
     {
         _db = db;
+        _configuration = configuration;
     }
 
     // GET /api/v1/robots
@@ -183,7 +186,7 @@ public sealed class RobotsController : ControllerBase
                 {
                     RobotId = robotId,
                     IncidentType = "OTHER",
-                    Severity = "HIGH",
+                    Severity = "ERROR",
                     Description = reason,
                     IsResolved = false,
                     CreatedAt = now
@@ -229,12 +232,12 @@ public sealed class RobotsController : ControllerBase
             // ---------------------------------------------
             if (target == "AVAILABLE")
             {
-                if (robot.ConnectionStatus != "ONLINE")
+                if (robot.ConnectionStatus != "ONLINE" || !RobotPresencePolicy.IsFresh(robot, now, _configuration))
                 {
                     return Conflict(new
                     {
                         message =
-                            "Robot must be ONLINE before becoming AVAILABLE."
+                            "Robot must be ONLINE with fresh heartbeat/telemetry before becoming AVAILABLE."
                     });
                 }
 

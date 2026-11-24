@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmartFleetBE.Model;
 using SmartFleetBE.Repositories.Interfaces;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace SmartFleetBE.Repositories;
 
@@ -12,6 +13,9 @@ public sealed class TransportTaskRepository : ITransportTaskRepository
     {
         _dbContext = dbContext;
     }
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken) =>
+        _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
 
     public async Task<IReadOnlyCollection<TransportTask>> GetAllAsync(
         CancellationToken cancellationToken = default)
@@ -51,12 +55,13 @@ public sealed class TransportTaskRepository : ITransportTaskRepository
     public Task<bool> IsStationActiveInWarehouseAsync(
         int stationId,
         int warehouseId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, string? stationType = null)
     {
         return _dbContext.Stations
             .AsNoTracking()
             .AnyAsync(
                 s => s.StationId == stationId
+                     && (stationType == null || s.StationType == stationType)
                      && s.IsActive
                      && s.Zone.IsActive
                      && s.Zone.WarehouseId == warehouseId,
@@ -85,6 +90,9 @@ public sealed class TransportTaskRepository : ITransportTaskRepository
             .AsNoTracking()
             .AnyAsync(i => i.TaskId == taskId, cancellationToken);
     }
+
+    public Task<bool> HasAssignmentsAsync(long taskId, CancellationToken cancellationToken = default) =>
+        _dbContext.TaskAssignments.AnyAsync(a => a.TaskId == taskId, cancellationToken);
 
     public async Task AddAsync(
         TransportTask task,
@@ -129,6 +137,7 @@ public sealed class TransportTaskRepository : ITransportTaskRepository
             .Include(t => t.Warehouse)
             .Include(t => t.PickupStation)
             .Include(t => t.DeliveryStation);
+        query = query.Include(t => t.TaskAssignments).ThenInclude(a => a.Robot);
 
         return asNoTracking ? query.AsNoTracking() : query;
     }

@@ -21,7 +21,7 @@ public sealed class MqttNavigationWorker(
         new(JsonSerializerDefaults.Web);
     private readonly SemaphoreSlim _messageGate = new(1, 1);
     // SMARTFLEET_NAV_ACK_V1: dedupe accepted requests on QoS1 resend.
-    private readonly Dictionary<string, (string Robot, string Kind)> _ackCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (string Robot, string Kind, string Payload)> _ackCache = new(StringComparer.Ordinal);
     private readonly Queue<string> _ackOrder = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -121,7 +121,7 @@ public sealed class MqttNavigationWorker(
                 if (eventId != null && _ackCache.TryGetValue(eventId, out var old))
                 {
                     bool sameRequest = string.Equals(old.Robot, robot.RobotCode, StringComparison.OrdinalIgnoreCase)
-                        && string.Equals(old.Kind, kind, StringComparison.Ordinal);
+                        && string.Equals(old.Kind, kind, StringComparison.Ordinal) && old.Payload == payload;
                     await PublishPilotAck(robot.RobotCode, kind, eventId, sameRequest,
                         sameRequest ? "Already applied" : "Event ID reused for different robot/event", ct);
                     return;
@@ -143,7 +143,7 @@ public sealed class MqttNavigationWorker(
                 await NavigationMqttDispatch.PublishAsync(publisher, result.Directives, ct);
                 if (eventId != null)
                 {
-                    _ackCache[eventId] = (robot.RobotCode, kind);
+                    _ackCache[eventId] = (robot.RobotCode, kind, payload);
                     _ackOrder.Enqueue(eventId);
                     while (_ackOrder.Count > 4096)
                         _ackCache.Remove(_ackOrder.Dequeue());

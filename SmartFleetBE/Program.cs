@@ -27,6 +27,7 @@ if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled") && !builder.Enviro
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<FleetConnectionRegistry>();
 builder.Services.AddSingleton<FleetRealtimePublisher>();
 
 builder.Services.AddCors(options =>
@@ -186,6 +187,7 @@ builder.Services.AddSingleton<NavigationCoordinator>();
 
 builder.Services.AddScoped<MissionLifecycleService>();
 builder.Services.AddScoped<TaskInterventionService>();
+builder.Services.AddScoped<RobotHealthMonitor>();
 
 bool enableMqttWorkers =
     builder.Configuration.GetValue<bool>(
@@ -203,6 +205,7 @@ if (enableMqttWorkers)
         .AddHostedService<MqttMissionStatusWorker>();
 
     builder.Services.AddHostedService<MqttRobotTelemetryWorker>();
+    builder.Services.AddHostedService<RobotHealthWorker>();
     if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled"))
         builder.Services.AddHostedService<QrDemoProgressWorker>();
 
@@ -271,6 +274,13 @@ builder.Services
                     context.Token = token;
                 }
                 return Task.CompletedTask;
+            },
+            OnTokenValidated = async context =>
+            {
+                var db = context.HttpContext.RequestServices.GetRequiredService<SmartFleetDbContext>();
+                if (!await CurrentAccountValidator.IsCurrentAsync(context.Principal, db,
+                    context.HttpContext.RequestAborted))
+                    context.Fail("Account is inactive or its permissions changed. Sign in again.");
             }
         };
         options.TokenValidationParameters =
@@ -344,7 +354,7 @@ app.UseAuthorization();
 // =====================================================
 
 app.MapControllers();
-app.MapHub<FleetHub>("/hubs/robots");
+app.MapHub<FleetHub>("/hubs/robots", options => options.CloseOnAuthenticationExpiration = true);
 
 // =====================================================
 // 13. DEVELOPMENT DATABASE CHECK

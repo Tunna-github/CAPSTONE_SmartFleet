@@ -1,12 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
-import { Task, Robot, LogEntry, TASKS, ROBOTS, INITIAL_LOGS } from "../data/mockData";
+import { Task, LogEntry } from "../data/mockData";
 import { getTransportTasks, createTransportTask, deleteTransportTask, type CreateTransportTaskPayload } from "../api/modules/tasks";
 import { useAuth } from "./AuthContext";
 import { intervene } from "../api/modules/interventions";
 
 interface DataContextType {
     tasks: Task[];
-    robots: Robot[];
     logs: LogEntry[];
     isTasksLoading: boolean;
     tasksError: string | null;
@@ -14,21 +13,17 @@ interface DataContextType {
     setTaskRobot: (taskId: number | string, robotDisplay: string) => void;
     deleteTask: (task: Task) => Promise<void>;
     refreshTasks: (showErrorToast?: boolean) => Promise<void>;
-    updateTaskStatus: (id: string, status: Task["status"]) => void;
     cancelTask: (id: string, reason: string) => Promise<void>;
-    toggleMaintenance: (id: string) => void;
     addLog: (log: Omit<LogEntry, "id" | "time">) => void;
-    completeTask: (task: Task) => Promise<void>; // ADDED
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
     const { user, role, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-    const canLoadTasks = !isAuthLoading && isAuthenticated && (role === "operator" || role === "admin");
-    const [tasks, setTasks] = useState<Task[]>(TASKS);
-    const [robots, setRobots] = useState<Robot[]>(ROBOTS);
-    const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
+    const canLoadTasks = !isAuthLoading && isAuthenticated && user?.roles?.includes("Warehouse Operator") === true;
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
     const [isTasksLoading, setIsTasksLoading] = useState(false);
     const [tasksError, setTasksError] = useState<string | null>(null);
 
@@ -106,10 +101,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return newTask;
     };
 
-    const updateTaskStatus = (id: string, status: Task["status"]) => {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
-    };
-
     const setTaskRobot = (taskId: number | string, robotDisplay: string) => {
         setTasks(prev => prev.map(task => task.taskId === taskId
             ? { ...task, robotId: robotDisplay, status: task.status === "QUEUED" ? "ASSIGNED" : task.status }
@@ -133,37 +124,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
         addLog({ level: "WARN", robot: "SYSTEM", message: `Cancellation saved for ${id}; robot release requires safety confirmation.` });
     };
 
-    // ADDED: completeTask Implementation
-    const completeTask = async (task: Task) => {
-        // If you later add an API endpoint for completing tasks, you would await it here:
-        // await apiCompleteTask(task.taskId);
-
-        // Update task status to COMPLETED
-        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: "COMPLETED" } : t));
-
-        // Free up the robot that was assigned to this mission
-        setRobots(prev => prev.map(r => r.missionId === task.id ? { ...r, missionId: null, zone: "Idle — Dock" } : r));
-
-        // Push a success log to the dashboard
-        addLog({ level: "SUCCESS", robot: task.robotId || "SYSTEM", message: `Task ${task.id} marked as completed.` });
-    };
-
-    const toggleMaintenance = (id: string) => {
-        setRobots(prev => prev.map(r => {
-            if (r.id === id) {
-                const newState = !r.maintenance;
-                addLog({ level: "INFO", robot: id, message: `Maintenance mode ${newState ? "ENABLED" : "DISABLED"}` });
-                return { ...r, maintenance: newState, mqtt: newState ? "OFFLINE" : "ONLINE" };
-            }
-            return r;
-        }));
-    };
-
     return (
         <DataContext.Provider
             value={{
                 tasks,
-                robots,
                 logs,
                 isTasksLoading,
                 tasksError,
@@ -171,11 +135,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 setTaskRobot,
                 deleteTask,
                 refreshTasks,
-                updateTaskStatus,
                 cancelTask,
-                toggleMaintenance,
                 addLog,
-                completeTask, // ADDED
             }}
         >
             {children}
