@@ -65,6 +65,8 @@ function mapFromBackend(document: NavigationMapDocument): WarehouseLayout {
     label: cell.label ?? undefined,
     arucoId: cell.arucoId ?? undefined,
     isIntersection: cell.isIntersection,
+    markerYawDeg: cell.markerYawDeg ?? undefined,
+    markerSizeM: cell.markerSizeM ?? undefined,
   } satisfies WarehouseCell)));
 }
 
@@ -96,6 +98,8 @@ function mapToBackend(
       label: point ? (cell.label?.trim() || null) : null,
       arucoId,
       isIntersection: type === "qr" && !!cell.isIntersection,
+      markerYawDeg: type === "qr" ? cell.markerYawDeg ?? null : null,
+      markerSizeM: type === "qr" ? cell.markerSizeM ?? null : null,
     };
   }));
   return { revision, rows: 18, columns: 28, cells, links: links.map(([a, b]) => [a, b]) };

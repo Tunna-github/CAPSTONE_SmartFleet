@@ -2,6 +2,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth, type Role } from "../context/AuthContext";
+import RobotSafetyPanel from "./RobotSafetyPanel";
 
 export function Sidebar({
     role,
@@ -148,6 +149,10 @@ export function Sidebar({
                     );
                 })}
             </nav>
+
+            <div className="shrink-0 px-3 pb-3">
+                <RobotSafetyPanel isCollapsed={isCollapsed} />
+            </div>
 
             {/* Broker widget (Hidden when collapsed) */}
             {!isCollapsed && (

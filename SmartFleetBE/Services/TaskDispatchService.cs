@@ -16,16 +16,18 @@ public sealed class TaskDispatchService : ITaskDispatchService
 
     private readonly SmartFleetDbContext _db;
     private readonly IConfiguration _configuration;
+    private readonly QrDemoRouteService? _routes;
     private readonly FleetRealtimePublisher _realtime;
     private readonly ILogger<TaskDispatchService> _logger;
 
     public TaskDispatchService(
         SmartFleetDbContext db,
         IConfiguration configuration,
-        ILogger<TaskDispatchService> logger)
+        ILogger<TaskDispatchService> logger, QrDemoRouteService? routes = null)
     {
         _db = db;
         _configuration = configuration;
+        _routes = routes;
         _logger = logger;
     }
 
@@ -118,6 +120,8 @@ public sealed class TaskDispatchService : ITaskDispatchService
             if (robot.ConnectionStatus != "ONLINE") reasons.Add("Robot OFFLINE");
             if (robot.OperationalStatus != "AVAILABLE") reasons.Add($"Robot status: {robot.OperationalStatus}");
             if (!RobotPresencePolicy.IsFresh(robot, now, _configuration)) reasons.Add("Heartbeat/telemetry missing or stale");
+            if (_configuration.GetValue<bool>("DemoRoute:Enabled") && _routes?.HasFreshLocalization(robot.RobotCode) != true)
+                reasons.Add("Camera/IMU localization missing, stale, or on an older map");
             if (robot.BatteryPercent == null || robot.BatteryPercent < MinimumBatteryPercent) reasons.Add("Battery must be at least 20%");
             if (robot.MaxPayloadWeightKg < weightKg) reasons.Add("Insufficient payload capacity");
             if (busy.Contains(robot.RobotId)) reasons.Add("Has ACTIVE assignment");
@@ -305,6 +309,13 @@ public sealed class TaskDispatchService : ITaskDispatchService
         {
             return TransportTaskServiceResult<ManualAssignTaskResponse>
                 .NotFound($"Robot {robotId} was not found.");
+        }
+
+        if (_configuration.GetValue<bool>("DemoRoute:Enabled"))
+        {
+            var reason = "Camera/IMU localization is unavailable.";
+            if (_routes == null || !_routes.CanDispatchTask(taskId, robot.RobotCode, out reason))
+                return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict(reason);
         }
 
         // STEP 4: VALIDATE ROBOT

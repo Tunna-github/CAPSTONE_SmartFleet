@@ -8,6 +8,8 @@ export interface NavigationMapCell {
   label: string | null;
   arucoId: number | null;
   isIntersection: boolean;
+  markerYawDeg?: number | null;
+  markerSizeM?: number | null;
 }
 
 export interface NavigationMapDocument {
@@ -43,6 +45,19 @@ export interface IntersectionTraffic {
 }
 
 const BASE = "/api/v1/navigation";
+
+export interface MapReadiness {
+  mapRevision: number;
+  qrNodeCount: number;
+  corridorCount: number;
+  readyForRouting: boolean;
+  issues: string[];
+}
+
+export async function getMapReadiness(): Promise<MapReadiness> {
+  const { data } = await apiClient.get<MapReadiness>("/api/v1/demo-routing/map/validation");
+  return data;
+}
 
 export async function getNavigationMap(): Promise<NavigationMapDocument> {
   const { data } = await apiClient.get<NavigationMapDocument>(`${BASE}/map`);

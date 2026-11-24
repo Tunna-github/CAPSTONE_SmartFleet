@@ -151,7 +151,7 @@ public sealed class AutoDispatchService(
                 // STEP 3: FIND THE BEST ELIGIBLE ROBOT
                 // ======================================
 
-                var robot = await db.Robots
+                var candidates = await db.Robots
                     .Where(r =>
                         // Same warehouse
                         r.WarehouseId == task.WarehouseId &&
@@ -203,7 +203,12 @@ public sealed class AutoDispatchService(
                             )))
                     .OrderByDescending(r => r.BatteryPercent)
                     .ThenBy(r => r.RobotId)
-                    .FirstOrDefaultAsync(cancellationToken);
+                    .ToListAsync(cancellationToken);
+
+                var routes = configuration.GetValue<bool>("DemoRoute:Enabled")
+                    ? scope.ServiceProvider.GetService<QrDemoRouteService>() : null;
+                var robot = candidates.FirstOrDefault(r => !configuration.GetValue<bool>("DemoRoute:Enabled") ||
+                    (routes != null && routes.CanDispatchTask(taskId, r.RobotCode, out _)));
 
                 if (robot is null)
                 {

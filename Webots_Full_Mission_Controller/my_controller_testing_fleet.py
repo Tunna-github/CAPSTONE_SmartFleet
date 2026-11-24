@@ -24,6 +24,7 @@ import uuid
 import datetime as sf_datetime
 import paho.mqtt.client as mqtt
 from controller import Robot, Keyboard
+from aruco_localization import PoseEstimator, HeadingFusion
 
 # ============================================================
 # TEST CONFIGURATION - verify before a mission
@@ -33,8 +34,8 @@ BROKER_PORT = 1883
 # SMARTFLEET_MULTI_ROBOT_ARGS_V1
 # Each simulated robot is a separate process but shares this source file.
 # Configure Robot.controllerArgs per robot in Webots, for example:
-#   --robot-code=R01 --start-qr=0 --start-heading=S
-#   --robot-code=R02 --start-qr=5 --start-heading=S
+#   --robot-code=R01
+#   --robot-code=R02
 # The fallback below preserves the original one-robot R01 demo; it must NEVER
 # be relied upon when multiple robots are present.
 def _sf_controller_arg(key, default):
@@ -52,17 +53,12 @@ if not ROBOT_CODE.startswith("R") or not ROBOT_CODE[1:].isdigit():
 if not any(value.startswith("--robot-code=") for value in sys.argv[1:]):
     print("[CONFIG WARNING] controllerArgs has no --robot-code; using R01! "
           "Set a unique code on EVERY Webots Robot before adding more.")
-# QR0 is only a ONE-TIME first-run calibration anchor, not a fixed mission start.
-# After the first valid driven segment, the controller learns its world yaw frame
-# and can cold-start from ANY visible QR using the saved orientation calibration.
-FIRST_RUN_CALIBRATION_QR = int(_sf_controller_arg("start-qr", "0"))
-FIRST_RUN_HEADING = _sf_controller_arg("start-heading", "S").upper()
-if FIRST_RUN_HEADING not in ("N", "S", "E", "W") or FIRST_RUN_CALIBRATION_QR < 0:
-    raise ValueError("Invalid Webots --start-heading or --start-qr")
-HEADING_CALIBRATION_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "smartfleet_heading_calibration_{}.json".format(ROBOT_CODE),
-)
+# Start pose is measured from camera/IMU, never from controller arguments.
+BROKER_IP = _sf_controller_arg("broker-host", BROKER_IP)
+BROKER_PORT = int(_sf_controller_arg("broker-port", str(BROKER_PORT)))
+localization_diagnostics_dir = _sf_controller_arg("localization-diagnostics-dir", "")
+if any(v.startswith(("--start-heading=", "--start-qr=")) for v in sys.argv[1:]):
+    print("[CONFIG] Deprecated start-heading/start-qr ignored; using ArUco + IMU")
 # WEBOTS ONLY. Never enable fake sensor CLEAR on a real JetRacer.
 INTERSECTION_PILOT = _sf_controller_arg("intersection-pilot", "false").lower() in ("true", "1", "yes")
 SF_FAKE_CLEAR = _sf_controller_arg("sim-lidar", "false").lower() in ("true", "1", "yes")
@@ -82,6 +78,7 @@ COMMAND_TOPIC = "smartfleet/robot/{}/command".format(ROBOT_CODE)
 STATUS_TOPIC = "smartfleet/robot/{}/status".format(ROBOT_CODE)
 STATUS_ACK_TOPIC = "smartfleet/robot/{}/status-ack".format(ROBOT_CODE)
 QR_PROGRESS_TOPIC = "smartfleet/robot/{}/qr-progress".format(ROBOT_CODE)
+LOCALIZATION_MAP_TOPIC = "smartfleet/robot/{}/localization-map".format(ROBOT_CODE)
 QR_PROGRESS_ACK_TOPIC = "smartfleet/robot/{}/qr-progress-ack".format(ROBOT_CODE)
 TELEMETRY_TOPIC = "smartfleet/robot/{}/telemetry".format(ROBOT_CODE)
 SF_SCAN_TOPIC = "smartfleet/robot/{}/scan".format(ROBOT_CODE)
@@ -137,6 +134,23 @@ KP_STRAIGHT = 0.05
 KP_ALIGN_OFFSET = 2.5
 KP_ALIGN_TILT = 0.03
 
+# CAMERA CHECKPOINT APPROACH FIX (Webots pilot tuning)
+# Apparent marker size = median corner-to-corner side length / image width.
+# These are IMAGE fractions, not meters. Tune from [APPROACH] logs.
+# With your current camera, a marker near the robot was about 0.17 wide.
+# ============================================================
+SEEK_SPEED = 2.2                 # slower than old 3.5 in blind SEEKING
+APPROACH_SPEED = 1.35            # marker visible and approaching
+FINAL_APPROACH_SPEED = 0.70     # very close to marker
+RECOVERY_CRAWL_SPEED = 0.65     # briefly reacquire a far marker
+APPROACH_VISIBLE_FRACTION = 0.055
+MARKER_NEAR_FRACTION = 0.090
+ARRIVAL_MARKER_FRACTION = 0.130
+ARRIVAL_MAX_OFFSET = 0.65       # normalised [-1,1] image-center offset
+LOST_NEAR_FRAMES = 24           # stop immediately if a near marker disappears
+LOST_FAR_FRAMES = 36            # crawl briefly, then stop if still lost
+STEERING_FRACTION_LIMIT = 0.55 # no full-speed reverse wheel during approach
+
 STATE_SEEKING = "SEEKING"
 STATE_ALIGNING = "ALIGNING"
 STATE_OVERSHOOT = "OVERSHOOT"
@@ -151,6 +165,13 @@ state_start_time = 0.0
 stable_counter = 0
 last_detected_id = -1
 missing_align_frames = 0
+
+# Per-segment camera approach state. Reset for every Backend waypoint.
+approach_seen = False
+approach_near = False
+approach_lost_frames = 0
+approach_max_size = 0.0
+approach_last_band = None
 
 current_marker = None
 current_heading = "S"
@@ -176,7 +197,22 @@ ready_acknowledged = False
 ready_last_sent = 0.0
 last_telemetry_at = -100.0
 mission_camera_lost_since = None
-heading_calibration = None
+localization_map = None
+localization_request_id = None
+localization_request_at = -100.0
+localization_last_frame_at = -100.0
+localization_last_warning_at = -100.0
+localization_reconnect = False
+localization_valid = False
+localization_reason = "Waiting for camera pose"
+heading_fusion = HeadingFusion()
+pose_estimator = None
+try:
+    calibration_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aruco_camera_calibration.json")
+    with open(calibration_path, encoding="utf-8") as handle:
+        pose_estimator = PoseEstimator(json.load(handle), camera.getWidth(), camera.getHeight(), camera.getFov())
+except (OSError, ValueError, KeyError, TypeError) as error:
+    print("[LOCALIZATION CONFIG]", error)
 last_bootstrap_warning_at = 0.0
 sf_nav_epoch = None
 sf_nav_sequence = -1
@@ -243,20 +279,134 @@ def get_marker_offset_tilt(corners, img_width):
     return offset_x, tilt
 
 
+def marker_size_fraction(corners, frame_width):
+    """Approximate proximity using observed marker size (not metric distance).
+
+    The average of the four projected side lengths handles mild perspective
+    distortion better than horizontal width alone. This approach controller uses
+    image fractions as proximity cues; pose estimation runs separately.
+    """
+    points = np.asarray(corners[0][0], dtype=float)
+    if points.shape != (4, 2) or frame_width <= 0:
+        return 0.0
+    sides = [float(np.linalg.norm(points[(i + 1) % 4] - points[i]))
+             for i in range(4)]
+    return float(np.median(sides)) / float(frame_width)
+
+
+def visual_approach(data, target_id):
+    """Single camera-arrival check for BOTH SEEKING and ALIGNING states.
+
+    A detected QR is not 'reached' until it is close and seen stably while
+    reasonably centered. If a nearby QR vanishes, stop rather than driving
+    through it at SEEKING speed.
+    """
+    global current_state, stable_counter, last_detected_id
+    global approach_seen, approach_near, approach_lost_frames
+    global approach_max_size, approach_last_band
+
+    observation = visible_marker(target_id)
+    if observation is not None:
+        corners, width = observation
+        offset_x, tilt = get_marker_offset_tilt(corners, width)
+        size = marker_size_fraction(corners, width)
+        approach_seen = True
+        approach_lost_frames = 0
+        approach_max_size = max(approach_max_size, size)
+        last_detected_id = target_id
+        current_state = STATE_ALIGNING
+
+        if size >= MARKER_NEAR_FRACTION:
+            approach_near = True
+
+        if size >= ARRIVAL_MARKER_FRACTION and abs(offset_x) <= ARRIVAL_MAX_OFFSET:
+            # Stop first, THEN confirm over repeated camera frames. We should
+            # never drive forward while collecting arrival confirmations.
+            stop_robot()
+            stable_counter += 1
+            if approach_last_band != 'ARRIVAL':
+                print('[APPROACH] QR{} arrival zone size={:.3f} offset={:+.2f}'
+                      .format(target_id, size, offset_x))
+                approach_last_band = 'ARRIVAL'
+            if stable_counter >= STABLE_FRAMES:
+                reached_marker(data, target_id)
+            return
+
+        stable_counter = 0
+        if approach_near or size >= MARKER_NEAR_FRACTION:
+            # Do not accelerate because of one small/jittery marker frame.
+            band = 'NEAR'
+            speed = FINAL_APPROACH_SPEED
+        elif size >= APPROACH_VISIBLE_FRACTION:
+            band = 'SLOW'
+            speed = APPROACH_SPEED
+        else:
+            band = 'FAR'
+            speed = SEEK_SPEED
+
+        if band != approach_last_band:
+            print('[APPROACH] QR{} {} size={:.3f} offset={:+.2f} speed={:.2f}'
+                  .format(target_id, band, size, offset_x, speed))
+            approach_last_band = band
+
+        # If the marker is already huge and far off-center, moving blindly
+        # can drive right past it; halt rather than falsely confirm arrival.
+        if size >= ARRIVAL_MARKER_FRACTION * 1.40 and abs(offset_x) > ARRIVAL_MAX_OFFSET:
+            fail_mission('QR{} very close but outside centered arrival zone; '
+                         'stop and re-align camera/robot'.format(target_id))
+            return
+
+        correction = KP_ALIGN_OFFSET * offset_x + KP_ALIGN_TILT * tilt
+        max_correction = STEERING_FRACTION_LIMIT * speed
+        correction = max(-max_correction, min(max_correction, correction))
+        set_motor_speeds(speed - correction, speed + correction)
+        return
+
+    # Camera cannot see the expected marker in this frame.
+    stable_counter = 0
+    last_detected_id = -1
+    approach_lost_frames += 1
+
+    if approach_near:
+        # The last view indicated the robot was close. Do not accelerate
+        # into a blind, full-speed search across the actual QR location.
+        stop_robot()
+        if approach_lost_frames == 1:
+            print('[APPROACH] Lost NEAR QR{}; holding still for reacquisition'
+                  .format(target_id))
+        if approach_lost_frames >= LOST_NEAR_FRAMES:
+            fail_mission('Camera lost nearby QR{} before confirming arrival; '
+                         'robot stopped safely'.format(target_id))
+        return
+
+    if approach_seen:
+        if approach_lost_frames == 1:
+            print('[APPROACH] QR{} temporarily lost; crawling slowly'
+                  .format(target_id))
+        if approach_lost_frames >= LOST_FAR_FRAMES:
+            fail_mission('Camera lost QR{} during approach; '
+                         'robot stopped instead of passing checkpoint'.format(target_id))
+            return
+        drive_straight_with_imu(RECOVERY_CRAWL_SPEED)
+        return
+
+    # The marker has not yet been observed on this straight corridor.
+    # Continue cautiously in the Backend-provided cardinal direction.
+    drive_straight_with_imu(SEEK_SPEED)
+
+
+
 def decide_turn(direction_to_go):
-    """Unchanged steering math; the requested cardinal direction comes from BE."""
+    """Use measured continuous heading; a 45/180 degree cold start needs no manual hint."""
     global current_heading
-    if direction_to_go not in DIRECTION_YAW:
-        raise ValueError("Invalid Backend travelDirection " + repr(direction_to_go))
-    current_yaw_target = DIRECTION_YAW[current_heading]
-    new_yaw_target = DIRECTION_YAW[direction_to_go]
-    angle_diff = normalize_angle(new_yaw_target - current_yaw_target)
+    if direction_to_go not in DIRECTION_YAW or not localization_valid:
+        raise ValueError("No valid camera/IMU orientation for this route")
+    difference = normalize_angle(DIRECTION_YAW[direction_to_go] + base_yaw_offset - get_yaw_deg())
     current_heading = direction_to_go
-    if abs(angle_diff) < 1.0:
+    if abs(difference) <= 1.5:
         return 0.0, None
-    if angle_diff > 0:
-        return angle_diff, "LEFT"
-    return abs(angle_diff), "RIGHT"
+    return abs(difference), "LEFT" if difference > 0 else "RIGHT"
+
 
 
 def get_absolute_target_yaw():
@@ -327,58 +477,39 @@ def visible_any_marker():
     return marker_id, selected, camera.getWidth()
 
 
-def read_heading_calibration():
-    try:
-        with open(HEADING_CALIBRATION_FILE, "r", encoding="utf-8") as handle:
-            value = json.load(handle)
-        if value.get("robotCode") != ROBOT_CODE:
-            raise ValueError("Calibration belongs to another robot")
-        offset = float(value["worldNorthYawOffsetDeg"])
-        if not math.isfinite(offset) or not -180 <= offset <= 180:
-            raise ValueError("Invalid yaw calibration")
-        print("[CALIBRATION] Loaded world yaw offset", round(offset, 1))
-        return offset
-    except FileNotFoundError:
-        return None
-    except (OSError, ValueError, TypeError, KeyError) as exc:
-        print("[CALIBRATION] Could not load previous orientation:", repr(exc))
-        return None
 
 
-def infer_heading_from_imu(offset):
-    actual = get_yaw_deg()
-    candidates = sorted(
-        DIRECTION_YAW,
-        key=lambda direction: abs(normalize_angle(
-            actual - (DIRECTION_YAW[direction] + offset))),
-    )
-    best = candidates[0]
-    residual = abs(normalize_angle(actual - (DIRECTION_YAW[best] + offset)))
-    if residual > 30.0:
-        return None
-    return best
+
+
 
 
 def store_heading_calibration():
-    """Learn the map/world heading only after a camera-confirmed driven edge."""
-    global heading_calibration
-    heading_calibration = normalize_angle(
-        get_yaw_deg() - DIRECTION_YAW[current_heading])
-    data = {"robotCode": ROBOT_CODE,
-            "worldNorthYawOffsetDeg": heading_calibration}
-    tmp = HEADING_CALIBRATION_FILE + ".tmp"
+    """Correct slow IMU drift from a camera-observed marker, never from the planned heading."""
+    global base_yaw_offset
+    if not localization_valid or localization_map is None or pose_estimator is None:
+        return
+    seen = visible_marker(current_marker)
+    marker = next((m for m in localization_map["markers"] if m["arucoId"] == current_marker), None)
+    if seen is None or marker is None:
+        return
     try:
-        with open(tmp, "w", encoding="utf-8") as handle:
-            json.dump(data, handle)
-        os.replace(tmp, HEADING_CALIBRATION_FILE)
-        print("[CALIBRATION] Learned yaw frame from QR route:",
-              round(heading_calibration, 1), "degrees")
-    except OSError as exc:
-        # The current mission still retains the heading in RAM.
-        print("[CALIBRATION] Could not persist orientation:", repr(exc))
+        corners, width = seen
+        pose = pose_estimator.estimate(corners[0], marker)
+        delta = normalize_angle(pose["headingDeg"] - heading_fusion.heading(get_yaw_deg()))
+        if abs(delta) > 10.0:
+            raise ValueError("Camera/IMU orientation disagreement at checkpoint")
+        heading_fusion.offset = normalize_angle(heading_fusion.offset - 0.2 * delta)
+        base_yaw_offset = heading_fusion.offset
+    except (ValueError, cv2.error, TypeError) as error:
+        fail_mission("Heading verification failed: " + str(error))
+
 
 
 def validate_command(data):
+    if not localization_valid or localization_map is None or data.get("mapRevision") != localization_map["mapRevision"]:
+        raise ValueError("Fresh camera/IMU localization on this map is required")
+    if abs(normalize_angle(heading_fusion.heading(get_yaw_deg()) - heading_fusion.last_vision_yaw)) > 5.0:
+        raise ValueError("Robot was rotated after its last camera localization")
     if data.get("command") != "EXECUTE_TASK" or data.get("pattern") != "WAYPOINT_ROUTE":
         raise ValueError("Expected EXECUTE_TASK / WAYPOINT_ROUTE; CIRCLE is disabled")
     for key in ("taskId", "assignmentId", "missionId"):
@@ -433,11 +564,14 @@ def validate_command(data):
 # ============================================================
 def on_connect(cli, userdata, flags, reason_code, properties=None):
     global connected, ready_acknowledged, ready_event_id, ready_last_sent
+    global localization_reconnect, localization_request_at
+    localization_reconnect = True
+    localization_request_at = -100.0
     connected = reason_code == 0
     if connected:
         cli.subscribe([(COMMAND_TOPIC, 1), (STATUS_ACK_TOPIC, 1),
                        (QR_PROGRESS_ACK_TOPIC, 1), (SF_NAV_CONTROL_TOPIC, 1),
-                       (SF_NAV_ACK_TOPIC, 1)])
+                       (SF_NAV_ACK_TOPIC, 1), (LOCALIZATION_MAP_TOPIC, 1)])
         # A reconnect is not proof that the Backend retained an in-memory READY.
         ready_acknowledged = False
         ready_event_id = None
@@ -484,13 +618,16 @@ def publish(topic, data, qos=1):
 
 def send_ready():
     global ready_event_id, ready_last_sent
-    if not connected or is_first_checkin or current_marker is None or mission is not None:
+    if not connected or not localization_valid or is_first_checkin or current_marker is None or mission is not None:
         return
     if ready_event_id is None:
         ready_event_id = str(uuid.uuid4())
     if publish(QR_PROGRESS_TOPIC, {
         "event": "READY", "eventId": ready_event_id,
         "missionId": 0, "arucoId": current_marker, "waypointIndex": 0,
+        "mapRevision": localization_map["mapRevision"],
+        "headingDeg": heading_fusion.heading(get_yaw_deg()), "localizationSource": "ARUCO_IMU",
+        "reprojectionErrorPx": heading_fusion.last_error, "stableFrames": len(heading_fusion.samples),
     }):
         ready_last_sent = time.monotonic()
         print("[READY] Camera confirmed QR{}; sent to Backend".format(current_marker))
@@ -724,7 +861,9 @@ def handle_incoming():
             break
         if not isinstance(data, dict):
             continue
-        if topic == COMMAND_TOPIC:
+        if topic == LOCALIZATION_MAP_TOPIC:
+            accept_localization_map(data)
+        elif topic == COMMAND_TOPIC:
             if data.get("command") in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL", "RETURN_HOME"):
                 try:
                     handle_safety_command(data)
@@ -757,7 +896,7 @@ def handle_incoming():
                 print("[READY ACK] Backend recorded current QR", current_marker)
             else:
                 print("[READY REJECTED]", data.get("reason", "Unknown reason"))
-                # No auto resending a rejected start: change BE start configuration.
+                invalidate_localization("Backend rejected localization; refresh map and camera")
                 ready_acknowledged = False
                 ready_event_id = None
                 ready_last_sent = time.monotonic()  # avoid spamming rejected READY
@@ -1070,6 +1209,8 @@ def begin_segment(data):
 def sf_start_physical_segment(data):
     global current_state, state_start_time, turn_direction, stable_counter
     global last_detected_id, missing_align_frames, mission_camera_lost_since
+    global approach_seen, approach_near, approach_lost_frames
+    global approach_max_size, approach_last_band
     i = data["next_index"]
     target_id = data["waypoints"][i]["arucoId"]
     if i <= 0 or current_marker != data["waypoints"][i - 1]["arucoId"]:
@@ -1080,6 +1221,11 @@ def sf_start_physical_segment(data):
     last_detected_id = -1
     missing_align_frames = 0
     mission_camera_lost_since = None
+    approach_seen = False
+    approach_near = False
+    approach_lost_frames = 0
+    approach_max_size = 0.0
+    approach_last_band = None
     data["segment_started_at"] = robot.getTime()
     if turn_angle == 0.0:
         current_state = STATE_ALIGNING
@@ -1219,38 +1365,8 @@ def tick_mission():
 
     target_id = data["waypoints"][data["next_index"]]["arucoId"]
     now = robot.getTime()
-    if current_state == STATE_SEEKING:
-        seen = visible_marker(target_id)
-        if seen is not None:
-            if last_detected_id == target_id:
-                stable_counter += 1
-            else:
-                stable_counter, last_detected_id = 1, target_id
-            if stable_counter >= STABLE_FRAMES:
-                reached_marker(data, target_id)
-                return
-        else:
-            stable_counter = 0
-            last_detected_id = -1
-        drive_straight_with_imu(MAX_SPEED)
-
-    elif current_state == STATE_ALIGNING:
-        seen = visible_marker(target_id)
-        if seen is not None:
-            corners, width = seen
-            offset_x, tilt = get_marker_offset_tilt(corners, width)
-            correction = KP_ALIGN_OFFSET * offset_x + KP_ALIGN_TILT * tilt
-            set_motor_speeds(ALIGN_SPEED - correction, ALIGN_SPEED + correction)
-            missing_align_frames = 0
-        else:
-            missing_align_frames += 1
-            if missing_align_frames > 5:
-                current_state = STATE_SEEKING
-                drive_straight_with_imu(MAX_SPEED)
-            else:
-                # The previous program kept old wheel commands; after an MQTT
-                # ACK we are stopped, so prime a gentle forward movement.
-                drive_straight_with_imu(ALIGN_SPEED)
+    if current_state in (STATE_SEEKING, STATE_ALIGNING):
+        visual_approach(data, target_id)
 
     elif current_state == STATE_OVERSHOOT:
         if now - state_start_time < OVERSHOOT_TIME:
@@ -1279,70 +1395,123 @@ def tick_mission():
         fail_mission("Invalid movement state: " + str(current_state))
 
 
-def tick_bootstrap():
-    """Localize at ANY camera-visible QR; do not assume the robot is at QR0.
-
-    First ever boot can use the known-good QR0 heading calibration. Once a
-    driven segment has been confirmed, an automatically learned yaw frame
-    enables cold starts from other QR markers. If orientation is unknown,
-    the robot STOPS instead of guessing a turn or driving blind.
-    """
-    global is_first_checkin, current_marker, base_yaw_offset, current_state
-    global stable_counter, last_detected_id, current_heading
-    global last_bootstrap_warning_at
+def invalidate_localization(reason):
+    global localization_valid, is_first_checkin, current_marker
+    global ready_acknowledged, ready_event_id, localization_reason
+    if localization_valid:
+        publish(QR_PROGRESS_TOPIC, {"event": "LOCALIZATION_LOST", "eventId": str(uuid.uuid4()),
+                                   "arucoId": current_marker or 0, "missionId": 0})
+    localization_valid = False
+    is_first_checkin = True
+    current_marker = None
+    ready_acknowledged = False
+    ready_event_id = None
+    localization_reason = reason
+    heading_fusion.reset()
     stop_robot()
-    if not connected:
+
+
+def accept_localization_map(data):
+    global localization_map, localization_request_id
+    if data.get("eventId") != localization_request_id:
         return
-    seen = visible_any_marker()
-    if seen is not None:
-        marker_id, corners, width = seen
-        if last_detected_id == marker_id:
-            stable_counter += 1
-        else:
-            stable_counter, last_detected_id = 1, marker_id
-        if stable_counter >= STABLE_FRAMES:
-            actual_yaw = get_yaw_deg()
-            if marker_id == FIRST_RUN_CALIBRATION_QR:
-                # Preserve the exact proven initial QR0 controller tuning.
-                _, tilt = get_marker_offset_tilt(corners, width)
-                base_yaw_offset = normalize_angle(actual_yaw - tilt)
-                current_heading = FIRST_RUN_HEADING
-            elif heading_calibration is not None:
-                inferred_heading = infer_heading_from_imu(heading_calibration)
-                if inferred_heading is None:
-                    if time.monotonic() - last_bootstrap_warning_at >= 5.0:
-                        print("[LOCALIZATION] QR{} visible, but IMU orientation is "
-                              "between cardinal headings; adjust robot alignment".format(marker_id))
-                        last_bootstrap_warning_at = time.monotonic()
-                    return
-                current_heading = inferred_heading
-                base_yaw_offset = heading_calibration
-            else:
-                if time.monotonic() - last_bootstrap_warning_at >= 5.0:
-                    print("[LOCALIZATION] QR{} visible but this controller has no "
-                          "orientation calibration yet. First drive from QR{}; "
-                          "future restarts can begin here.".format(
-                              marker_id, FIRST_RUN_CALIBRATION_QR))
-                    last_bootstrap_warning_at = time.monotonic()
-                return
-            current_marker = marker_id
-            is_first_checkin = False
-            current_state = STATE_IDLE
-            stable_counter = 0
-            last_detected_id = -1
-            print("[CAMERA] Localized at QR{} (heading {})".format(
-                marker_id, current_heading))
-            print("[IMU] Grid heading offset = {:.1f} degrees".format(
-                base_yaw_offset))
-            send_ready()
+    snapshot = data.get("map")
+    if not isinstance(snapshot, dict) or snapshot.get("protocolVersion") != 1 or snapshot.get("frame") != "MAP_N_W_UP":
+        return
+    if not valid_int(snapshot.get("mapRevision")) or not isinstance(snapshot.get("markers"), list):
+        return
+    ids = [m.get("arucoId") for m in snapshot["markers"] if isinstance(m, dict)]
+    if len(ids) != len(snapshot["markers"]) or len(set(ids)) != len(ids) or any(not valid_int(i) for i in ids):
+        return
+    if localization_map is None or snapshot["mapRevision"] != localization_map["mapRevision"]:
+        if mission is not None:
+            fail_mission("Backend map changed during a mission; relocalization required")
+        invalidate_localization("Backend localization map updated")
+        print("[LOCALIZATION MAP] revision {} | {} markers".format(snapshot["mapRevision"], len(ids)))
+    localization_map = snapshot
+    localization_request_id = None
+
+
+def request_localization_map():
+    global localization_request_id, localization_request_at
+    if not connected or mission is not None or time.monotonic() - localization_request_at < 4.0:
+        return
+    localization_request_id = str(uuid.uuid4())
+    if publish(QR_PROGRESS_TOPIC, {"event": "LOCALIZATION_CONFIG", "eventId": localization_request_id,
+                                 "arucoId": 0, "missionId": 0}):
+        localization_request_at = time.monotonic()
+
+
+def tick_localization(force=False):
+    global localization_valid, localization_last_frame_at, localization_last_warning_at
+    global localization_reconnect, current_marker, current_heading, base_yaw_offset, is_first_checkin
+    global ready_acknowledged, ready_event_id, ready_last_sent, localization_reason
+    if mission is not None:
+        return
+    stop_robot()
+    if localization_reconnect:
+        invalidate_localization("MQTT reconnected; checking camera pose again")
+        localization_reconnect = False
+    request_localization_map()
+    if not force and robot.getTime() - localization_last_frame_at < 0.20:
+        return
+    localization_last_frame_at = robot.getTime()
+    try:
+        if not connected or localization_map is None:
+            raise ValueError("Waiting for current marker calibration from Backend")
+        if pose_estimator is None:
+            raise ValueError("Camera installation calibration is missing or invalid")
+        seen = visible_any_marker()
+        if seen is None:
+            raise ValueError("No camera-visible ArUco marker; hold position")
+        marker_id, corners, _ = seen
+        marker = next((m for m in localization_map["markers"] if m["arucoId"] == marker_id), None)
+        if marker is None:
+            raise ValueError("Detected QR{} is absent from the current map".format(marker_id))
+        pose = pose_estimator.estimate(corners[0], marker)
+        stable = heading_fusion.observe(marker_id, pose["headingDeg"], get_yaw_deg(), pose["reprojectionErrorPx"])
+        if not stable:
+            if localization_valid:
+                invalidate_localization("Marker/heading changed; collecting stable camera frames")
             return
-    else:
-        stable_counter = 0
-        last_detected_id = -1
-        if time.monotonic() - last_bootstrap_warning_at >= 5.0:
-            print("[LOCALIZATION] No QR in camera view. Holding motors; "
-                  "position the robot over a visible QR to start.")
-            last_bootstrap_warning_at = time.monotonic()
+        first = not localization_valid
+        current_marker = marker_id
+        base_yaw_offset = heading_fusion.offset
+        current_heading = min(DIRECTION_YAW, key=lambda d: abs(normalize_angle(pose["headingDeg"] - DIRECTION_YAW[d])))
+        localization_valid = True
+        is_first_checkin = False
+        localization_reason = "ARUCO_IMU"
+        if first:
+            ready_acknowledged = False
+            ready_event_id = None
+            ready_last_sent = 0.0
+            print("[AUTO LOCALIZED] QR{} | heading={:.1f} deg ({}) | IMU offset={:.1f} | map={} | error={:.2f}px".format(
+                marker_id, heading_fusion.heading(get_yaw_deg()), current_heading, base_yaw_offset,
+                localization_map["mapRevision"], pose["reprojectionErrorPx"]))
+            send_ready()
+        if localization_diagnostics_dir:
+            os.makedirs(localization_diagnostics_dir, exist_ok=True)
+            with open(os.path.join(localization_diagnostics_dir, ROBOT_CODE + ".json"), "w", encoding="utf-8") as handle:
+                json.dump({"qr": marker_id, "headingDeg": heading_fusion.heading(get_yaw_deg()),
+                           "imuYawDeg": get_yaw_deg(), "mapRevision": localization_map["mapRevision"],
+                           "errorPx": pose["reprojectionErrorPx"], "stableFrames": len(heading_fusion.samples)}, handle)
+    except (ValueError, cv2.error, KeyError, TypeError) as error:
+        invalidate_localization(str(error))
+        if time.monotonic() - localization_last_warning_at >= 5.0:
+            print("[LOCALIZATION HOLD]", error)
+            if localization_diagnostics_dir:
+                os.makedirs(localization_diagnostics_dir, exist_ok=True)
+                with open(os.path.join(localization_diagnostics_dir, ROBOT_CODE + ".hold.json"), "w") as handle:
+                    json.dump({"reason": str(error), "imuYawDeg": get_yaw_deg()}, handle)
+                frame = get_camera_frame()
+                if frame is not None:
+                    cv2.imwrite(os.path.join(localization_diagnostics_dir, ROBOT_CODE + ".camera.png"), frame)
+            localization_last_warning_at = time.monotonic()
+
+
+def tick_bootstrap():
+    tick_localization()
+
 
 
 def tick_telemetry():
@@ -1356,11 +1525,13 @@ def tick_telemetry():
         "batteryPercent": SIMULATED_BATTERY_PERCENT,
         "batteryVoltage": SIMULATED_BATTERY_VOLTAGE,
         "heading": round(get_yaw_deg(), 2),
+        "localizationStatus": "LOCALIZED" if localization_valid else "LOCALIZING",
+        "localizationReason": localization_reason,
     }, qos=0)
 
 
 print("[BOOT] SmartFleet Webots CAMERA ArUco full-mission driver", ROBOT_CODE)
-heading_calibration = read_heading_calibration()
+print("[BOOT] Automatic camera pose + IMU localization; no start pose arguments")
 print("[BOOT] Waiting for a camera-visible QR and Backend READY ACK")
 print("[BOOT] MANUAL 0-8 keyboard mission controls are disabled; Q stops the pilot")
 if INTERSECTION_PILOT:
@@ -1373,6 +1544,7 @@ try:
     client.loop_start()
     while robot.step(timestep) != -1 and is_running:
         handle_incoming()
+        tick_localization()
         tick_telemetry()
         sf_tick_lidar()
         tick_ready()

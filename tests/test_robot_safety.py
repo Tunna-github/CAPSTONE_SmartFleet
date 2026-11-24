@@ -18,7 +18,7 @@ class RobotSafetyTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.g = dict(os=os, json=json, uuid=uuid, SAFETY_FILE=os.path.join(self.temp.name, "hold.json"),
             safety_hold=False, safety_commands={}, safety_generation={}, mission={"missionId": 3, "phase": "MOVING"},
-            current_marker=0, current_state="MOVING", STATE_IDLE="IDLE", pending=None,
+            current_marker=0, current_state="MOVING", STATE_IDLE="IDLE", pending=None, INTERSECTION_PILOT=False,
             STATUS_TOPIC="status", STATUS_ACK_TOPIC="ack", stop_robot=Mock(),
             publish=Mock(), send_reliable=Mock(), visible_marker=Mock(return_value=object()),
             valid_int=lambda x: type(x) is int, expected_grid_direction=lambda a,b: "E", begin_segment=Mock())

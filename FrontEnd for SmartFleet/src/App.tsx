@@ -1,5 +1,4 @@
 import { useState } from "react"
-import RobotSafetyPanel from "./components/RobotSafetyPanel"
 import WarehouseMapProvider from "./context/WarehouseMapContext"
 
 import {
@@ -101,7 +100,6 @@ function ProtectedLayout() {
           </button>
         )}
 
-        <RobotSafetyPanel />
         <Outlet />
       </div>
     </div>

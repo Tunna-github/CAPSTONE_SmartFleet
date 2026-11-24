@@ -219,6 +219,7 @@ public sealed class NavigationController(
 
     private IActionResult Error(NavigationOperation result)
     {
+        if (result.Unavailable) return StatusCode(503, new { message = result.Error });
         if (result.Conflict) return Conflict(new { message = result.Error });
         return BadRequest(new { message = result.Error });
     }

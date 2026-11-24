@@ -1,11 +1,13 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace SmartFleetBE.Navigation;
 
 /// <summary>
 /// Single-process intersection coordinator for a controlled pilot.
-/// Persisted map/config and active intersection locks require no DB migration.
+/// Map topology is stored in PostgreSQL; local state retains device config and safety locks.
 /// IMPORTANT: run exactly one BE instance. Never treat MQTT alone as a physical e-stop.
 /// </summary>
 public sealed class NavigationCoordinator
@@ -41,6 +43,7 @@ public sealed class NavigationCoordinator
     private readonly object _gate = new();
     private readonly string _configPath;
     private readonly ILogger<NavigationCoordinator> _logger;
+    private readonly INavigationMapStore? _mapStore;
     // Reports must be refreshed by the robot while approaching (e.g. every 1-2s).
     // A lost robot is removed from the *count*, but granted/entered ownership is
     // never released by TTL: physical clearance or EXIT remains necessary.
@@ -56,9 +59,11 @@ public sealed class NavigationCoordinator
     public NavigationCoordinator(
         IWebHostEnvironment environment,
         IConfiguration configuration,
-        ILogger<NavigationCoordinator> logger)
+        ILogger<NavigationCoordinator> logger,
+        INavigationMapStore? mapStore = null)
     {
         _logger = logger;
+        _mapStore = mapStore;
         _approachTtl = TimeSpan.FromSeconds(Math.Clamp(
             configuration.GetValue("Navigation:ApproachTtlSeconds", 60), 10, 300));
         _configPath = configuration["Navigation:StateFile"] ??
@@ -83,6 +88,15 @@ public sealed class NavigationCoordinator
         var validation = ValidateMap(_stored.Map);
         if (validation != null)
             throw new InvalidDataException("Invalid saved navigation map: " + validation);
+
+        if (_mapStore != null)
+        {
+            _stored.Map = _mapStore.LoadOrCreate(CopyMap(_stored.Map));
+            validation = ValidateMap(_stored.Map);
+            if (validation != null)
+                throw new InvalidDataException("Invalid database navigation map: " + validation);
+            NormalizeMap(_stored.Map);
+        }
 
         foreach (var item in _stored.IntersectionLocks)
         {
@@ -153,10 +167,7 @@ public sealed class NavigationCoordinator
             var next = CopyMap(candidate);
             NormalizeMap(next);
             next.Revision++;
-            _stored.Map = next;
-            _intersections.Clear();
-            SaveLocked();
-            return NavigationOperation.Ok();
+            return SaveMapLocked(next);
         }
     }
 
@@ -177,10 +188,7 @@ public sealed class NavigationCoordinator
 
             cell.IsIntersection = enabled;
             next.Revision++;
-            _stored.Map = next;
-            _intersections.Clear();
-            SaveLocked();
-            return NavigationOperation.Ok();
+            return SaveMapLocked(next);
         }
     }
 
@@ -630,6 +638,40 @@ public sealed class NavigationCoordinator
     private bool HasTraffic() => _intersections.Values.Any(state =>
         state.Blocked || state.ActiveRobotCode != null || state.Waiting.Count != 0);
 
+    private NavigationOperation SaveMapLocked(WarehouseMapDocument next)
+    {
+        try
+        {
+            // Persist before changing the map used by route planning and MQTT workers.
+            _mapStore?.Save(next, _stored.Map!.Revision);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            var latest = _mapStore!.LoadOrCreate(CopyMap(_stored.Map!));
+            if (ValidateMap(latest) != null)
+                throw new InvalidDataException("Database navigation map is invalid.");
+            NormalizeMap(latest);
+            _stored.Map = latest;
+            _intersections.Clear();
+            return NavigationOperation.Fail("Database map changed. Reload the map before saving.", true);
+        }
+        catch (Exception ex) when (ex is DbException or DbUpdateException or TimeoutException)
+        {
+            _logger.LogError(ex, "Navigation map database save failed; current map is unchanged.");
+            return NavigationOperation.Fail("Map was not saved to the database. Please retry.", unavailable: true);
+        }
+
+        _stored.Map = next;
+        _intersections.Clear();
+        try { SaveLocked(); }
+        catch (Exception ex) when (_mapStore != null && ex is IOException or UnauthorizedAccessException)
+        {
+            // Database commit succeeded. A stale local map mirror must not undo it.
+            _logger.LogError(ex, "Map saved to database, but the local navigation mirror could not be updated.");
+        }
+        return NavigationOperation.Ok();
+    }
+
     private void SaveLocked()
     {
         _stored.IntersectionLocks = _intersections.Values
@@ -702,7 +744,8 @@ public sealed class NavigationCoordinator
                 return "Unknown map cell type.";
             if (type is "wall" or "floor")
             {
-                if (cell.ArucoId != null || cell.IsIntersection || !string.IsNullOrEmpty(cell.Label))
+                if (cell.ArucoId != null || cell.IsIntersection || !string.IsNullOrEmpty(cell.Label) ||
+                    cell.MarkerYawDeg != null || cell.MarkerSizeM != null)
                     return "Empty floor/wall cells cannot have labels or ArUco metadata.";
                 continue;
             }
@@ -715,8 +758,12 @@ public sealed class NavigationCoordinator
                 var id = cell.ArucoId ?? IdFromLabel(cell.Label);
                 if (!id.HasValue || id.Value is < 0 or > 49 || !ids.Add(id.Value))
                     return "Each QR requires a unique ArUco ID 0..49 (DICT_4X4_50).";
+                if (cell.MarkerYawDeg is { } yaw && (!double.IsFinite(yaw) || yaw is < -180 or > 180))
+                    return "Marker yaw must be between -180 and 180 degrees.";
+                if (cell.MarkerSizeM is { } size && (!double.IsFinite(size) || size is < 0.005 or > 2))
+                    return "Marker size must be between 0.005 and 2 meters.";
             }
-            else if (cell.ArucoId.HasValue || cell.IsIntersection)
+            else if (cell.ArucoId.HasValue || cell.IsIntersection || cell.MarkerYawDeg != null || cell.MarkerSizeM != null)
                 return "Only QR cells can have ArUco IDs or be intersections.";
         }
 

@@ -181,6 +181,7 @@ builder.Services.AddSingleton<MqttService>();
 // QR graph A* / Webots progress state for one-robot pilot.
 builder.Services.AddSingleton<QrDemoRouteService>();
 // Shared, single-process navigation map and intersection coordinator.
+builder.Services.AddSingleton<INavigationMapStore, DatabaseNavigationMapStore>();
 builder.Services.AddSingleton<NavigationCoordinator>();
 
 builder.Services.AddScoped<MissionLifecycleService>();

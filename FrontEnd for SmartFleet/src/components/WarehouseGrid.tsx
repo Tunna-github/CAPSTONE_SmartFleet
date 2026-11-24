@@ -9,7 +9,7 @@ const GW = CELL * GCOLS;
 const GH = CELL * GROWS;
 
 export type WarehouseCellType = "floor" | "wall" | "station" | "qr" | "charge";
-export interface WarehouseCell { type: WarehouseCellType; label?: string; color?: string; arucoId?: number; isIntersection?: boolean; }
+export interface WarehouseCell { type: WarehouseCellType; label?: string; color?: string; arucoId?: number; isIntersection?: boolean; markerYawDeg?: number; markerSizeM?: number; }
 export type WarehouseLayout = WarehouseCell[][];
 
 export function createDefaultWarehouseLayout(): WarehouseLayout {

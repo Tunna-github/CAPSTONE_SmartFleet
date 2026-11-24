@@ -34,6 +34,11 @@ public sealed class QrDemoRouteService
         public long MissionId { get; set; }
         public int ArucoId { get; set; }
         public int WaypointIndex { get; set; }
+        public int? MapRevision { get; set; }
+        public double? HeadingDeg { get; set; }
+        public string? LocalizationSource { get; set; }
+        public double? ReprojectionErrorPx { get; set; }
+        public int StableFrames { get; set; }
     }
 
     public sealed class MissionView
@@ -82,6 +87,9 @@ public sealed class QrDemoRouteService
     private readonly Dictionary<long, MissionView> _missions = [];
     private readonly Dictionary<long, string> _publishedPayloads = [];
     private readonly HashSet<string> _freshRobotPositions = new(StringComparer.OrdinalIgnoreCase);
+    public sealed record RobotLocalization(int ArucoId, double HeadingDeg, int MapRevision,
+        string Source, DateTime ReceivedAtUtc);
+    private readonly Dictionary<string, RobotLocalization> _localizations = new(StringComparer.OrdinalIgnoreCase);
 
     public QrDemoRouteService(
         NavigationCoordinator navigation,
@@ -111,9 +119,58 @@ public sealed class QrDemoRouteService
 
     public IReadOnlyDictionary<string, int> GetRobotPositions()
     {
+        var revision = _navigation.GetMap().Revision;
         lock (_gate) return _store.RobotPositions
-            .Where(p => _freshRobotPositions.Contains(p.Key))
+            .Where(p => _freshRobotPositions.Contains(p.Key) && _localizations.TryGetValue(p.Key, out var pose) &&
+                pose.MapRevision == revision && DateTime.UtcNow - pose.ReceivedAtUtc < TimeSpan.FromSeconds(30))
             .ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public IReadOnlyDictionary<string, RobotLocalization> GetRobotLocalizations()
+    {
+        var revision = _navigation.GetMap().Revision;
+        lock (_gate) return _localizations.Where(p => p.Value.MapRevision == revision &&
+            DateTime.UtcNow - p.Value.ReceivedAtUtc < TimeSpan.FromSeconds(30))
+            .ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public bool HasFreshLocalization(string code) => GetRobotLocalizations().ContainsKey(code);
+
+    public object GetLocalizationMap()
+    {
+        var map = _navigation.GetMap();
+        return new { protocolVersion = 1, mapRevision = map.Revision, frame = "MAP_N_W_UP",
+            markers = map.Cells.SelectMany((row, r) => row.Select((cell, c) => new { cell, r, c }))
+                .Where(p => p.cell.Type == "qr" && p.cell.ArucoId.HasValue)
+                .Select(p => new { arucoId = p.cell.ArucoId, row = p.r, col = p.c,
+                    markerYawDeg = p.cell.MarkerYawDeg, markerSizeM = p.cell.MarkerSizeM }).ToArray() };
+    }
+
+    public bool CanDispatchTask(long taskId, string code, out string reason)
+    {
+        reason = "Robot needs a fresh camera/IMU localization on the current map.";
+        if (!HasFreshLocalization(code)) return false;
+        var map = _navigation.GetMap();
+        var nodes = ReadNodes(map);
+        lock (_gate)
+        {
+            if (!_store.TaskRoutes.TryGetValue(taskId, out var selection))
+            { reason = "Configure this task's pickup and delivery QR before assignment."; return false; }
+            try
+            {
+                var start = _localizations[code].ArucoId;
+                var pickupRoute = FindPath(map, nodes, start, selection.PickupArUcoId);
+                var deliveryRoute = FindPath(map, nodes, selection.PickupArUcoId, selection.DeliveryArUcoId);
+                if (pickupRoute.Concat(deliveryRoute).Distinct().Any(id =>
+                    map.Cells[nodes[id].Row][nodes[id].Col].MarkerYawDeg == null ||
+                    map.Cells[nodes[id].Row][nodes[id].Col].MarkerSizeM == null))
+                { reason = "Commission every QR marker on this route before assignment."; return false; }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException)
+            { reason = "No connected QR route for this task on the current map."; return false; }
+        }
+        reason = "";
+        return true;
     }
 
     public IReadOnlyList<MissionView> GetMissions()
@@ -193,6 +250,40 @@ public sealed class QrDemoRouteService
         };
     }
 
+    public sealed record MapReadiness(int MapRevision, int QrNodeCount, int CorridorCount,
+        bool ReadyForRouting, IReadOnlyList<string> Issues);
+
+    public MapReadiness GetMapReadiness()
+    {
+        var map = _navigation.GetMap();
+        var nodes = ReadNodes(map);
+        var edges = TraversableQrLinks(map, nodes);
+        var issues = new List<string>();
+        if (nodes.Count < 2)
+            issues.Add("Add at least two QR markers with physical ArUco IDs before assigning QR tasks.");
+        if (map.Cells.SelectMany(row => row).Any(c => c.Type == "qr" &&
+                (c.MarkerYawDeg == null || c.MarkerSizeM == null)))
+            issues.Add("Commission each QR marker's rotation and physical size for automatic heading localization.");
+        var byLabel = nodes.Values.ToDictionary(n => n.Label, StringComparer.OrdinalIgnoreCase);
+        foreach (var link in map.Links)
+            if (byLabel.TryGetValue(link[0], out var a) && byLabel.TryGetValue(link[1], out var b) && !AxisAligned(a, b))
+                issues.Add($"QR corridor {a.Label} to {b.Label} must be horizontal or vertical.");
+        if (nodes.Count > 1)
+        {
+            var visited = new HashSet<int> { nodes.Keys.First() };
+            var queue = new Queue<int>(visited);
+            while (queue.TryDequeue(out var id))
+                foreach (var (a, b) in edges)
+                {
+                    var neighbor = a.Id == id ? b.Id : b.Id == id ? a.Id : -1;
+                    if (neighbor >= 0 && visited.Add(neighbor)) queue.Enqueue(neighbor);
+                }
+            if (visited.Count != nodes.Count)
+                issues.Add("QR markers are disconnected. Link the QR corridors so routes can reach every marker.");
+        }
+        return new(map.Revision, nodes.Count, edges.Count, issues.Count == 0, issues);
+    }
+
     public string BuildMqttCommand(TaskAssignment assignment)
     {
         long missionId = assignment.Mission?.MissionId
@@ -200,6 +291,8 @@ public sealed class QrDemoRouteService
         lock (_gate)
             if (_publishedPayloads.TryGetValue(missionId, out var cached))
                 return cached; // MQTT retries must not reset waypoint progress.
+        if (!CanDispatchTask(assignment.TaskId, assignment.Robot.RobotCode, out var localizationReason))
+            throw new InvalidOperationException(localizationReason);
         var map = _navigation.GetMap();
         var nodes = ReadNodes(map);
         int pickupId, deliveryId, startId;
@@ -283,25 +376,36 @@ public sealed class QrDemoRouteService
     public (bool Accepted, string Reason) ReceiveProgress(string robotCode, RouteProgressReport report)
     {
         var map = _navigation.GetMap();
+        if (report.Event == "LOCALIZATION_LOST")
+        {
+            lock (_gate) { _freshRobotPositions.Remove(robotCode); _localizations.Remove(robotCode); }
+            return (true, "Localization invalidated; new camera/IMU READY required.");
+        }
         var qrExists = ReadNodes(map).ContainsKey(report.ArucoId);
-        if (!qrExists) return (false, $"QR{report.ArucoId} does not exist on the saved map");
+        if (!qrExists)
+        {
+            if (report.Event == "READY") lock (_gate) { _freshRobotPositions.Remove(robotCode); _localizations.Remove(robotCode); }
+            return (false, $"QR{report.ArucoId} does not exist on the saved map");
+        }
         lock (_gate)
         {
             if (string.Equals(report.Event, "READY", StringComparison.OrdinalIgnoreCase))
             {
-                // READY is camera-confirmed by Webots. Use the reported QR for
-                // every new mission, even if the previous mission ended at QR7.
-                // Fixed-start validation remains opt-in for legacy demo setups.
-                if (_configuration.GetValue<bool>("DemoRoute:EnforceFixedStartQr"))
+                var cell = map.Cells.SelectMany(row => row).Single(c => c.Type == "qr" && c.ArucoId == report.ArucoId);
+                if (report.MapRevision != map.Revision || report.LocalizationSource != "ARUCO_IMU" ||
+                    report.HeadingDeg is not { } heading || !double.IsFinite(heading) || heading is < -180 or > 180 ||
+                    report.ReprojectionErrorPx is not { } error || !double.IsFinite(error) || error is < 0 or > 2 ||
+                    report.StableFrames < 5 || cell.MarkerYawDeg == null || cell.MarkerSizeM == null)
                 {
-                    var expected = _configuration.GetValue<int>($"DemoRoute:RobotStartQr:{robotCode}", -1);
-                    if (expected >= 0 && expected != report.ArucoId)
-                        return (false, $"Webots QR{report.ArucoId} disagrees with configured expected start QR{expected}");
+                    _freshRobotPositions.Remove(robotCode);
+                    _localizations.Remove(robotCode);
+                    return (false, "Valid camera/IMU heading, commissioned marker and current map revision are required.");
                 }
                 _store.RobotPositions[robotCode] = report.ArucoId;
                 _freshRobotPositions.Add(robotCode);
+                _localizations[robotCode] = new(report.ArucoId, heading, map.Revision, "ARUCO_IMU", DateTime.UtcNow);
                 SaveLocked();
-                return (true, "Webots start QR recorded");
+                return (true, "Webots QR and camera/IMU heading recorded");
             }
             if (!string.Equals(report.Event, "WAYPOINT_REACHED", StringComparison.OrdinalIgnoreCase))
                 return (false, "Unsupported QR progress event");

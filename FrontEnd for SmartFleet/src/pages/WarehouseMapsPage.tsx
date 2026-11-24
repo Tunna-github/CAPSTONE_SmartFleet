@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react"
 
 import { useWarehouseMap, computeDefaultLinks } from "../context/WarehouseMapContext"
+import { getMapReadiness, type MapReadiness } from "../api/modules/navigation"
 import { Icon, IC } from "../components/Icons"
 import { PageHeader, PrimaryBtn } from "../components/SharedUI"
 import {
@@ -13,6 +14,19 @@ export default function WarehouseMapsPage() {
     warehouseLayout, setWarehouseLayout, links, setLinks,
     mapRevision, mapLoading, mapSaving, mapError, reloadMap, saveMap,
   } = useWarehouseMap()
+  const [readiness, setReadiness] = useState<MapReadiness | null>(null)
+  const [readinessError, setReadinessError] = useState("")
+  useEffect(() => {
+    if (mapRevision === null) return
+    let cancelled = false
+    setReadiness(null)
+    void getMapReadiness().then(value => {
+      if (!cancelled) { setReadiness(value); setReadinessError("") }
+    }).catch(error => {
+      if (!cancelled) setReadinessError(error?.message ?? "Cannot validate the saved QR map.")
+    })
+    return () => { cancelled = true }
+  }, [mapRevision])
   const [toast, setToast] = useState<{
     msg: string
     type: "success" | "error" | "info"
@@ -229,7 +243,7 @@ export default function WarehouseMapsPage() {
     ? warehouseLayout[selectedCell.row]?.[selectedCell.col]
     : undefined
 
-  const updateSelectedQr = (changes: { arucoId?: number; isIntersection?: boolean }) => {
+  const updateSelectedQr = (changes: { arucoId?: number; isIntersection?: boolean; markerYawDeg?: number; markerSizeM?: number }) => {
     const target = selectedCell
     if (!target) return
     setWarehouseLayout(prev => prev.map((row, ri) => row.map((cell, ci) =>
@@ -261,9 +275,9 @@ export default function WarehouseMapsPage() {
           style={{ background: "#0d9488", borderColor: "#0d9488", color: "white" }}
           disabled={mapRevision === null || mapLoading || mapSaving}
           onClick={() => void saveMap()
-            .then(() => setToast({ msg: "Saved map to Backend!", type: "success" }))
+            .then(() => setToast({ msg: "Saved map to database!", type: "success" }))
             .catch(err => setToast({ msg: `Save failed: ${err?.message ?? "API error"}`, type: "error" }))}>
-          {mapSaving ? "Saving..." : "Save to Backend"}
+          {mapSaving ? "Saving..." : "Save to Database"}
         </button>
         <PrimaryBtn
           onClick={() => {
@@ -279,9 +293,17 @@ export default function WarehouseMapsPage() {
         </PrimaryBtn>
       </PageHeader>
       <div className="px-6 py-2 text-xs" style={{ color: "var(--text-faint)" }}>
-        Backend map revision: {mapRevision ?? "not loaded"} · Edits are local until you click Save to Backend.
+        Saved map revision: {mapRevision ?? "not loaded"} · Edits are local until you click Save to Database.
         {mapError && <div role="alert" style={{ color: "#f87171" }}>Navigation API: {mapError}</div>}
       </div>
+      {readiness && <div role="status" className="mx-6 mb-3 rounded-lg border px-3 py-2 text-xs"
+        style={{ borderColor: readiness.readyForRouting ? "#0d9488" : "#d97706" }}>
+        Saved QR map: {readiness.qrNodeCount} markers · {readiness.corridorCount} corridors.
+        {readiness.readyForRouting
+          ? " Connected for route planning. Confirm that markers and roads match Webots before dispatch."
+          : ` Not ready for QR tasks: ${readiness.issues.join(" ")}`}
+      </div>}
+      {readinessError && <p role="alert" className="mx-6 mb-3 text-xs text-amber-600">{readinessError}</p>}
       <div
         className="flex-1 min-h-0 overflow-y-auto p-6"
         role="region"
@@ -431,6 +453,17 @@ export default function WarehouseMapsPage() {
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2"
                   style={{ borderColor: "var(--border-medium)", background: "var(--surface-3)" }}>
                   <span className="text-xs font-semibold">Edit {selectedQrCell.label}</span>
+                  <label className="text-xs flex items-center gap-1">Marker yaw (°)
+                    <input aria-label="Marker yaw in degrees" type="number" min={-180} max={180} step="0.1"
+                      className="w-20 rounded border px-1 py-1" value={selectedQrCell.markerYawDeg ?? ""}
+                      onChange={e => updateSelectedQr({ markerYawDeg: e.target.value === "" ? undefined : Number(e.target.value) })}/>
+                  </label>
+                  <label className="text-xs flex items-center gap-1">Marker size (m)
+                    <input aria-label="Marker size in meters" type="number" min={0.005} max={2} step="0.001"
+                      className="w-20 rounded border px-1 py-1" value={selectedQrCell.markerSizeM ?? ""}
+                      onChange={e => updateSelectedQr({ markerSizeM: e.target.value === "" ? undefined : Number(e.target.value) })}/>
+                  </label>
+                  <span className="text-xs">Marker +X: 0° North, +90° West, −90° East. Set once at installation.</span>
                   <label className="text-xs flex items-center gap-1">ID
                     <input type="number" min={0} max={49} className="w-16 rounded border px-1 py-1"
                       style={{ borderColor: "var(--border-medium)", background: "var(--surface-2)" }}

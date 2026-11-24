@@ -143,6 +143,8 @@ public partial class SmartFleetDbContext : DbContext
                 .HasMaxLength(500)
                 .HasColumnName("MapImageURL");
             entity.Property(e => e.MapName).HasMaxLength(120);
+            entity.Property(e => e.MapMetadataJson).IsConcurrencyToken();
+            entity.Property(e => e.IsActive).IsConcurrencyToken();
             entity.Property(e => e.MapSource)
                 .HasMaxLength(30)
                 .IsUnicode(false)

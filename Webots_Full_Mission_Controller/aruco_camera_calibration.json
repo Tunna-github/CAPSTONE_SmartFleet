@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "frame": "MAP_N_W_UP",
+  "imageWidth": 626,
+  "imageHeight": 250,
+  "horizontalFovRad": 0.85404,
+  "distortionCoefficients": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "robotFromOpticalRotation": [
+    [
+      0.0,
+      -0.999967305837636,
+      0.008086238669477441
+    ],
+    [
+      -1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      -0.008086238669477441,
+      -0.999967305837636
+    ]
+  ],
+  "installation": "Webots R2025a TurtleBot3Burger camera mount from turtlebot3_burger.wbt; no runtime robot pose"
+}

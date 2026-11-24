@@ -18,6 +18,9 @@ public sealed class WarehouseMapCell
     public string? Label { get; set; }
     public int? ArucoId { get; set; }
     public bool IsIntersection { get; set; }
+    // Marker +X angle in MAP_N_W_UP: 0=N, +90=W, -90=E. Installation data.
+    public double? MarkerYawDeg { get; set; }
+    public double? MarkerSizeM { get; set; }
 }
 
 public sealed class MapCellUpdateRequest
@@ -118,17 +121,18 @@ public sealed class NavigationOperation
 {
     public bool Success { get; init; }
     public bool Conflict { get; init; }
+    public bool Unavailable { get; init; }
     public string Error { get; init; } = "";
     public IReadOnlyList<NavigationDirective> Directives { get; init; } = [];
 
     public static NavigationOperation Ok(IReadOnlyList<NavigationDirective>? directives = null) =>
         new() { Success = true, Directives = directives ?? [] };
 
-    public static NavigationOperation Fail(string message, bool conflict = false) =>
-        new() { Error = message, Conflict = conflict };
+    public static NavigationOperation Fail(string message, bool conflict = false, bool unavailable = false) =>
+        new() { Error = message, Conflict = conflict, Unavailable = unavailable };
 }
 
-// Local JSON document. No EF migration or DB write is needed.
+// Local device settings, safety locks, and a legacy/mirror copy of the database map.
 public sealed class NavigationStoredState
 {
     public WarehouseMapDocument? Map { get; set; }

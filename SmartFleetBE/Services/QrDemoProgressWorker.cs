@@ -43,6 +43,12 @@ public sealed class QrDemoProgressWorker(
                 var json = args.ApplicationMessage.ConvertPayloadToString();
                 var report = JsonSerializer.Deserialize<QrDemoRouteService.RouteProgressReport>(json, Options);
                 if (report == null || string.IsNullOrWhiteSpace(report.EventId)) return;
+                if (report.Event == "LOCALIZATION_CONFIG")
+                {
+                    await publisher.PublishAsync($"smartfleet/robot/{parts[2]}/localization-map",
+                        JsonSerializer.Serialize(new { eventId = report.EventId, map = routes.GetLocalizationMap() }, Options), stoppingToken);
+                    return;
+                }
                 if (report.Event == "WAYPOINT_REACHED")
                 {
                     using var guardScope = scopes.CreateScope();

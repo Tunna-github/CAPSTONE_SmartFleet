@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getInterventions, intervene, type InterventionRow } from "../api/modules/interventions";
 
-export default function RobotSafetyPanel() {
+export default function RobotSafetyPanel({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const { role } = useAuth();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<InterventionRow[]>([]);
@@ -34,13 +34,24 @@ export default function RobotSafetyPanel() {
     } catch (e) { setMessage((e as Error).message); }
     finally { setBusy(false); }
   };
-  return <div className="fixed right-4 top-3 z-[100] text-sm" style={{ color: "var(--text-primary)" }}>
-    <button className="rounded-lg bg-red-700 text-white px-3 py-2 font-bold" onClick={() => setOpen(!open)}>
-      {open ? "Close robot safety" : "Robot safety / Pause"}
+  return <div className="text-sm" style={{ color: "var(--text-primary)" }}>
+    <button type="button" className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-700 text-white px-2 py-3 text-xs font-bold hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+      aria-label={open ? "Close robot safety" : "Robot safety / Pause"}
+      title="Robot safety / Pause" aria-expanded={open} aria-controls="robot-safety-panel"
+      onClick={() => setOpen(!open)}>
+      <svg aria-hidden="true" className="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="6" y="4" width="4" height="16" rx="1" />
+        <rect x="14" y="4" width="4" height="16" rx="1" />
+      </svg>
+      {!isCollapsed && <span>{open ? "Close robot safety" : "Robot safety / Pause"}</span>}
     </button>
-    {open && <section className="mt-2 p-4 rounded-xl border shadow-xl max-h-[80vh] overflow-auto w-[min(640px,92vw)]"
+    {open && <section id="robot-safety-panel" aria-label="Robot safety controls"
+      className="fixed right-4 top-4 z-[100] p-4 rounded-xl border shadow-xl max-h-[calc(100dvh-2rem)] overflow-auto w-[min(640px,92vw)]"
       style={{ background: "var(--surface-2)", borderColor: "var(--border-medium)" }}>
-      <p className="font-bold">Robot safety and task cancellation</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-bold">Robot safety and task cancellation</p>
+        <button type="button" aria-label="Close safety panel" className="rounded border px-2 py-1" onClick={() => setOpen(false)}>✕</button>
+      </div>
       <p className="my-2 text-xs">Pause sends a software stop. Task and resource locks remain held. Check robot acknowledgement; use the physical E-Stop for immediate danger.</p>
       <label>Reason (required for cancellation)
         <input className="block w-full p-2 my-2 rounded border" style={{ background: "var(--surface-3)" }}

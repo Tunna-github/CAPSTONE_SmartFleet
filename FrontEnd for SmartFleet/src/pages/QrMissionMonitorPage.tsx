@@ -24,19 +24,24 @@ interface Mission {
 export default function QrMissionMonitorPage() {
     const [missions, setMissions] = useState<Mission[]>([]);
     const [positions, setPositions] = useState<Record<string, number>>({});
+    const [localizations, setLocalizations] = useState<Record<string, {
+        headingDeg: number; mapRevision: number; source: string;
+    }>>({});
     const [error, setError] = useState("");
     const [lastUpdated, setLastUpdated] = useState("");
     useEffect(() => {
         let stopped = false;
         async function reload() {
             try {
-                const [missionResponse, positionResponse] = await Promise.all([
+                const [missionResponse, positionResponse, localizationResponse] = await Promise.all([
                     apiClient.get<Mission[]>("/api/v1/demo-routing/missions"),
                     apiClient.get<Record<string, number>>("/api/v1/demo-routing/robots/positions"),
+                    apiClient.get("/api/v1/demo-routing/robots/localizations").catch(() => ({ data: {} })),
                 ]);
                 if (!stopped) {
                     setMissions(missionResponse.data);
                     setPositions(positionResponse.data);
+                    setLocalizations(localizationResponse.data);
                     setLastUpdated(new Date().toLocaleTimeString());
                     setError("");
                 }
@@ -53,7 +58,7 @@ export default function QrMissionMonitorPage() {
             <h1 className="text-xl font-bold">Webots QR Mission Monitor</h1>
             <p className="text-xs mt-2" style={{ color: "var(--text-faint)" }}>
                 Live route chosen from the Backend QR map, robot waypoint confirmations, and pickup/drop-off progress.
-                This is odometry-based Webots simulation, not camera ArUco verification.
+                Starting QR and heading are localized from camera ArUco pose and IMU.
             </p>
             <p className="text-xs mt-2" style={{ color: "var(--text-faint)" }}>
                 Last updated: {lastUpdated || "Connecting"} · Auto-refresh every 1.5 seconds
@@ -63,10 +68,13 @@ export default function QrMissionMonitorPage() {
                 <h2 className="font-semibold">Robot checkpoint positions reported to Backend</h2>
                 <div className="flex flex-wrap gap-2 mt-3">
                     {Object.keys(positions).length === 0
-                        ? <span className="text-sm opacity-60">No robot READY received. Start your Webots controller first.</span>
+                        ? <span className="text-sm opacity-60">Waiting for a valid camera/IMU localization on the saved map. Check marker calibration and the robot's camera view.</span>
                         : Object.entries(positions).map(([name, id]) =>
                             <span key={name} className="rounded-md border px-3 py-2 text-sm" style={{ borderColor: "var(--border-medium)" }}>
                                 {name} : QR{id}
+                                {localizations[name] && <span className="block text-xs opacity-70">
+                                    Heading {localizations[name].headingDeg.toFixed(1)}° · {localizations[name].source} · map {localizations[name].mapRevision}
+                                </span>}
                             </span>)}
                 </div>
             </section>
@@ -100,7 +108,7 @@ export default function QrMissionMonitorPage() {
                             })}
                         </div>
                         <p className="text-xs opacity-60 mt-3">
-                            Green means the Backend acknowledged that waypoint. This is not a physical camera QR scan.
+                            Green means the Backend acknowledged a camera-confirmed waypoint in Webots.
                         </p>
                     </section>
                 ))}

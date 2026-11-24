@@ -66,8 +66,14 @@ public sealed class QrDemoRoutingController(
     [HttpGet("map/graph")]
     public IActionResult GetMapGraph() => Ok(routes.GetDirectedQrGraph());
 
+    [HttpGet("map/validation")]
+    public IActionResult ValidateMap() => Ok(routes.GetMapReadiness());
+
     [HttpGet("robots/positions")]
     public IActionResult Positions() => Ok(routes.GetRobotPositions());
+
+    [HttpGet("robots/localizations")]
+    public IActionResult Localizations() => Ok(routes.GetRobotLocalizations());
 
     [HttpGet("missions")]
     public IActionResult Missions() => Ok(routes.GetMissions());
