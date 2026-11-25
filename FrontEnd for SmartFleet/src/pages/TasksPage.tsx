@@ -685,7 +685,7 @@ function TaskAssignmentModal({ task, onClose, onAssigned }: {
                     return;
                 }
             }}>
-                <p className="text-[12px]" style={{ color: "var(--text-faint)" }}>{robots.filter(r => r.isEligible).length} eligible / {robots.length} registered robots. Unavailable robots are disabled with a reason. Status refreshes every 5 seconds and is checked again on confirmation.</p>
+                <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>{robots.filter(r => r.isEligible).length} eligible / {robots.length} registered robots. Unavailable robots are disabled with a reason. Status refreshes every 5 seconds and is checked again on confirmation.</p>
                 {error && <p role="alert" className="text-[12px] text-red-400">{error}</p>}
                 {loading ? <p role="status">Loading available robots...</p> : (
                     <div>
@@ -762,7 +762,7 @@ function ModalShell({
             aria-describedby={sub ? descriptionId : undefined}
             onCancel={(event) => { event.preventDefault(); if (!busy) onClose(); }}
             className="m-auto p-0 bg-transparent backdrop:bg-black/75 backdrop:backdrop-blur-sm outline-none"
-            style={{ width: `min(${width}px, calc(100vw - 32px))` }}
+            style={{ width: `min(${width}px, calc(100vw - 32px))`, color: "var(--text-primary)" }}
         >
             <div
                 className="w-full rounded-2xl overflow-hidden transition-all duration-200 ease-out"
@@ -781,7 +781,7 @@ function ModalShell({
                 >
                     <div>
                         <h2 id={titleId} className="text-[15px] font-bold" style={{ color: "var(--text-primary)" }}>{title}</h2>
-                        {sub && <p id={descriptionId} className="font-mono text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>{sub}</p>}
+                        {sub && <p id={descriptionId} className="font-mono text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{sub}</p>}
                     </div>
                     <button
                         type="button"

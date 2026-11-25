@@ -32,6 +32,10 @@ export default defineConfig(({ mode }) => {
             },
         },
         server: {
+            proxy: {
+                '/api': { target: process.env.SMARTFLEET_API_PROXY || 'https://localhost:7166', secure: false, ws: true },
+                '/hubs': { target: process.env.SMARTFLEET_API_PROXY || 'https://localhost:7166', secure: false, ws: true },
+            },
             host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
             port: parseInt(process.env.PORT || '8443'),
             strictPort: true,

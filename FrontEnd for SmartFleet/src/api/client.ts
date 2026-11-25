@@ -5,7 +5,8 @@ import axios, {
 } from "axios";
 import type { ApiError } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://localhost:7166";
+// Same-origin gateway works on localhost, LAN hosts and deployed HTTPS domains.
+export const apiBaseUrl = import.meta.env.VITE_API_URL ?? "";
 
 // ─── Token storage ───────────────────────────────────────────────────────────
 export const tokenStorage = {
@@ -34,7 +35,7 @@ export const tokenStorage = {
 
 // ─── Axios instance ──────────────────────────────────────────────────────────
 export const apiClient: AxiosInstance = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: apiBaseUrl,
     timeout: 15000,
     headers: {
         "Content-Type": "application/json",

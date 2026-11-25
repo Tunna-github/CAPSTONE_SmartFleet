@@ -7,6 +7,12 @@ test constitutes pickup/delivery verification for production.
 
 ## Local setup
 
+For a portable isolated demo with PostgreSQL, MQTT, two Webots robots, live 2D
+tracking and shared 3D viewing, run `python tools/setup_demo.py` then
+`docker compose up -d --build`. Open http://localhost:8080. See
+[simulation deployment](docs/simulation-deployment.md) for accounts, LAN viewing,
+deployment and map/world commissioning constraints.
+
 Use .NET 10, Node.js and npm, PostgreSQL, and an MQTT broker. Install frontend
 dependencies with `npm ci` inside `FrontEnd for SmartFleet`. The frontend uses
 port 8443; the HTTPS backend profile uses 7166.
@@ -38,7 +44,7 @@ table and rolls back the test.
 
 Enable `Mqtt:EnableWorkers` only against the intended broker. Enable
 `Navigation:Enabled` only with a compatible robot adapter. QR route execution
-uses `DemoRoute:Enabled` and is restricted to Development. Select
+uses `DemoRoute:Enabled` and is restricted to Development or the isolated Simulation environment. Select
 `Navigation:WarehouseId` explicitly if more than one warehouse is active.
 See `docs/aruco-auto-localization.md` and `docs/warehouse-map-storage.md` for
 camera/marker commissioning and map storage.

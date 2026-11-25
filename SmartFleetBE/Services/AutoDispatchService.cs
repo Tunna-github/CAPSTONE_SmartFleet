@@ -168,13 +168,14 @@ public sealed class AutoDispatchService(
                 // STEP 3: FIND THE BEST ELIGIBLE ROBOT
                 // ======================================
 
+                var requiredType = DispatchRobotTypePolicy.RequiredType(configuration);
                 var candidates = await db.Robots
                     .Where(r =>
                         // Same warehouse
                         r.WarehouseId == task.WarehouseId &&
 
                         // Physical and enabled robot
-                        r.RobotType == "PHYSICAL" &&
+                        r.RobotType == requiredType &&
                         r.IsActive &&
 
                         // Robot must be online and free

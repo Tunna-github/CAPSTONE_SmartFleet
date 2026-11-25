@@ -9,7 +9,7 @@ namespace SmartFleetBE.Controllers;
 
 [ApiController]
 [Route("api/v1/navigation")]
-[Authorize(Roles = AppRoles.AdminOrWarehouseOperator)]
+[Authorize(Roles = AppRoles.AdminOrWarehouseOperator + "," + AppRoles.MaintenanceTechnician)]
 public sealed class NavigationController(
     NavigationCoordinator coordinator,
     SmartFleetDbContext db,
@@ -97,6 +97,7 @@ public sealed class NavigationController(
     // Manual testing with a JWT. A real robot sends the same JSON via MQTT /scan.
     // ?simulate=true skips command publishing ONLY for a Development Admin demo.
     [HttpPost("robots/{robotCode}/scan")]
+    [Authorize(Roles = AppRoles.AdminOrWarehouseOperator)]
     public async Task<IActionResult> ReportRobotScan(
         string robotCode, [FromBody] RobotArUcoScanReport report,
         [FromQuery] bool simulate, CancellationToken ct)

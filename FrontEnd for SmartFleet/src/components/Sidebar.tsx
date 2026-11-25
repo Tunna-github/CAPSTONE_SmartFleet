@@ -6,6 +6,7 @@ import RobotSafetyPanel from "./RobotSafetyPanel";
 import NotificationPanel from "./NotificationPanel";
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/client";
+import fleetLogo from "../../Icon/icon4.svg";
 
 export function Sidebar({
     role,
@@ -59,6 +60,7 @@ export function Sidebar({
                     { id: "analytics", label: "Analytics", path: "/dashboard/analytics", icon: IC.analytics },
                 ];
 
+    navItems.push({ id: "simulation", label: "Simulation / Live Map", path: "/simulation", icon: IC.maps });
     const roleLabel =
         role === "admin"
             ? "Administrator"
@@ -83,7 +85,7 @@ export function Sidebar({
                 <div className="flex items-center gap-3 overflow-hidden cursor-default">
                     <div className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center relative overflow-hidden shadow-md">
                         <img
-                            src="/icon/icon4.svg"
+                            src={fleetLogo}
                             alt="SmartFleet Logo"
                             className="w-full h-full object-cover rounded-lg shadow-sm"
                         />

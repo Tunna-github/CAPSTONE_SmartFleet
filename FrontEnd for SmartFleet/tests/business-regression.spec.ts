@@ -63,7 +63,7 @@ test("CRITICAL and unknown server states never appear as PENDING", async ({ page
 
 test("admin dashboard shows registered robot rather than seed assets", async ({ page }, testInfo) => {
   await setup(page, "Administrator"); await page.goto("/admin");
-  await expect(page.getByText("REAL-R99", { exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "REAL-R99", exact: true })).toBeVisible();
   await expect(page.getByText("AMR-001", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add Robot", exact: true })).toHaveCount(0);
   await expect(page.getByText("142", { exact: true })).toHaveCount(0);

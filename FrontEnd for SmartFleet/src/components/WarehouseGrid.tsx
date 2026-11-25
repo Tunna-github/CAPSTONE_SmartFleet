@@ -94,8 +94,14 @@ export function WarehouseGrid({
     selectedCell,
     selectedPoint,
     animateRobots = true,
+    missionRoutes = [],
+    onRobotClick,
+    focusQrNetwork = false,
 }: {
     robots: RobotPos[];
+    missionRoutes?: { robotId: string; color: string; points: { x: number; y: number }[] }[];
+    onRobotClick?: (robotCode: string) => void;
+    focusQrNetwork?: boolean;
     grid?: WarehouseLayout;
     links?: Array<[string, string]>;
     scale?: number;
@@ -131,12 +137,12 @@ export function WarehouseGrid({
         for (let r = 0; r < GROWS; r++) {
             for (let c = 0; c < GCOLS; c++) {
                 const cell = grid[r]?.[c];
-                if ((cell?.type === "station" || cell?.type === "qr" || cell?.type === "charge") && cell.label) pts.push({ r, c, label: cell.label });
+                if ((focusQrNetwork ? cell?.type === "qr" : (cell?.type === "station" || cell?.type === "qr" || cell?.type === "charge")) && cell.label) pts.push({ r, c, label: cell.label });
             }
         }
         pts.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
         return pts;
-    }, [grid]);
+    }, [grid, focusQrNetwork]);
 
     const defaultLinks = useMemo(() => {
         const edges: Array<[string, string]> = [];
@@ -294,12 +300,35 @@ export function WarehouseGrid({
         };
     }, [animateRobots]);
 
-    const centerX = GW / 2;
-    const centerY = GH / 2;
+    // Keep the live QR network large without changing map coordinates used by
+    // navigation or robot telemetry. The map editor retains the complete grid.
+    const viewport = useMemo(() => {
+        if (!focusQrNetwork || stations.length === 0) return { x: 0, y: 0, width: GW, height: GH };
+        let left = Math.min(...stations.map(p => p.c));
+        let right = Math.max(...stations.map(p => p.c));
+        let top = Math.min(...stations.map(p => p.r));
+        let bottom = Math.max(...stations.map(p => p.r));
+        for (const robot of robots) {
+            // Include robots outside the QR area, but avoid zoom jitter from
+            // normal motion within the padded network.
+            if (Number.isFinite(robot.x) && (robot.x < left - .8 || robot.x > right + .8)) {
+                left = Math.min(left, Math.floor(robot.x)); right = Math.max(right, Math.ceil(robot.x));
+            }
+            if (Number.isFinite(robot.y) && (robot.y < top - .8 || robot.y > bottom + .8)) {
+                top = Math.min(top, Math.floor(robot.y)); bottom = Math.max(bottom, Math.ceil(robot.y));
+            }
+        }
+        return { x: (left - .8) * CELL, y: (top - .8) * CELL,
+            width: Math.max(4, right - left + 2.6) * CELL,
+            height: Math.max(4, bottom - top + 2.6) * CELL };
+    }, [focusQrNetwork, stations, robots]);
+    const centerX = viewport.x + viewport.width / 2;
+    const centerY = viewport.y + viewport.height / 2;
     const transform = `translate(${centerX} ${centerY}) scale(${scale}) translate(${-centerX} ${-centerY})`;
 
     // Selection changes do not need to rebuild the static map cells.
     const mapCells = useMemo(() => gridWithRoads.map((row, ri) => row.map((cell, ci) => {
+        if (focusQrNetwork && (cell.type === "station" || cell.type === "charge")) return null;
         const style = cellTypeStyles[cell.type] || cellTypeStyles.floor;
         const x = ci * CELL;
         const y = ri * CELL;
@@ -309,7 +338,7 @@ export function WarehouseGrid({
                 {(cell.type === "station" || cell.type === "qr" || cell.type === "charge") && (
                     <>
                         <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
-                        <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize="8" fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.label}</text>
+                        <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize={focusQrNetwork ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.label}</text>
                         {cell.type === "qr" && cell.isIntersection && (
                             <g>
                                 <circle cx={x + CELL - 8} cy={y + 8} r={6} fill="#f59e0b" />
@@ -320,10 +349,10 @@ export function WarehouseGrid({
                 )}
             </g>
         );
-    })), [gridWithRoads, cellTypeStyles]);
+    })), [gridWithRoads, cellTypeStyles, focusQrNetwork]);
 
     return (
-        <svg width="100%" height="100%" viewBox={`0 0 ${GW} ${GH}`} style={{ background: isLight ? "#ffffff" : "#060d1f", display: "block", transition: "background 0.2s ease" }} preserveAspectRatio="xMidYMid meet">
+        <svg aria-label={focusQrNetwork ? "Live QR robot map" : "Warehouse map"} width="100%" height="100%" viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`} style={{ background: isLight ? "#ffffff" : "#060d1f", display: "block", transition: "background 0.2s ease" }} preserveAspectRatio="xMidYMid meet">
             <defs>
                 <pattern id="dots" x="0" y="0" width={CELL} height={CELL} patternUnits="userSpaceOnUse">
                     <circle cx="0" cy="0" r="0.8" fill={isLight ? "#e2e8f0" : "#0d1634"} />
@@ -412,6 +441,9 @@ export function WarehouseGrid({
                     );
                 }))}
 
+            {missionRoutes.filter(route => route.points.length > 1).map(route => <polyline key={`mission-${route.robotId}`}
+                points={route.points.map(p => `${p.x * CELL + CELL / 2},${p.y * CELL + CELL / 2}`).join(" ")}
+                fill="none" stroke={route.color} strokeWidth="2" strokeDasharray="6 4" opacity="0.65" />)}
             {robots
                 .filter((rb) => rb.missionId && rb.mqtt === "ONLINE")
                 .map((rb) => {
@@ -443,18 +475,23 @@ export function WarehouseGrid({
                 const filterId = rb.mqtt === "OFFLINE" ? "glow-red" : rb.battery <= 15 ? "glow-yellow" : "glow-cyan";
                 const R = 11;
                 return (
-                    <g key={rb.id} filter={`url(#${filterId})`}>
+                    <g key={rb.id} filter={`url(#${filterId})`} onClick={() => onRobotClick?.(rb.id)}
+                        style={{ cursor: onRobotClick ? "pointer" : "default" }} data-robot-code={rb.id}>
+                        <title>{rb.id} · {rb.positionLabel ?? "Robot position"}</title>
                         {rb.mqtt === "ONLINE" && (
                             <circle cx={cx} cy={cy} r={R + 5} fill="none" stroke={rb.color} strokeWidth="0.8" opacity="0.3">
                                 <animate attributeName="r" values={`${R + 3};${R + 10};${R + 3}`} dur="2s" repeatCount="indefinite" />
                                 <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite" />
                             </circle>
                         )}
+                        {rb.heading !== undefined && <path d="M0 -18 L-4 -12 L4 -12 Z" fill={rb.color}
+                            transform={`translate(${cx},${cy}) rotate(${-rb.heading})`} />}
                         <rect x={cx - R} y={cy - R} width={R * 2} height={R * 2} rx="4"
+                            style={{ transition: animateRobots ? "none" : "x 100ms linear, y 100ms linear" }}
                             fill={rb.mqtt === "OFFLINE" ? "#1a0a0a" : (isLight ? "#ffffff" : "#0a1628")}
                             stroke={rb.color} strokeWidth="1.5" />
                         <text x={cx} y={cy + 4} textAnchor="middle" fontSize="12" fill={rb.color}>⬡</text>
-                        <text x={cx} y={cy + R + 10} textAnchor="middle" fontSize="7" fontFamily="monospace" fontWeight="600" fill={rb.color} opacity="0.9">{rb.id.replace("AMR-", "")}</text>
+                        <text x={cx} y={cy + R + 10} textAnchor="middle" fontSize={focusQrNetwork ? 9 : 7} fontFamily="monospace" fontWeight="600" fill={rb.color} opacity="0.9">{rb.id.replace("AMR-", "")}</text>
                         <circle cx={cx + R - 3} cy={cy - R + 3} r="3" fill={rb.battery <= 15 ? "#ef4444" : rb.battery <= 35 ? "#f59e0b" : "#22c55e"} />
                     </g>
                 );

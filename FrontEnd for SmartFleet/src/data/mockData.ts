@@ -20,6 +20,8 @@ export interface LogEntry {
 }
 
 export interface RobotPos {
+    heading?: number;
+    positionLabel?: string;
     id: string; x: number; y: number; tx: number; ty: number;
     battery: number; mqtt: MQTTStatus; missionId: string | null; color: string;
 }

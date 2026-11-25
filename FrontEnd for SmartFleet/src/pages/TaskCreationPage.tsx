@@ -214,6 +214,7 @@ export function TaskCreateForm({
         <form
             onSubmit={submit}
             className="p-6 space-y-5"
+            style={{ color: "var(--text-primary)" }}
             aria-busy={busy}
         >
             <div
@@ -221,9 +222,9 @@ export function TaskCreateForm({
                 className={
                     "rounded-xl px-4 py-3 " +
                     "text-[12px] leading-relaxed " +
-                    "bg-cyan-400/10 text-cyan-600 " +
-                    "dark:text-cyan-300"
+                    "bg-cyan-400/10"
                 }
+                style={{ color: "var(--text-secondary)" }}
             >
                 Use existing warehouse and station IDs.
                 Task tracking codes are generated automatically.
@@ -310,7 +311,7 @@ export function TaskCreateForm({
                                 <p
                                     className="mt-1.5 text-[11px]"
                                     style={{
-                                        color: "var(--text-faint)",
+                                        color: "var(--text-muted)",
                                     }}
                                 >
                                     {hint}
@@ -477,7 +478,7 @@ export function TaskCreateForm({
                                         <span
                                             className="block mt-1 text-[11px]"
                                             style={{
-                                                color: "var(--text-faint)",
+                                                color: "var(--text-muted)",
                                             }}
                                         >
                                             {hint}
@@ -507,7 +508,7 @@ export function TaskCreateForm({
                         <p
                             className="mt-1.5 text-[11px]"
                             style={{
-                                color: "var(--text-faint)",
+                                color: "var(--text-muted)",
                             }}
                         >
                             Uses your local timezone.
@@ -570,7 +571,7 @@ export function TaskCreateForm({
                                         <span
                                             className="block mt-1 text-[11px]"
                                             style={{
-                                                color: "var(--text-faint)",
+                                                color: "var(--text-muted)",
                                             }}
                                         >
                                             {mode === "AUTO"

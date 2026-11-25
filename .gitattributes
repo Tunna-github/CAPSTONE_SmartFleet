@@ -1,0 +1,8 @@
+# Commissioned hashes and Linux entrypoints must survive Windows git checkout.
+simulation/worlds/*.wbt text eol=lf
+simulation/config/*.json text eol=lf
+deploy/*.sh text eol=lf
+tools/*.py text eol=lf
+Webots_Full_Mission_Controller/*.py text eol=lf
+simulation/controllers/**/*.py text eol=lf
+*.png binary

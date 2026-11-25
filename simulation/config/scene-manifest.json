@@ -1,0 +1,127 @@
+{
+  "sceneId": "smartfleet-demo-r2025a-v1",
+  "webotsVersion": "R2025a",
+  "warehouseId": 1,
+  "mapRevisionAtExport": 5,
+  "world": "worlds/smartfleet.wbt",
+  "worldSha256": "f255267ab3843692ec604d39e211f0672ec6440dd8ca140bca83845368d6c6ef",
+  "worldToGrid": [
+    [
+      -0.003862991326285465,
+      1.9960794063404232,
+      3.994519278848133
+    ],
+    [
+      2.001061046200735,
+      0.002678939650942791,
+      3.0057608533579634
+    ]
+  ],
+  "worldToMapYawDeg": 179.90622650741932,
+  "gridResidual": 0.009377218114289843,
+  "anchors": [
+    {
+      "arucoId": 3,
+      "row": 1,
+      "col": 2,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": -1.00633,
+      "worldY": -0.998504
+    },
+    {
+      "arucoId": 2,
+      "row": 1,
+      "col": 4,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": -0.998455,
+      "worldY": 0.00169212
+    },
+    {
+      "arucoId": 8,
+      "row": 1,
+      "col": 6,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": -1.00169,
+      "worldY": 1.00315
+    },
+    {
+      "arucoId": 4,
+      "row": 3,
+      "col": 2,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": -0.00141339,
+      "worldY": -0.99735
+    },
+    {
+      "arucoId": 1,
+      "row": 3,
+      "col": 4,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": -0.00109815,
+      "worldY": -0.00195921
+    },
+    {
+      "arucoId": 7,
+      "row": 3,
+      "col": 6,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": -0.00721457,
+      "worldY": 0.99967
+    },
+    {
+      "arucoId": 5,
+      "row": 5,
+      "col": 2,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": 1.00069,
+      "worldY": -0.999757
+    },
+    {
+      "arucoId": 0,
+      "row": 5,
+      "col": 4,
+      "markerYawDeg": -90.09356303343094,
+      "markerSizeM": 0.04,
+      "worldX": 0.995746,
+      "worldY": 0.00448957
+    },
+    {
+      "arucoId": 6,
+      "row": 5,
+      "col": 6,
+      "markerYawDeg": -90.09383191223469,
+      "markerSizeM": 0.04,
+      "worldX": 0.993822,
+      "worldY": 1.01323
+    }
+  ],
+  "robots": [
+    {
+      "code": "R01",
+      "defName": "SF_R01"
+    },
+    {
+      "code": "R02",
+      "defName": "SF_R02"
+    }
+  ],
+  "assets": {
+    "textures/QR_1.png": "8395733a1d5b2baabfcfc0f850b47a2b9f40c59f8bb541f8299bada8d4c72b98",
+    "textures/QR_2.png": "f2e1de1d0adeffe9e72c831b0a1a671b390627fa7a9a0994be7be4de11e8d6cf",
+    "textures/QR_3.png": "2a4ca36a8a4d4ee55e95c11e3c935a7bc42e8566e6accbf4a280c36931a2cca7",
+    "textures/QR_4.png": "42a01f558df3bba90a3330dfaddeb3fa0a98f9b5cd8c28a358bff38e1b3191fd",
+    "textures/QR_5.png": "61ccd2a9c314eaf1875344f1aa4265a1e78abfb12e8c6844fd9373d2f89c9200",
+    "textures/QR_6.png": "85c2ca3d8469d61df3405c4370343e5325f44787d392703d1192c09b11fbd3f9",
+    "textures/QR_7.png": "4e24c330efa7575b33341ece48fc727761aa0a64e3cdb5a689ac3481d59d6ff8",
+    "textures/QR_8.png": "044dc0218375067d735e712334dc6a75fd2df28803870f07ee45d1fa51532174",
+    "textures/map (1).png": "64f37b328adb691740607e9a432d59edeb213964828faf27f9b8ae642f91df4a",
+    "textures/qr code 2.png": "06d3b62affc3b84bc344805fc8eeaf519489b3305d767af7e8d4d7481cfacfee"
+  }
+}

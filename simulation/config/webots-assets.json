@@ -1,0 +1,314 @@
+{
+  "version": "R2025a",
+  "license": "https://github.com/cyberbotics/webots/blob/R2025a/LICENSE",
+  "assets": [
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/BrushedAluminium.proto",
+      "sha256": "d2a2cd1c15c69d62ae9add8ff79f413ae5177c12a981dcaeb8002a11cc04d4ad"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/MattePaint.proto",
+      "sha256": "65911291cb96c9dfd9e43cd216fd4622fc077333c980f1a742c55859f4b51000"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/OldSteel.proto",
+      "sha256": "1e1b15289f8c4171284074f4c48c4ed269b4961a4a09bb4d1b1c1b345c311be8"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/Parquetry.proto",
+      "sha256": "0a7d8f9a7e99908bc32c439f40204887d1aecd27a6c897d723df7b1e048c6785"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/Pcb.proto",
+      "sha256": "31a12b1b730dd258640f49d94215949f0b696ae5b4bb5e516d2f49354acbe765"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/RoughPolymer.proto",
+      "sha256": "e0046e944d7c4f97fb8f750987225aa026587b5c2313969a7cf09a0612bfd2ae"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/ScrewThread.proto",
+      "sha256": "987e0d56e586f6ddc0b2f618b4698b56f44516238dd0cdeabd4a0347d3bf2505"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/TireRubber.proto",
+      "sha256": "44d494d487f2099338327349e03b6bb35da00936d6217ce306ab1e94c3e82222"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/brushed_aluminium/brushed_aluminium_base_color.jpg",
+      "sha256": "02ac2298bf255e55b66e90f329fa3437b4460982bf14277640cbf17307c478f1"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/brushed_aluminium/brushed_aluminium_normal.jpg",
+      "sha256": "e184e5b17cce514c5afa9efacd020d07f69da6caf20670220b2d46747e8c2e6d"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/brushed_aluminium/brushed_aluminium_roughness.jpg",
+      "sha256": "b5bc119049432c574651c0a90b3431fc7ab9abc5688e34d31a77ae89d53fdb16"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/matte_car_paint/matte_car_paint_base_color.jpg",
+      "sha256": "c2364d95b565f27664f09cd06878497e86d8a5a147c43ca1636fbf3a81f2c305"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/matte_car_paint/matte_car_paint_roughness.jpg",
+      "sha256": "0369c04c58d217621de852dad09c5d6e0c0fc2e99797853e28632811eb4cf759"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/old_steel/old_steel_base_color.jpg",
+      "sha256": "9d8baefa0bbea8705d05647ef65b26b8f2f1ba07db9d39adc0d0cf8244b4d76a"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/old_steel/old_steel_metalness.jpg",
+      "sha256": "de80c5afea7a1f445f0d2bc7f83b3757f9eb616b0f6fcd59675d56882fc653c4"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/old_steel/old_steel_normal.jpg",
+      "sha256": "7b62dc4ae5bd2fc4c297157c463c2836fd1ea1611e743c680f33c725265ef435"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/old_steel/old_steel_roughness.jpg",
+      "sha256": "8397d0de9496e78ebcd7b218b4816d5d8fa383c9a9f1765d931fc0df5932b0b0"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/pcb/pcb_base_color.jpg",
+      "sha256": "a61d9b9df781c82956c39c4fa917f3fc1193ce8ad5344034835944cdf6ca8ed1"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/pcb/pcb_metalness.jpg",
+      "sha256": "09eee9d2f31cc67a83512056b2d5f0d02176e43483c6267f0cd86a13e770bd0c"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/pcb/pcb_normal.jpg",
+      "sha256": "45e9c39b19856a5e9d276cf3b0450f08b03b55def7e2c4189ffcea3ffd2d1102"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/pcb/pcb_occlusion.jpg",
+      "sha256": "4d861dfca6bd7b82a9467a4ef2c18167e1e3c68ba4e16c37095273a93e988c75"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/pcb/pcb_roughness.jpg",
+      "sha256": "a39885ae7e9fc085e622cf999f21665f3bd160e62ad52270ba9a6d9b819bd131"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/rough_polymer/rough_polymer_normal.jpg",
+      "sha256": "358eabe39b7b9b0c8095ba7a2439ca392ed9a03f86223902039c39d39fd2da35"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/rough_polymer/rough_polymer_occlusion.jpg",
+      "sha256": "34c312d7a4a97805f527991d2267fd1f56e740c822955495a4798f88e19b2acd"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/rough_polymer/rough_polymer_roughness.jpg",
+      "sha256": "22d41d0b5b5c7459b5fea7bebe8217b468d87a0927ca97207e7c863c96c2e065"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/screw_thread/screw_thread_base_color.jpg",
+      "sha256": "a86765be53058e2364acf3196998865e702a0cdd059a2c478947ee28b374b4d4"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/screw_thread/screw_thread_normal.jpg",
+      "sha256": "d91fcfd1e2fa6f77784c72464b49e96d9b477e775861b5b694c4b2a2c4cf73af"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/screw_thread/screw_thread_occlusion.jpg",
+      "sha256": "31d63b395bf4117e0e9b3e3233ccfb324f91f5e16b9f8a88fabbb022d2f80ef7"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/screw_thread/screw_thread_roughness.jpg",
+      "sha256": "49865d4f1669335705a8ed2042bb6b46a3465d7af8ae9af8004b3e342dca4c21"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/tire_rubber/bike_tire_rubber_base_color.jpg",
+      "sha256": "49f65cb0cdc79aab41f9664ae2b1c7f3eda100fd312da42b89e0a7fa1caa12ec"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/tire_rubber/bike_tire_rubber_normal.jpg",
+      "sha256": "d4774f6112411cbeff354c71c8789157e1cee8313c02094a59ed0bd6d4343f7a"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/tire_rubber/bike_tire_rubber_occlusion.jpg",
+      "sha256": "239b5c3d16860a14d8569c12a3005c5c97c2135b08a121df9adc5b6c45800865"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/textures/tire_rubber/bike_tire_rubber_roughness.jpg",
+      "sha256": "efcbbbe0ce039d0ad618efc53a677a1d193fb9c717751b8170bf83040a0b65d3"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/bounding_objects/protos/PipeBoundingObject.proto",
+      "sha256": "3dd737cbbd667d65e96b5c0bbf0ac4b62254b8dfa318aa47b32e7d04c4a4a2c8"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/sounds/rotational_motor.wav",
+      "sha256": "771fca2d2abc1f0f91eb9bb169a44492d1fcc6e007d5186ec3115b26c5de71c8"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/checkered_parquetry.jpg",
+      "sha256": "df4c127c2bfb61373ee3eabc48528e473f5b9ec31108200efb873dd3712999af"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_back.hdr",
+      "sha256": "86487374bf4f44ae5406e02ab577c5c65177b4598c9bb1b7471611b7c6235104"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_back.jpg",
+      "sha256": "3e7992243a6cdbcea93b9be2c6ff795117f5de1d1ac4a58a817d0493702c5650"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_bottom.hdr",
+      "sha256": "261b4c8941c1ac409c1d24b81b042481b49ab54c72e533fb3e5b58f503e97366"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_bottom.jpg",
+      "sha256": "dab398a830d90303b6f6564e43c5da8ca969f5686c5af036a0c7566f40f708c9"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_front.hdr",
+      "sha256": "8ddb2bb7db3968d2341ff8684691ab48899c058f728bc8445e66beae10044a2c"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_front.jpg",
+      "sha256": "a9af978e54b75e696e08a7b42dbe0e4406a7979d09a650f46740ae59593a6d6b"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_left.hdr",
+      "sha256": "01a576c90f6f73c6373ed8eee42ba9c81542be4f0b65510920f01a0229b1a8b9"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_left.jpg",
+      "sha256": "74e642490d4327fe3f526baaedfc4c73bde7ca5a94cdc422476b4024e3a026b1"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_right.hdr",
+      "sha256": "91cc406d56b3a0773e2ef91d0c8ca4e2412ea74d1cc9442a08a866b6fc65ecfb"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_right.jpg",
+      "sha256": "1b650b4984c16007a45cd90f83a1c1d3a572451e80413e4abb6a56ec053497ef"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_top.hdr",
+      "sha256": "ad20354918869f20a5b2bc27d757b3556020bb74be2d6e5f680f75b17fa69cd3"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/cubic/mountains_top.jpg",
+      "sha256": "90ae5a9d6ecce742a08afa604988876a33a8a664ac120d33c8f358741e172559"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/metal.jpg",
+      "sha256": "47e7402410d6903c13b83cf7cff62dd66fb70258faaa6006f1c13c086ab38039"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/default/worlds/textures/tagged_wall.jpg",
+      "sha256": "b1b8157f5e9654789048254f6887ab3a8be1ca0b22776c2397bf8b7adfa5f5ec"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/RobotisLds01.proto",
+      "sha256": "91460a45bdd2e09f46346e7683db38811c82824bb34f70abdbfb0ec104c38e40"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/meshes/base.obj",
+      "sha256": "86a03d78a2090915452dede05057d559f2b789a46217ecc23a8ba9854315c59d"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/meshes/belt.obj",
+      "sha256": "555825d710c30ba653df4e5aca102d0cc029c3651f9d17392ba8ca7ac786c5e9"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/meshes/turret.obj",
+      "sha256": "781ed43955e342b027c4b9159b7e1f194d180f40f04ab8754c2c6987a67de64a"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/meshes/wheel.obj",
+      "sha256": "025e3824da681ea29103f09d1c7094978e0c26edc63874f320f29f4d0932b817"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto",
+      "sha256": "8ea2ec89cbec31d1c62d11d7548271f072273ba89873800d5842d67140e97c64"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto",
+      "sha256": "103b96d670659ecb54974a76c731374e384cef0a4a053b9b090742f1dbb9041e"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto",
+      "sha256": "418d0209031249a47a5b12f359d8a8e4078d9f021762fdce846f2d07f8b6687c"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/textures/wooden_box_base_color.jpg",
+      "sha256": "e0ad80bb664477dc840eb37bb5919424902892e77ae36e6c4fc807be3f6c7ac0"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/textures/wooden_box_normal.jpg",
+      "sha256": "72e0c438a895cb315be88612818183865355925cd1983db7b4a2bc413d283480"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/textures/wooden_box_occlusion.jpg",
+      "sha256": "4116961d1e8ca073815f83210bb5338fbe904f6915cf36b0d514db5ea45a59f9"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/textures/wooden_box_roughness.jpg",
+      "sha256": "10b0fc3b3df937d7fae2281ed95a39e1de28fabbe8420b2c5895fae317dda215"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/tools/protos/CapScrew.proto",
+      "sha256": "b397a19b82be55fb2cb375b9be2e4d22c1131e5f344305996e2fde2fa6438193"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/CircleArena.proto",
+      "sha256": "e79a3ffaf85d4f94ac7b4b399182344db33b480e7af4b5cdded349e3b3a7bffb"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/solids/protos/SolidPipe.proto",
+      "sha256": "b0a6941d21982af46b9152ba2963419cd50557cdb319354c8ab0e1e469faabb2"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/TurtleBot3Burger.proto",
+      "sha256": "21526dc97968a2fdba6f9999b9d84b82534713b2f5f271605de01bde2b55ef85"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/bars.obj",
+      "sha256": "081b0edb5380f89933c5be166e8c6f0897fea3b3d0185ca84c92975575e9b770"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/battery.obj",
+      "sha256": "0f6bf2d0a52aa985b8ebb608a4ed42a91206b19755ef92450a242a72d05e9929"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/body_floor.obj",
+      "sha256": "d989200a3bececd8260f9f928608ead6081c78183a69bc26680ec72e0e7a6ec6"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/cards.obj",
+      "sha256": "23afaca4fa2580d3851e56df70f2e1037dfd83c8dc58463adfabb0fe28ce9216"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/holders.obj",
+      "sha256": "7d03bad67db3b7e6cd23c793baad0eb78fac9276744921b6643f66d554b689c4"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/inner_wheel.obj",
+      "sha256": "dea5ca4e522fa7bbd31a12b578612fdcaf4f71ed49867e7413e04d13831ad71e"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/motors.obj",
+      "sha256": "c4aec129c8d8e3d7e425c829d2574d009cd7413b043718d409ffa818659aa058"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/screws.obj",
+      "sha256": "1ed40c596b1fb01b9362b855b18a06d156009b99f8c7ff9c16bd68bec8ac8313"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/tire.obj",
+      "sha256": "31dcdf234359ebf57254e16f1147dcb2a177a57c954cc2d79116278fc15a2431"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/wheel_shape.obj",
+      "sha256": "370f6af06ce775db05329435aab7ee1340dd7d43d05c9988876e8416d98db4a6"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/meshes/wheel_support.obj",
+      "sha256": "4e04b9a17a2024895dac2b72cd6e86fcda0da7bb235eedd495499ee1fd537e02"
+    }
+  ]
+}

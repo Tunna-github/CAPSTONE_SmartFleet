@@ -125,7 +125,7 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
   }, []);
 
   const reloadMap = useCallback(async () => {
-    if (!isAuthenticated || (role !== "admin" && role !== "operator")) return;
+    if (!isAuthenticated || !["admin", "operator", "maintenance"].includes(role ?? "")) return;
     setMapLoading(true);
     try {
       applySnapshot(await getNavigationMap());
@@ -139,7 +139,7 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
   }, [applySnapshot, isAuthenticated, role]);
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated || (role !== "admin" && role !== "operator")) return;
+    if (authLoading || !isAuthenticated || !["admin", "operator", "maintenance"].includes(role ?? "")) return;
     void reloadMap().catch(() => { /* Error is shown in mapError. */ });
   }, [authLoading, isAuthenticated, role, reloadMap]);
 

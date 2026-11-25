@@ -18,8 +18,8 @@ using SmartFleetBE.Navigation;
 var builder = WebApplication.CreateBuilder(args);
 // LOCAL WEBOTS PILOT only. This file is ignored by Git and is never deployed.
 builder.Configuration.AddJsonFile("App_Data/demo-route-config.json", optional: true, reloadOnChange: true);
-if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled") && !builder.Environment.IsDevelopment())
-    throw new InvalidOperationException("DemoRoute is allowed only in ASPNETCORE_ENVIRONMENT=Development.");
+if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled") && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Simulation"))
+    throw new InvalidOperationException("DemoRoute requires Development or the explicit Simulation environment.");
 
 // =====================================================
 // 1. CONTROLLERS AND CORS
@@ -29,12 +29,16 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<FleetConnectionRegistry>();
 builder.Services.AddSingleton<FleetRealtimePublisher>();
+builder.Services.AddSingleton(sp=>SimulationScene.Load(builder.Configuration,builder.Environment));
+builder.Services.AddSingleton<RobotPoseStore>();
+builder.Services.AddSingleton<SimulationViewerSessions>();
+builder.Services.AddHttpClient("simulation-assets",client=>client.Timeout=TimeSpan.FromSeconds(20));
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:8443", "http://localhost:5173")
+        policy.WithOrigins(builder.Configuration.GetSection("Frontend:AllowedOrigins").Get<string[]>() ?? ["http://localhost:8443", "http://localhost:5173"])
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -206,6 +210,7 @@ if (enableMqttWorkers)
         .AddHostedService<MqttMissionStatusWorker>();
 
     builder.Services.AddHostedService<MqttRobotTelemetryWorker>();
+    if (builder.Configuration.GetValue<bool>("Simulation:Enabled")) builder.Services.AddHostedService<MqttRobotPoseWorker>();
     builder.Services.AddHostedService<RobotHealthWorker>();
     if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled"))
         builder.Services.AddHostedService<QrDemoProgressWorker>();
@@ -342,7 +347,8 @@ if (app.Environment.IsDevelopment())
 // 11. MIDDLEWARE
 // =====================================================
 
-app.UseHttpsRedirection();
+if (builder.Configuration.GetValue("Hosting:UseHttpsRedirection", true)) app.UseHttpsRedirection();
+app.UseWebSockets();
 
 app.UseCors("AllowFrontend");
 
@@ -355,6 +361,8 @@ app.UseAuthorization();
 // =====================================================
 
 app.MapControllers();
+app.MapGet("/healthz", async (SmartFleetDbContext db, CancellationToken ct) =>
+    await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status="ready" }) : Results.StatusCode(503)).AllowAnonymous();
 app.MapHub<FleetHub>("/hubs/robots", options => options.CloseOnAuthenticationExpiration = true);
 
 // =====================================================

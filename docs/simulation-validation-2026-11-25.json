@@ -1,0 +1,343 @@
+{
+  "localDate": "2026-11-25",
+  "environment": "Windows Docker Desktop Linux containers; Webots R2025a, PostgreSQL 18.6",
+  "automatedTests": {
+    "backend": 114,
+    "python": 35,
+    "playwright": 26,
+    "typescript": "passed",
+    "frontendBuild": "passed"
+  },
+  "mainTwoRobotRun": {
+    "taskIds": [
+      1,
+      2
+    ],
+    "events": [
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "INITIALIZING"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "INITIALIZING"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "AT_PICKUP"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "AT_PICKUP"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "NAVIGATING_TO_DELIVERY"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "NAVIGATING_TO_DELIVERY"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "AT_DELIVERY"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "COMPLETED"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "AT_DELIVERY"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "COMPLETED"
+      }
+    ],
+    "poseSamples": 406,
+    "verifications": 4,
+    "wrongQrRejected": true
+  },
+  "cleanSourceRun": {
+    "privateConfigurationPresent": false,
+    "hostWebotsRequired": false,
+    "taskIds": [
+      1,
+      2
+    ],
+    "events": [
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "INITIALIZING"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "INITIALIZING"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "AT_PICKUP"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "AT_PICKUP"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "NAVIGATING_TO_DELIVERY"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "NAVIGATING_TO_DELIVERY"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "AT_DELIVERY"
+      },
+      {
+        "missionId": 1,
+        "robotCode": "R01",
+        "status": "COMPLETED"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "AT_DELIVERY"
+      },
+      {
+        "missionId": 2,
+        "robotCode": "R02",
+        "status": "COMPLETED"
+      }
+    ],
+    "verifications": 4
+  },
+  "finalImageRun": {
+    "taskIds": [
+      4
+    ],
+    "events": [
+      {
+        "missionId": 3,
+        "robotCode": "R01",
+        "status": "INITIALIZING"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R01",
+        "status": "AT_PICKUP"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R01",
+        "status": "NAVIGATING_TO_DELIVERY"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R01",
+        "status": "AT_DELIVERY"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R01",
+        "status": "COMPLETED"
+      }
+    ],
+    "verifications": 2
+  },
+  "browser": {
+    "state": {
+      "text": "",
+      "canvases": [
+        {
+          "width": 1178,
+          "height": 878
+        }
+      ]
+    },
+    "errors": [],
+    "failed": [],
+    "sockets": [
+      {
+        "url": "ws://192.168.1.6:8080/hubs/robots",
+        "received": 24,
+        "sent": [
+          "{\"protocol\":\"json\",\"version\":1}\u001e",
+          "{\"type\":6}\u001e",
+          "{\"type\":7}\u001e"
+        ]
+      },
+      {
+        "url": "ws://192.168.1.6:8080/api/v1/simulation/view/",
+        "received": 303,
+        "sent": [
+          "w3d;broadcast",
+          "pause"
+        ]
+      },
+      {
+        "url": "ws://192.168.1.6:8080/api/v1/simulation/view/",
+        "received": 21,
+        "sent": [
+          "w3d;broadcast",
+          "reset",
+          "pause",
+          "real-time:1"
+        ]
+      }
+    ],
+    "independentViewers": 2,
+    "controlCommandsDiscarded": true,
+    "motion": {
+      "start": {
+        "x": 169.04097614452502,
+        "y": 204.98327042163828
+      },
+      "current": {
+        "x": 169.0294170381702,
+        "y": 202.50390535966545
+      }
+    }
+  },
+  "map": {
+    "databaseRevisionAfterWriteRestoreAndRestart": 7,
+    "geometryMismatchBlockedAssignment": true,
+    "restoredSceneCompatible": true
+  },
+  "access": {
+    "rolesChecked": [
+      "Administrator",
+      "Warehouse Operator",
+      "Maintenance Technician"
+    ],
+    "unauthenticatedViewerRejected": true,
+    "maintenanceMapWriteAndScanRejected": true,
+    "nonCommissionedAssetRejected": true
+  },
+  "limits": [
+    "Two independent browser contexts were tested on the same Windows host using its LAN address; a second physical device has not been verified.",
+    "Battery is a fixed simulated 85 percent; this does not validate real robot batteries or production hardware.",
+    "Software rendering warnings remain possible; no internet deployment or horizontal scaling was validated.",
+    "Remote LAN access depends on the host firewall and network; a second physical device was not verified."
+  ],
+  "manualAssignmentFollowUp": {
+    "backendTestsPassed": 114,
+    "playwrightTestsPassed": 26,
+    "darkAndLightDialogContrast": "labels and enabled text checked at >=4.5:1",
+    "manualR02MissionCompleted": true,
+    "verifications": 2,
+    "events": [
+      {
+        "missionId": 3,
+        "robotCode": "R02",
+        "status": "INITIALIZING"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R02",
+        "status": "AT_PICKUP"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R02",
+        "status": "NAVIGATING_TO_DELIVERY"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R02",
+        "status": "AT_DELIVERY"
+      },
+      {
+        "missionId": 3,
+        "robotCode": "R02",
+        "status": "COMPLETED"
+      }
+    ],
+    "policy": "shared robot-type policy for list, MANUAL confirmation and AUTO; production defaults to PHYSICAL",
+    "userTask5Preserved": true
+  },
+  "qrMapLayout": {
+    "passed": true,
+    "mapRevision": 7,
+    "results": [
+      {
+        "size": {
+          "width": 1440,
+          "height": 900
+        },
+        "viewBox": "48 7.999999999999998 264 264",
+        "qrLabels": [
+          "QR03",
+          "QR02",
+          "QR08",
+          "QR04",
+          "QR01",
+          "QR07",
+          "QR05",
+          "QR00",
+          "QR06"
+        ],
+        "labelWidths": [
+          59.515625,
+          59.515625,
+          59.51556396484375,
+          59.63311767578125,
+          59.515625,
+          59.51556396484375,
+          59.515625,
+          59.63311767578125,
+          59.63311767578125
+        ],
+        "legacyLabels": 0
+      },
+      {
+        "size": {
+          "width": 1125,
+          "height": 720
+        },
+        "viewBox": "48 7.999999999999998 264 264",
+        "qrLabels": [
+          "QR03",
+          "QR02",
+          "QR08",
+          "QR04",
+          "QR01",
+          "QR07",
+          "QR05",
+          "QR00",
+          "QR06"
+        ],
+        "labelWidths": [
+          43.262481689453125,
+          43.26251220703125,
+          43.262451171875,
+          43.262481689453125,
+          43.26251220703125,
+          43.262451171875,
+          43.262481689453125,
+          43.26251220703125,
+          43.262451171875
+        ],
+        "legacyLabels": 0
+      }
+    ]
+  }
+}

@@ -10,6 +10,7 @@ public sealed class FleetRealtimePublisher(
     IHubContext<FleetHub> hub,
     IServiceScopeFactory scopes)
 {
+    public Task PoseUpdatedAsync(RobotPose pose,CancellationToken ct=default) => hub.Clients.All.SendAsync("RobotPoseUpdated",pose,ct);
     public async Task RobotUpdatedAsync(string robotCode, CancellationToken ct = default)
     {
         using var scope = scopes.CreateScope();

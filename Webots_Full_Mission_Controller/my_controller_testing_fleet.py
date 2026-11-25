@@ -29,8 +29,8 @@ from aruco_localization import PoseEstimator, HeadingFusion
 # ============================================================
 # TEST CONFIGURATION - verify before a mission
 # ============================================================
-BROKER_IP = "localhost"
-BROKER_PORT = 1883
+BROKER_IP = os.environ.get("SMARTFLEET_MQTT_HOST", "localhost")
+BROKER_PORT = int(os.environ.get("SMARTFLEET_MQTT_PORT", "1883"))
 # SMARTFLEET_MULTI_ROBOT_ARGS_V1
 # Each simulated robot is a separate process but shares this source file.
 # Configure Robot.controllerArgs per robot in Webots, for example:
@@ -56,7 +56,7 @@ if not any(value.startswith("--robot-code=") for value in sys.argv[1:]):
 # Start pose is measured from camera/IMU, never from controller arguments.
 BROKER_IP = _sf_controller_arg("broker-host", BROKER_IP)
 BROKER_PORT = int(_sf_controller_arg("broker-port", str(BROKER_PORT)))
-localization_diagnostics_dir = _sf_controller_arg("localization-diagnostics-dir", "")
+localization_diagnostics_dir = _sf_controller_arg("localization-diagnostics-dir", os.environ.get("SMARTFLEET_DIAGNOSTICS_DIR", ""))
 if any(v.startswith(("--start-heading=", "--start-qr=")) for v in sys.argv[1:]):
     print("[CONFIG] Deprecated start-heading/start-qr ignored; using ArUco + IMU")
 # WEBOTS ONLY. Never enable fake sensor CLEAR on a real JetRacer.
@@ -762,7 +762,9 @@ def start_mission(data):
 
 # Safety controls are latched across controller restarts. Only a confirmed HOME
 # return clears this latch; transport EXECUTE_TASK never clears it.
-SAFETY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".smartfleet-safety-" + ROBOT_CODE + ".json")
+SAFETY_DIRECTORY = os.environ.get("SMARTFLEET_STATE_DIR", os.path.dirname(os.path.abspath(__file__)))
+os.makedirs(SAFETY_DIRECTORY, exist_ok=True)
+SAFETY_FILE = os.path.join(SAFETY_DIRECTORY, ".smartfleet-safety-" + ROBOT_CODE + ".json")
 safety_hold = os.path.exists(SAFETY_FILE)
 safety_commands = {}
 safety_generation = {}
@@ -958,7 +960,14 @@ def sf_timestamp(raw):
     if not isinstance(raw, str):
         return None
     try:
-        value = sf_datetime.datetime.fromisoformat(raw.replace('Z', '+00:00'))
+        # .NET emits up to seven fractional digits. Python 3.10 fromisoformat
+        # accepts only three or six; normalize explicitly without extending TTL.
+        import re
+        match = re.fullmatch(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}:\d{2})', raw)
+        if match is None:
+            return None
+        fraction = '.' + match[2][:6].ljust(6, '0') if match[2] else ''
+        value = sf_datetime.datetime.fromisoformat(match[1] + fraction + match[3].replace('Z', '+00:00'))
         if value.tzinfo is None:
             return None
         return value.astimezone(sf_datetime.timezone.utc)
@@ -1169,6 +1178,21 @@ def sf_tick_nav_gate(data):
         fail_mission('Unexpected navigation ack kind: ' + kind)
         return
     if data['phase'] == 'NAV_WAIT_GRANT':
+        # Refresh the stopped robot's route while another robot owns the intersection.
+        # An ACK retry reuses an event ID and is deduplicated by the backend, so
+        # each fresh route report needs its own ID. Never clear an entered lock.
+        now = time.monotonic()
+        if sf_active_intersection is None and now >= data.get('sf_route_refresh_at', now + 1):
+            target = data['waypoints'][data['next_index']]
+            data['sf_route_refresh_at'] = now + 2.0
+            if target['isIntersection']:
+                sf_nav_send('APPROACH', data, {'event': 'APPROACH',
+                    'intersectionArUcoId': target['arucoId'], 'currentArUcoId': current_marker}, target['arucoId'])
+            else:
+                sf_nav_send('SCAN', data, {'currentArUcoId': current_marker,
+                    'nextArUcoId': target['arucoId']})
+            return
+        data.setdefault('sf_route_refresh_at', now + 2.0)
         if time.monotonic() < data.get('sf_hold_until', 0):
             return
         if not sf_move_permission(data):
@@ -1590,6 +1614,7 @@ if INTERSECTION_PILOT:
 try:
     client.connect(BROKER_IP, BROKER_PORT, 60)
     client.loop_start()
+    diagnostic_at = 0.0
     while robot.step(timestep) != -1 and is_running:
         handle_incoming()
         tick_localization()
@@ -1607,6 +1632,22 @@ try:
             tick_bootstrap()
         else:
             tick_mission()
+        if localization_diagnostics_dir and time.monotonic() - diagnostic_at >= 1:
+            diagnostic_at = time.monotonic()
+            os.makedirs(localization_diagnostics_dir, exist_ok=True)
+            diagnostic = {"phase": mission.get("phase") if mission else None, "state": current_state,
+                "missionId": mission.get("missionId") if mission else None,
+                "permission": sf_move_permission(mission) if mission else False,
+                "leftCommand": left_motor.getVelocity(), "rightCommand": right_motor.getVelocity(),
+                "yaw": get_yaw_deg(), "targetYaw": get_absolute_target_yaw(),
+                "navMode": sf_nav_directive.get("mode") if sf_nav_directive else None,
+                "navReason": sf_nav_directive.get("reason") if sf_nav_directive else None,
+                "pending": pending.get("kind") if pending else None, "safetyHold": bool(safety_hold)}
+            with open(os.path.join(localization_diagnostics_dir, ROBOT_CODE + ".motion.json"), "w") as handle:
+                json.dump(diagnostic, handle)
+            frame = get_camera_frame()
+            if frame is not None:
+                cv2.imwrite(os.path.join(localization_diagnostics_dir, ROBOT_CODE + ".motion.png"), frame)
 except KeyboardInterrupt:
     print("[STOP] KeyboardInterrupt")
 except Exception as error:

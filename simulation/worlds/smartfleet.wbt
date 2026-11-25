@@ -1,0 +1,295 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/CircleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/TurtleBot3Burger.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/RobotisLds01.proto"
+
+WorldInfo {
+  basicTimeStep 64
+}
+Viewpoint {
+  orientation 0.4968643974716675 -0.007959636577918653 -0.8677916885466606 3.1693944505569562
+  position 5.742898476789159 -0.40118271922423565 8.630252094645854
+  follow "QR_2"
+  followType "None"
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+  castShadows FALSE
+}
+CircleArena {
+  radius 4
+  floorAppearance PBRAppearance {
+    baseColorMap ImageTexture {
+      url [
+        "textures/map (1).png"
+      ]
+      filtering 3
+    }
+    metalness 0
+  }
+  wallHeight 0.4
+}
+Solid {
+  translation -1.00633 -0.998504 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_3.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_2(1)"
+}
+Solid {
+  translation -0.00141339 -0.99735 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_4.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_2(2)"
+}
+Solid {
+  translation 1.00069 -0.999757 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_5.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_2(3)"
+}
+Solid {
+  translation 0.993822 1.01323 0.005
+  rotation 0 0 -1 -1.5707953071795862
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_6.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_2(4)"
+}
+Solid {
+  translation -0.00721457 0.99967 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_7.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_2(5)"
+}
+Solid {
+  translation -1.00169 1.00315 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_8.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_2(6)"
+}
+Solid {
+  translation -0.998455 0.00169212 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_2.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_2"
+}
+Solid {
+  translation -0.00109815 -0.00195921 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/QR_1.png"
+          ]
+        }
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "QR_1"
+}
+Solid {
+  translation 0.995746 0.00448957 0.005
+  rotation 0 0 1 1.5708
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColorMap ImageTexture {
+          url [
+            "textures/qr code 2.png"
+          ]
+        }
+        roughness 1
+        metalness 0
+      }
+      geometry Plane {
+        size 0.04 0.04
+      }
+    }
+  ]
+  name "chute_mien_bac"
+}
+WoodenBox {
+  translation 3.37776 0.219965 0.15
+  name "wooden box(7)"
+  size 0.3 0.3 0.3
+}
+WoodenBox {
+  translation 2.76094 0.985401 0.15
+  name "wooden box(8)"
+  size 0.3 0.3 0.3
+}
+WoodenBox {
+  translation 3.05428 -1.26742 0.15
+  name "wooden box(9)"
+  size 0.3 0.3 0.3
+}
+WoodenBox {
+  translation 2.45848 -1.9369 0.15
+  name "wooden box(5)"
+  size 0.3 0.3 0.3
+}
+DEF SF_R01 TurtleBot3Burger {
+  translation 1.0702967095264198 0.005025396890238962 -0.0004935372036767721
+  rotation 0.004682915601320995 -2.0553556019402274e-05 0.9999890348793941 3.1291999766516136
+  name "R01"
+  controller "my_controller_testing_fleet"
+  controllerArgs [
+    "--traffic-test-hold=8"
+    "--sim-lidar=true"
+    "--intersection-pilot=true"
+    "--robot-code=R01"
+  ]
+  extensionSlot [
+    Camera {
+      translation 0.080866 0.0077265 0.0906544
+      rotation 0 -1 0 -1.56271
+      fieldOfView 0.85404
+      width 626
+      height 250
+    }
+    InertialUnit {
+    }
+    RobotisLds01 {
+      rotation 0 0 -1 0.261798
+    }
+  ]
+}
+DEF SF_R02 TurtleBot3Burger {
+  translation 0.016362403498423817 -1.064055861573572 -0.0004935372053302134
+  rotation 0.004691363415442536 -0.004730996914126716 0.9999778041424234 1.5587967034066146
+  name "R02"
+  controller "my_controller_testing_fleet"
+  controllerArgs [
+    "--traffic-test-hold=0"
+    "--sim-lidar=true"
+    "--intersection-pilot=true"
+    "--robot-code=R02"
+  ]
+  extensionSlot [
+    Camera {
+      translation 0.080866 0.0077265 0.0906544
+      rotation 0 -1 0 -1.56271
+      fieldOfView 0.85404
+      width 626
+      height 250
+    }
+    InertialUnit {
+    }
+    RobotisLds01 {
+      rotation 0 0 -1 0.261798
+    }
+  ]
+}
+
+Robot {
+  name "SmartFleet simulation observer"
+  supervisor TRUE
+  controller "smartfleet_observer"
+}

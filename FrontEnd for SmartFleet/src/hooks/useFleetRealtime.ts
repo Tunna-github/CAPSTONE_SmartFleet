@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
-import { tokenStorage } from "../api/client";
+import { tokenStorage, apiBaseUrl } from "../api/client";
 import type { RobotInfo } from "../api/modules/robots";
 
 /** Server event emitted after an MQTT battery sample is saved in PostgreSQL. */
@@ -69,9 +69,7 @@ export function useFleetRealtime(
         let retryTimer: ReturnType<typeof setTimeout> | undefined;
         let startPromise: Promise<void> | null = null;
 
-        const baseUrl = (
-            import.meta.env.VITE_API_URL || "https://localhost:7166"
-        ).replace(/\/+$/, "");
+        const baseUrl = apiBaseUrl.replace(/\/+$/, "");
 
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(`${baseUrl}/hubs/robots`, {

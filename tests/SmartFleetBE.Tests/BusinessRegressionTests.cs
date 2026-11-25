@@ -97,6 +97,46 @@ public sealed class BusinessRegressionTests
     }
 
     [Theory]
+    [InlineData(true,"SIMULATION",true)]
+    [InlineData(true,"PHYSICAL",false)]
+    [InlineData(false,"PHYSICAL",true)]
+    [InlineData(false,"SIMULATION",false)]
+    [InlineData(null,"PHYSICAL",true)]
+    [InlineData(null,"SIMULATION",false)]
+    public async Task ManualConfirmationAgreesWithListedRobotType(bool? simulation,string robotType,bool eligible)
+    {
+        using var f = new Fixture();
+        f.Config["Simulation:Enabled"]=simulation?.ToString();
+        f.Db.Robots.Single().RobotType=robotType;
+        await f.Db.SaveChangesAsync();
+        var manual=new TaskDispatchService(f.Db,f.Config,NullLogger<TaskDispatchService>.Instance);
+        var listed=await manual.GetAvailableRobotsAsync(1,includeIneligible:true);
+        Assert.Equal(eligible,Assert.Single(listed.Value!).IsEligible);
+        var result=await manual.AssignManualAsync(1,1,42);
+        Assert.Equal(eligible ? TransportTaskResultStatus.Success : TransportTaskResultStatus.Conflict,result.Status);
+        Assert.Equal(eligible ? 1 : 0,f.Db.TaskAssignments.Count());
+        Assert.Equal(eligible ? 1 : 0,f.Db.RobotCommandOutbox.Count());
+        Assert.Equal(eligible ? "BUSY" : "AVAILABLE",f.Db.Robots.Single().OperationalStatus);
+    }
+
+    [Theory]
+    [InlineData(true,"SIMULATION",true)]
+    [InlineData(true,"PHYSICAL",false)]
+    [InlineData(false,"PHYSICAL",true)]
+    [InlineData(false,"SIMULATION",false)]
+    public async Task AutoDispatchEnforcesTheSameRobotType(bool simulation,string robotType,bool eligible)
+    {
+        using var f=new Fixture();
+        f.Config["Simulation:Enabled"]=simulation.ToString();
+        f.Db.Robots.Single().RobotType=robotType;f.Db.TransportTasks.Single().DispatchMode="AUTO";
+        await f.Db.SaveChangesAsync();
+        var auto=new AutoDispatchService(f.Provider.GetRequiredService<IServiceScopeFactory>(),f.Config,
+            f.Provider.GetRequiredService<FleetRealtimePublisher>(),NullLogger<AutoDispatchService>.Instance);
+        Assert.Equal(eligible,await auto.TryAssignAsync(1));
+        Assert.Equal(eligible ? 1 : 0,f.Db.TaskAssignments.Count());
+    }
+
+    [Theory]
     [InlineData("ERROR")]
     [InlineData("FATAL")]
     public async Task DatabaseIncidentSeverityBlocksBothDispatchModes(string severity)

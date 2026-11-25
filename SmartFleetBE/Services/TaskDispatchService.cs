@@ -117,7 +117,8 @@ public sealed class TaskDispatchService : ITaskDispatchService
             var reasons = new List<string>();
             if (robot.WarehouseId != task.WarehouseId) reasons.Add("Different warehouse");
             if (!robot.IsActive) reasons.Add("Robot inactive");
-            if (robot.RobotType != "PHYSICAL") reasons.Add("Robot type is not PHYSICAL");
+            var requiredType = DispatchRobotTypePolicy.RequiredType(_configuration);
+            if (robot.RobotType != requiredType) reasons.Add("Robot type must be " + requiredType);
             if (robot.ConnectionStatus != "ONLINE") reasons.Add("Robot OFFLINE");
             if (robot.OperationalStatus != "AVAILABLE") reasons.Add($"Robot status: {robot.OperationalStatus}");
             if (!RobotPresencePolicy.IsFresh(robot, now, _configuration)) reasons.Add("Heartbeat/telemetry missing or stale");
@@ -337,13 +338,14 @@ public sealed class TaskDispatchService : ITaskDispatchService
                 .Conflict("Robot is inactive.");
         }
 
+        var requiredRobotType = DispatchRobotTypePolicy.RequiredType(_configuration);
         if (!string.Equals(
                 robot.RobotType,
-                "PHYSICAL",
+                requiredRobotType,
                 StringComparison.OrdinalIgnoreCase))
         {
             return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .Conflict("Robot must be PHYSICAL.");
+                .Conflict($"Robot must be {requiredRobotType}.");
         }
 
         if (robot.WarehouseId != task.WarehouseId)

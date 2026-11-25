@@ -1,0 +1,4177 @@
+{
+  "rows": 18,
+  "cells": [
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR03",
+        "arucoId": 3,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR02",
+        "arucoId": 2,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR08",
+        "arucoId": 8,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR04",
+        "arucoId": 4,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR01",
+        "arucoId": 1,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": true
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR07",
+        "arucoId": 7,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR05",
+        "arucoId": 5,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR00",
+        "arucoId": 0,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09356303343094,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "qr",
+        "label": "QR06",
+        "arucoId": 6,
+        "markerSizeM": 0.04,
+        "markerYawDeg": -90.09383191223469,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S1",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S2",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S3",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S4",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S5",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S6",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S7",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S8",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "station",
+        "label": "S9",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "charge",
+        "label": "CHG1",
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      },
+      {
+        "type": "wall",
+        "label": null,
+        "arucoId": null,
+        "markerSizeM": null,
+        "markerYawDeg": null,
+        "isIntersection": false
+      }
+    ]
+  ],
+  "links": [
+    [
+      "S1",
+      "S2"
+    ],
+    [
+      "S2",
+      "S3"
+    ],
+    [
+      "S4",
+      "S5"
+    ],
+    [
+      "S5",
+      "S6"
+    ],
+    [
+      "S7",
+      "S8"
+    ],
+    [
+      "S8",
+      "S9"
+    ],
+    [
+      "S1",
+      "S4"
+    ],
+    [
+      "S4",
+      "S7"
+    ],
+    [
+      "S2",
+      "S5"
+    ],
+    [
+      "S5",
+      "S8"
+    ],
+    [
+      "S3",
+      "S6"
+    ],
+    [
+      "S6",
+      "S9"
+    ],
+    [
+      "S8",
+      "CHG1"
+    ],
+    [
+      "QR02",
+      "QR03"
+    ],
+    [
+      "QR01",
+      "QR02"
+    ],
+    [
+      "QR00",
+      "QR01"
+    ],
+    [
+      "QR02",
+      "QR08"
+    ],
+    [
+      "QR07",
+      "QR08"
+    ],
+    [
+      "QR06",
+      "QR07"
+    ],
+    [
+      "QR01",
+      "QR07"
+    ],
+    [
+      "QR01",
+      "QR04"
+    ],
+    [
+      "QR04",
+      "QR05"
+    ],
+    [
+      "QR00",
+      "QR05"
+    ],
+    [
+      "QR00",
+      "QR06"
+    ],
+    [
+      "QR03",
+      "QR04"
+    ]
+  ],
+  "columns": 28,
+  "revision": 5
+}

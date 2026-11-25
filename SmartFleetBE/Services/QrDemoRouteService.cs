@@ -82,6 +82,7 @@ public sealed class QrDemoRouteService
     private readonly object _gate = new();
     private readonly NavigationCoordinator _navigation;
     private readonly IConfiguration _configuration;
+    private readonly SimulationScene? _scene;
     private readonly ILogger<QrDemoRouteService> _logger;
     private readonly string _statePath;
     private readonly StoreDocument _store;
@@ -96,10 +97,11 @@ public sealed class QrDemoRouteService
         NavigationCoordinator navigation,
         IWebHostEnvironment environment,
         IConfiguration configuration,
-        ILogger<QrDemoRouteService> logger)
+        ILogger<QrDemoRouteService> logger, SimulationScene? scene = null)
     {
         _navigation = navigation;
         _configuration = configuration;
+        _scene = scene;
         _logger = logger;
         _statePath = Path.Combine(environment.ContentRootPath, "App_Data", "qr-demo-state.json");
         _store = File.Exists(_statePath)
@@ -173,6 +175,9 @@ public sealed class QrDemoRouteService
         if (warehouseId.HasValue && !SupportsWarehouse(warehouseId.Value))
         { reason = "Task/robot warehouse does not match the configured navigation map warehouse."; return false; }
         reason = "Robot needs a fresh camera/IMU localization on the current map.";
+        if (_configuration.GetValue<bool>("Simulation:Enabled") &&
+            (_scene == null || !_scene.Matches(_navigation.GetMap())))
+        { reason = "Simulation world and saved map geometry do not match. Recommission before dispatch."; return false; }
         if (!HasFreshLocalization(code)) return false;
         var map = _navigation.GetMap();
         var nodes = ReadNodes(map);
