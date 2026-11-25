@@ -138,7 +138,11 @@ public sealed class NavigationStoredState
     public WarehouseMapDocument? Map { get; set; }
     public Dictionary<string, RobotNavigationConfig> RobotConfigs { get; set; } = [];
     public List<StoredIntersectionLock> IntersectionLocks { get; set; } = [];
+    // Last camera checkpoint and any claimed corridor remain occupied across disconnects.
+    public Dictionary<string, StoredRobotOccupancy> RobotOccupancies { get; set; } = [];
 }
+
+public sealed record StoredRobotOccupancy(int CurrentArUcoId, int? NextArUcoId = null);
 
 public sealed class StoredIntersectionLock
 {

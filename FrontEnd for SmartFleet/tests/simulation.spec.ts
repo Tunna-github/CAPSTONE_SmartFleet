@@ -40,3 +40,23 @@ test("Unconfigured server explains 3D availability and disables connecting",asyn
   await expect(page.getByRole("button",{name:"Connect 3D",exact:true})).toBeDisabled();
   await expect(page.getByRole("status")).toContainText("not configured");
 });
+
+test("Unresponsive simulator reports a useful error instead of opening a stuck viewer",async({page})=>{
+  await setup(page,"Warehouse Operator");
+  await page.route("https://localhost:7166/api/v1/simulation/session",route=>route.fulfill({status:503,json:{
+    message:"Webots is not reporting fresh positions. Check simulator logs."}}));
+  await page.getByRole("button",{name:"Connect 3D",exact:true}).click();
+  await expect(page.getByRole("alert")).toContainText("not reporting fresh positions");
+  await expect(page.locator('iframe')).toHaveCount(0);
+});
+
+test("Viewer failure closes the stalled iframe and permits a new connection",async({page})=>{
+  await setup(page,"Warehouse Operator");
+  await page.route("https://localhost:7166/api/v1/simulation/session",route=>route.fulfill({json:{viewerPath:"/simulation-viewer.html"}}));
+  await page.route("**/simulation-viewer.html?*",route=>route.fulfill({contentType:"text/html",body:
+    '<script>parent.postMessage({type:"smartfleet-simulation-error",message:"Webots connection timed out"},location.origin)</script>'}));
+  await page.getByRole("button",{name:"Connect 3D",exact:true}).click();
+  await expect(page.getByRole("alert")).toContainText("timed out");
+  await expect(page.locator('iframe')).toHaveCount(0);
+  await expect(page.getByRole("button",{name:"Connect 3D",exact:true})).toBeEnabled();
+});

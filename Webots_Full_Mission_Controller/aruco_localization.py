@@ -47,10 +47,15 @@ class PoseEstimator:
             raise ValueError("Marker image is too small or invalid for heading estimation")
         s = float(size) / 2.0
         model = np.array([[-s, s, 0.0], [s, s, 0.0], [s, -s, 0.0], [-s, -s, 0.0]])
-        result = cv2.solvePnPGeneric(model, points, self.camera_matrix, self.distortion,
-                                     flags=cv2.SOLVEPNP_IPPE_SQUARE)
+        # OpenCV 4.11 IPPE can lose the valid near-frontoparallel solution for
+        # integer-valued, off-centre corners. SQPnP supplies an independent
+        # candidate; every solver still passes the same gravity/error gates.
+        solutions = []
+        for flag in (cv2.SOLVEPNP_IPPE_SQUARE, cv2.SOLVEPNP_SQPNP):
+            result = cv2.solvePnPGeneric(model, points, self.camera_matrix, self.distortion, flags=flag)
+            solutions.extend(zip(result[1], result[2]))
         candidates = []
-        for rvec, tvec in zip(result[1], result[2]):
+        for rvec, tvec in solutions:
             if not np.isfinite(rvec).all() or not np.isfinite(tvec).all() or tvec[2, 0] <= 0:
                 continue
             camera_from_marker = cv2.Rodrigues(rvec)[0]

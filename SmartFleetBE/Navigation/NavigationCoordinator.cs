@@ -86,6 +86,7 @@ public sealed class NavigationCoordinator
         NormalizeMap(_stored.Map);
         _stored.RobotConfigs ??= [];
         _stored.IntersectionLocks ??= [];
+        _stored.RobotOccupancies = new(_stored.RobotOccupancies ?? [], StringComparer.OrdinalIgnoreCase);
         var validation = ValidateMap(_stored.Map);
         if (validation != null)
             throw new InvalidDataException("Invalid saved navigation map: " + validation);
@@ -130,6 +131,26 @@ public sealed class NavigationCoordinator
     }
 
     public int? WarehouseId => _mapStore?.SelectedWarehouseId;
+
+    public void RecordCameraCheckpoint(string robotCode, int arucoId)
+    {
+        lock (_gate)
+        {
+            if (FindQrCell(_stored.Map!, arucoId) == null) return;
+            // A replay at the departure QR cannot release a corridor already claimed.
+            if (_stored.RobotOccupancies.TryGetValue(robotCode, out var old) && old.CurrentArUcoId == arucoId) return;
+            _stored.RobotOccupancies[robotCode] = new(arucoId);
+            SaveLocked();
+        }
+    }
+
+    public IReadOnlySet<int> GetBlockedQrIds(string? robotCode)
+    {
+        lock (_gate) return _stored.RobotOccupancies
+            .Where(p => !string.Equals(p.Key, robotCode, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(p => p.Value.NextArUcoId is int next
+                ? new[] { p.Value.CurrentArUcoId, next } : new[] { p.Value.CurrentArUcoId }).ToHashSet();
+    }
 
     public bool PrepareUnreservedReturnHome(string robotCode)
     {
@@ -526,6 +547,9 @@ public sealed class NavigationCoordinator
         if (!IsLidarSafe(robot, now))
             return StopDirective(robot, "LIDAR_UNSAFE_OR_STALE");
 
+        if (robot.NextArUcoId is int next && GetBlockedQrIds(robot.RobotCode).Contains(next))
+            return StopDirective(robot, "QR_OCCUPIED_BY_OTHER_ROBOT");
+
         if (robot.IntersectionId is int id)
         {
             var traffic = GetOrCreateIntersection(id);
@@ -534,6 +558,7 @@ public sealed class NavigationCoordinator
                     StringComparison.OrdinalIgnoreCase))
                 return StopDirective(robot, "WAIT_FOR_INTERSECTION_GRANT");
 
+            ClaimCorridor(robot);
             return NewDirective(robot, "GO",
                 robot.LidarStatus == "DETECTED"
                     ? Math.Min(config.ApproachSpeed, config.ObstacleSpeed)
@@ -541,9 +566,22 @@ public sealed class NavigationCoordinator
                 true, "INTERSECTION_GRANTED");
         }
 
+        ClaimCorridor(robot);
         return NewDirective(robot, robot.LidarStatus == "DETECTED" ? "SLOW" : "GO",
             robot.LidarStatus == "DETECTED" ? config.ObstacleSpeed : config.NormalSpeed,
             false, robot.LidarStatus == "DETECTED" ? "OBSTACLE_DETECTED" : "CLEAR_ROAD");
+    }
+
+    private void ClaimCorridor(RobotState robot)
+    {
+        if (robot.CurrentArUcoId is not int current || robot.NextArUcoId is not int next) return;
+        if (_stored.RobotOccupancies.TryGetValue(robot.RobotCode, out var old))
+        {
+            // Camera may already have confirmed arrival while an intersection EXIT is pending.
+            if (old.CurrentArUcoId != current || old.NextArUcoId == next) return;
+        }
+        _stored.RobotOccupancies[robot.RobotCode] = new(current, next);
+        SaveLocked();
     }
 
     private NavigationDirective StopDirective(RobotState robot, string reason) =>

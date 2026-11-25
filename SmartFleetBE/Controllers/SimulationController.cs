@@ -17,9 +17,11 @@ public sealed class SimulationController(IConfiguration config,SimulationScene s
 {
     public sealed record BridgeRegistration(string RunId,string WorldSha256);
     private bool Enabled=>config.GetValue<bool>("Simulation:Enabled");
+    private bool StreamReady=>Enabled && scene.Matches(navigation.GetMap()) && poses.Snapshot(navigation.GetMap().Revision).Count>0;
     [HttpGet]
     public IActionResult Status()=>Ok(new {enabled=Enabled,scene.SceneId,mapRevision=navigation.GetMap().Revision,
-        mapCompatible=Enabled && scene.Matches(navigation.GetMap()),mode="w3d",poseSource="SIMULATION_GROUND_TRUTH"});
+        mapCompatible=Enabled && scene.Matches(navigation.GetMap()),streamReady=StreamReady,
+        mode="w3d",poseSource="SIMULATION_GROUND_TRUTH"});
 
     [HttpGet("poses")]
     public IActionResult Poses()=>Ok(new {mapRevision=navigation.GetMap().Revision,
@@ -39,6 +41,7 @@ public sealed class SimulationController(IConfiguration config,SimulationScene s
     public IActionResult Session()
     {
         if(!Enabled) return StatusCode(503,new {message="Simulation streaming is not configured on this server."});
+        if(!StreamReady) return StatusCode(503,new {message="Webots is not reporting fresh positions. The simulator may be starting or unresponsive. Check its logs; active missions remain held for recovery."});
         try
         {
             var session=sessions.Create(User);
@@ -82,7 +85,9 @@ public sealed class SimulationController(IConfiguration config,SimulationScene s
         using var upstream=new ClientWebSocket();
         using var lifetime=CancellationTokenSource.CreateLinkedTokenSource(ct);
         lifetime.CancelAfter(session.ExpiresAtUtc-DateTime.UtcNow);
-        try {await upstream.ConnectAsync(target,lifetime.Token);}
+        using var connectionTimeout=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+        connectionTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+        try {await upstream.ConnectAsync(target,connectionTimeout.Token);}
         catch(Exception ex) when(ex is WebSocketException or HttpRequestException or OperationCanceledException)
         {Response.StatusCode=503;return;}
         using var browser=await HttpContext.WebSockets.AcceptWebSocketAsync();
@@ -108,9 +113,13 @@ public sealed class SimulationController(IConfiguration config,SimulationScene s
         async Task ReceiveServer()
         {
             var buffer=new byte[65536];
+            var firstMessage=true;
             while(!lifetime.IsCancellationRequested)
             {
-                var message=await upstream.ReceiveAsync(buffer,lifetime.Token);
+                using var initialTimeout=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+                if(firstMessage) initialTimeout.CancelAfter(TimeSpan.FromSeconds(15));
+                var message=await upstream.ReceiveAsync(buffer,initialTimeout.Token);
+                firstMessage=false;
                 if(message.MessageType==WebSocketMessageType.Close) return;
                 // Device editor windows are not part of this observe-only viewer.
                 if(message.MessageType==WebSocketMessageType.Text && message.EndOfMessage &&

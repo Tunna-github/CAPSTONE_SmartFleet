@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "../api/client";
 import { getRobots, type RobotInfo } from "../api/modules/robots";
 import LiveFleetMap from "../components/LiveFleetMap";
 
 export default function SimulationPage() {
-    const [status, setStatus] = useState<{ enabled: boolean; mapCompatible: boolean; sceneId: string } | null>(null);
+    const [status, setStatus] = useState<{ enabled: boolean; mapCompatible: boolean; streamReady?: boolean; sceneId: string } | null>(null);
     const [robots, setRobots] = useState<RobotInfo[]>([]);
     const [viewer, setViewer] = useState("");
+    const viewerFrame = useRef<HTMLIFrameElement>(null);
     const [error, setError] = useState("");
     const [busy, setBusy] = useState(false);
     const [tab, setTab] = useState("3d");
@@ -20,7 +21,10 @@ export default function SimulationPage() {
         };
         void refresh(); const timer = window.setInterval(() => void refresh(), 10000);
         const message = (event: MessageEvent) => {
-            if (event.origin === window.location.origin && event.data?.type === "smartfleet-simulation-error") setError(String(event.data.message));
+            if (event.origin === window.location.origin && event.source === viewerFrame.current?.contentWindow &&
+                event.data?.type === "smartfleet-simulation-error") {
+                setError(String(event.data.message)); setViewer("");
+            }
         };
         window.addEventListener("message", message);
         return () => { disposed = true; window.clearInterval(timer); window.removeEventListener("message", message); };
@@ -43,9 +47,10 @@ export default function SimulationPage() {
         <p className="text-xs opacity-70">Shared simulation on the server · Battery values are simulated · Task, Pause and verification commands use SmartFleet permissions.</p>
         {status && !status.enabled && <p role="status" className="text-amber-500">Webots streaming is not configured on this server. Start the simulation Compose stack to enable 3D.</p>}
         {status?.enabled && !status.mapCompatible && <p role="alert" className="text-red-500">Saved map and simulation geometry differ. Dispatch is blocked until they are recommissioned.</p>}
+        {status?.enabled && status.mapCompatible && status.streamReady === false && <p role="status" className="text-amber-600">Webots has no fresh position reports. It may be starting or unresponsive. Reconnecting the viewer cannot restart the simulator; active tasks keep their safety holds.</p>}
         {error && <p role="alert" className="text-red-500">{error}</p>}
         <div className="flex-1 min-h-[350px] rounded-xl overflow-hidden border border-[var(--border-medium)]">
-            {tab === "2d" ? <LiveFleetMap robots={robots} /> : viewer ? <iframe key={viewer} src={viewer} title="Live Webots 3D simulation"
+            {tab === "2d" ? <LiveFleetMap robots={robots} /> : viewer ? <iframe ref={viewerFrame} key={viewer} src={viewer} title="Live Webots 3D simulation"
                 className="w-full h-full border-0" allow="fullscreen" /> : <div className="p-6 text-sm opacity-70">Connect to view the server's running Webots world. No local Webots installation is required for viewing.</div>}
         </div>
     </main>;

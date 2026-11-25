@@ -111,6 +111,8 @@ imu.enable(timestep)
 
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 aruco_params = cv2.aruco.DetectorParameters()
+aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+aruco_params.cornerRefinementWinSize = 3
 detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
 
 # ============================================================
@@ -483,25 +485,23 @@ def visible_any_marker():
 
 
 
-def store_heading_calibration():
+def store_heading_calibration(marker_id=None):
     """Correct slow IMU drift from a camera-observed marker, never from the planned heading."""
     global base_yaw_offset
     if not localization_valid or localization_map is None or pose_estimator is None:
-        return
-    seen = visible_marker(current_marker)
-    marker = next((m for m in localization_map["markers"] if m["arucoId"] == current_marker), None)
+        raise ValueError("Camera/IMU orientation is not initialized")
+    marker_id = current_marker if marker_id is None else marker_id
+    seen = visible_marker(marker_id)
+    marker = next((m for m in localization_map["markers"] if m["arucoId"] == marker_id), None)
     if seen is None or marker is None:
-        return
-    try:
-        corners, width = seen
-        pose = pose_estimator.estimate(corners[0], marker)
-        delta = normalize_angle(pose["headingDeg"] - heading_fusion.heading(get_yaw_deg()))
-        if abs(delta) > 10.0:
-            raise ValueError("Camera/IMU orientation disagreement at checkpoint")
-        heading_fusion.offset = normalize_angle(heading_fusion.offset - 0.2 * delta)
-        base_yaw_offset = heading_fusion.offset
-    except (ValueError, cv2.error, TypeError) as error:
-        fail_mission("Heading verification failed: " + str(error))
+        raise ValueError("Checkpoint marker is not camera-visible or commissioned")
+    corners, width = seen
+    pose = pose_estimator.estimate(corners[0], marker)
+    delta = normalize_angle(pose["headingDeg"] - heading_fusion.heading(get_yaw_deg()))
+    if abs(delta) > 10.0:
+        raise ValueError("Camera/IMU orientation disagreement at checkpoint")
+    heading_fusion.offset = normalize_angle(heading_fusion.offset - 0.2 * delta)
+    base_yaw_offset = heading_fusion.offset
 
 
 
@@ -1288,18 +1288,27 @@ def sf_start_physical_segment(data):
 
 def reached_marker(data, detected_id):
     global current_marker, current_state, stable_counter, last_detected_id
-    current_marker = detected_id
-    current_state = STATE_IDLE
-    stable_counter = 0
-    last_detected_id = -1
     stop_robot()
     i = data["next_index"]
     if detected_id != data["waypoints"][i]["arucoId"]:
         raise ValueError("Unexpected QR arrival")
     if i > 0:
-        # The camera confirmed a real driven edge. Learn the stable yaw frame
-        # for future cold-starts at QR2, QR7, or other configured QR markers.
-        store_heading_calibration()
+        try:
+            store_heading_calibration(detected_id)
+        except (ValueError, cv2.error, TypeError) as error:
+            # A rejected image is neither a reached waypoint nor an intersection EXIT.
+            # Stay stopped at the arrival zone and allow a bounded camera retry.
+            current_state = STATE_ALIGNING
+            stable_counter = 0
+            since = data.setdefault("heading_confirmation_since", time.monotonic())
+            if time.monotonic() - since >= 5.0:
+                fail_mission("Heading verification failed after stopped retries: " + str(error))
+            return
+    data.pop("heading_confirmation_since", None)
+    current_marker = detected_id
+    current_state = STATE_IDLE
+    stable_counter = 0
+    last_detected_id = -1
     if INTERSECTION_PILOT and sf_active_intersection is not None and i > 0 and             data["waypoints"][i - 1]["arucoId"] == sf_active_intersection:
         if data["waypoints"][i].get("isIntersection"):
             raise ValueError("Cannot exit directly into a second intersection")

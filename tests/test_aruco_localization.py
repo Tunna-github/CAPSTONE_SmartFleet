@@ -73,6 +73,26 @@ class LocalizationTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.estimator.estimate(self.corners(0), {"arucoId": 4})
         with self.assertRaises(ValueError): self.estimator.estimate(np.array([[1, 1], [2, 1], [2, 2], [1, 2]]), self.marker)
 
+    def test_off_centre_frontoparallel_pixels_work_on_container_opencv_411(self):
+        # Camera pixels captured during the real QR1 return leg. On 4.11 IPPE
+        # returns only a 16-degree tilt and a mirrored pose, losing the valid
+        # level solution. The independent candidate must obey the same gates.
+        corners = np.array([[433,111],[330,109],[332,6],[435,8]],dtype=float)
+        marker = {"arucoId":1,"markerYawDeg":-90.09356303343094,"markerSizeM":.04}
+        pose = self.estimator.estimate(corners,marker)
+        self.assertLess(abs(wrap_degrees(pose["headingDeg"] - (-178.981163417))), .1)
+        self.assertLess(pose["reprojectionErrorPx"], .01)
+
+    def test_additional_solver_does_not_accept_a_physically_tilted_robot(self):
+        robot_rotation = rotation_z(45) @ cv2.Rodrigues(np.array([math.radians(35), 0.0, 0.0]))[0]
+        camera_rotation = robot_rotation @ self.estimator.robot_from_optical
+        relative = camera_rotation.T @ rotation_z(self.marker["markerYawDeg"])
+        translation = camera_rotation.T @ np.array([[0.0], [0.0], [-0.244]])
+        model = np.array([[-.02,.02,0],[.02,.02,0],[.02,-.02,0],[-.02,-.02,0]])
+        pixels = cv2.projectPoints(model,cv2.Rodrigues(relative)[0],translation,
+            self.estimator.camera_matrix,self.estimator.distortion)[0].reshape(4,2)
+        with self.assertRaises(ValueError): self.estimator.estimate(pixels,self.marker)
+
     def test_changed_camera_installation_requires_recalibration(self):
         with self.assertRaises(ValueError): PoseEstimator(self.calibration, 640, 480, 0.85404)
         with self.assertRaises(ValueError): PoseEstimator(self.calibration, 626, 250, 1.0)

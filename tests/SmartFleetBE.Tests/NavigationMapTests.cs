@@ -134,7 +134,8 @@ public sealed class NavigationMapTests
             {
                 if (start == end) continue;
                 var id = start * 9 + end + 1;
-                var robot = new Robot { RobotCode = $"TEST-{id}", WarehouseId = 1 };
+                // One test robot is repositioned between independent route cases.
+                var robot = new Robot { RobotCode = "TEST", WarehouseId = 1 };
                 Assert.True(routes.ReceiveProgress(robot.RobotCode, new()
                     { Event = "READY", ArucoId = start, MapRevision = reloaded.GetMap().Revision,
                       HeadingDeg = 0, LocalizationSource = "ARUCO_IMU", ReprojectionErrorPx = 0.1, StableFrames = 5 }).Accepted);
@@ -285,6 +286,67 @@ public sealed class NavigationMapTests
         Assert.False(routes.CanDispatchTask(9001, "R01", out var reason));
         Assert.Contains("Commission every QR", reason);
         Assert.Empty(routes.GetMissions());
+    }
+
+    [Fact]
+    public void PlannerAvoidsAnIdleRobotsCameraCheckpoint()
+    {
+        var nav = Coordinator(); Assert.True(nav.ReplaceMap(QrMap(nav)).Success);
+        var routes = Routes(nav);
+        foreach (var (code, qr) in new[] { ("R01", 0), ("R02", 1) })
+            Assert.True(routes.ReceiveProgress(code, new() { Event = "READY", ArucoId = qr,
+                MapRevision = nav.GetMap().Revision, HeadingDeg = 0, LocalizationSource = "ARUCO_IMU",
+                ReprojectionErrorPx = .1, StableFrames = 5 }).Accepted);
+        routes.ConfigureTask(100, 0, 2);
+        var command = JsonNode.Parse(routes.BuildMqttCommand(new TaskAssignment {
+            AssignmentId = 100, TaskId = 100, Robot = new Robot { RobotCode = "R01" }, Mission = new Mission { MissionId = 100 } }))!;
+        var ids = command["waypoints"]!.AsArray().Select(w => w!["arucoId"]!.GetValue<int>()).ToArray();
+        Assert.DoesNotContain(1, ids); Assert.Equal(2, ids[^1]);
+        routes.ConfigureTask(101, 0, 1);
+        Assert.False(routes.CanDispatchTask(101, "R01", out var reason));
+        Assert.Contains("occup", reason);
+    }
+
+    [Fact]
+    public void NormalCorridorStopsBeforeAnOccupiedQrAndResumesOnlyAfterItMoves()
+    {
+        var nav = Coordinator(); Assert.True(nav.ReplaceMap(QrMap(nav)).Success);
+        nav.RecordCameraCheckpoint("R02", 1);
+        nav.RecordCameraCheckpoint("R01", 0);
+        nav.OnLidar(1, "R01", "CLEAR");
+        var blocked = nav.OnScan(1, "R01", new() { CurrentArUcoId = 0, NextArUcoId = 1 });
+        Assert.Equal("QR_OCCUPIED_BY_OTHER_ROBOT", Assert.Single(blocked.Directives).Reason);
+        nav.RecordCameraCheckpoint("R02", 2);
+        Assert.Equal("GO", Assert.Single(nav.OnLidar(1, "R01", "CLEAR").Directives).Mode);
+        Assert.Contains(1, nav.GetBlockedQrIds("R02"));
+    }
+
+    [Fact]
+    public void ClaimedCorridorSurvivesDuplicateCameraReportAndBackendRestart()
+    {
+        var env = new Environment(); var nav = Coordinator(env);
+        Assert.True(nav.ReplaceMap(QrMap(nav)).Success);
+        nav.RecordCameraCheckpoint("R02", 1);
+        nav.OnLidar(2, "R02", "CLEAR");
+        Assert.Equal("GO", Assert.Single(nav.OnScan(2, "R02", new() { CurrentArUcoId = 1, NextArUcoId = 2 }).Directives).Mode);
+        nav.RecordCameraCheckpoint("R02", 1); // Replay is not an EXIT.
+        var reloaded = Coordinator(env);
+        Assert.Contains(1, reloaded.GetBlockedQrIds("R01"));
+        Assert.Contains(2, reloaded.GetBlockedQrIds("R01"));
+        Assert.Empty(reloaded.GetBlockedQrIds("r02"));
+        reloaded.RecordCameraCheckpoint("R02", 2);
+        Assert.DoesNotContain(1, reloaded.GetBlockedQrIds("R01"));
+        Assert.Contains(2, reloaded.GetBlockedQrIds("R01"));
+    }
+
+    [Fact]
+    public void TwoRobotsCannotClaimTheSameNonIntersectionDestination()
+    {
+        var nav = Coordinator(); Assert.True(nav.ReplaceMap(QrMap(nav)).Success);
+        nav.RecordCameraCheckpoint("R01", 0); nav.RecordCameraCheckpoint("R02", 2);
+        nav.OnLidar(1, "R01", "CLEAR"); nav.OnLidar(2, "R02", "CLEAR");
+        Assert.Equal("GO", Assert.Single(nav.OnScan(1, "R01", new() { CurrentArUcoId = 0, NextArUcoId = 1 }).Directives).Mode);
+        Assert.Equal("STOP", Assert.Single(nav.OnScan(2, "R02", new() { CurrentArUcoId = 2, NextArUcoId = 1 }).Directives).Mode);
     }
 
     private sealed class Environment : IWebHostEnvironment

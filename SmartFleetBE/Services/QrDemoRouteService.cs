@@ -110,6 +110,7 @@ public sealed class QrDemoRouteService
             : new StoreDocument();
         _store.TaskRoutes ??= [];
         _store.RobotPositions ??= [];
+        foreach (var (code, qr) in _store.RobotPositions) _navigation.RecordCameraCheckpoint(code, qr);
     }
 
     private void SaveLocked()
@@ -155,6 +156,8 @@ public sealed class QrDemoRouteService
         {
             _store.RobotPositions[code] = arucoId; _freshRobotPositions.Add(code);
             _localizations[code] = new(arucoId, yaw, revision, "ARUCO_IMU", DateTime.UtcNow);
+            SaveLocked();
+            _navigation.RecordCameraCheckpoint(code, arucoId);
         }
     }
 
@@ -188,15 +191,15 @@ public sealed class QrDemoRouteService
             try
             {
                 var start = _localizations[code].ArucoId;
-                var pickupRoute = FindPath(map, nodes, start, selection.PickupArUcoId);
-                var deliveryRoute = FindPath(map, nodes, selection.PickupArUcoId, selection.DeliveryArUcoId);
+                var pickupRoute = FindPath(map, nodes, start, selection.PickupArUcoId, robotCode: code);
+                var deliveryRoute = FindPath(map, nodes, selection.PickupArUcoId, selection.DeliveryArUcoId, robotCode: code);
                 if (pickupRoute.Concat(deliveryRoute).Distinct().Any(id =>
                     map.Cells[nodes[id].Row][nodes[id].Col].MarkerYawDeg == null ||
                     map.Cells[nodes[id].Row][nodes[id].Col].MarkerSizeM == null))
                 { reason = "Commission every QR marker on this route before assignment."; return false; }
             }
             catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException)
-            { reason = "No connected QR route for this task on the current map."; return false; }
+            { reason = "No free QR route: another robot occupies a checkpoint/corridor, or the map is disconnected."; return false; }
         }
         reason = "";
         return true;
@@ -355,12 +358,12 @@ public sealed class QrDemoRouteService
         if (!nodes.ContainsKey(pickupId) || !nodes.ContainsKey(deliveryId))
             throw new InvalidOperationException("Task pickup/delivery QR was deleted from the map.");
 
-        var pickupRoute = FindPath(map, nodes, startId, pickupId);
+        var pickupRoute = FindPath(map, nodes, startId, pickupId, robotCode: assignment.Robot.RobotCode);
         // Preserve arrival direction when optimizing the pickup -> delivery leg.
         var incomingToPickup = pickupRoute.Count > 1
             ? DirectionBetween(nodes[pickupRoute[^2]], nodes[pickupRoute[^1]])
             : null;
-        var deliveryRoute = FindPath(map, nodes, pickupId, deliveryId, incomingToPickup);
+        var deliveryRoute = FindPath(map, nodes, pickupId, deliveryId, incomingToPickup, assignment.Robot.RobotCode);
         var fullIds = pickupRoute.Concat(deliveryRoute.Skip(1)).ToList();
         var pickupIndex = pickupRoute.Count - 1;
         var waypoints = fullIds.Select((id, index) => new QrWaypoint
@@ -449,6 +452,7 @@ public sealed class QrDemoRouteService
                 _store.RobotPositions[robotCode] = report.ArucoId;
                 _freshRobotPositions.Add(robotCode);
                 _localizations[robotCode] = new(report.ArucoId, heading, map.Revision, "ARUCO_IMU", DateTime.UtcNow);
+                _navigation.RecordCameraCheckpoint(robotCode, report.ArucoId);
                 SaveLocked();
                 return (true, "Webots QR and camera/IMU heading recorded");
             }
@@ -472,6 +476,7 @@ public sealed class QrDemoRouteService
                 mission.PickupReached |= report.WaypointIndex == mission.PickupWaypointIndex;
                 mission.DeliveryReached |= report.WaypointIndex == mission.Waypoints.Count - 1;
                 _store.RobotPositions[robotCode] = report.ArucoId;
+                _navigation.RecordCameraCheckpoint(robotCode, report.ArucoId);
                 SaveLocked();
             }
             return (true, mission.DeliveryReached ? "DELIVERY_REACHED" :
@@ -485,7 +490,7 @@ public sealed class QrDemoRouteService
         var nodes = ReadNodes(map);
         if (!nodes.ContainsKey(start) || !nodes.ContainsKey(home))
             throw new InvalidOperationException("Unknown home/current QR.");
-        var ids = FindPath(map, nodes, start, home);
+        var ids = FindPath(map, nodes, start, home, robotCode: robotCode);
         if (ids.Any(id => map.Cells[nodes[id].Row][nodes[id].Col].MarkerYawDeg == null ||
                 map.Cells[nodes[id].Row][nodes[id].Col].MarkerSizeM == null) ||
             map.Cells[nodes[start].Row][nodes[start].Col].IsIntersection || map.Cells[nodes[home].Row][nodes[home].Col].IsIntersection)
@@ -571,8 +576,11 @@ public sealed class QrDemoRouteService
         Dictionary<int, Node> nodes,
         int start,
         int goal,
-        string? initialHeading = null)
+        string? initialHeading = null, string? robotCode = null)
     {
+        var blocked = _navigation.GetBlockedQrIds(robotCode);
+        if (blocked.Contains(start) || blocked.Contains(goal))
+            throw new InvalidOperationException("Start or destination QR is occupied by another robot.");
         if (start == goal) return [start];
 
         var graph = nodes.Keys.ToDictionary(id => id, _ => new List<int>());
@@ -672,6 +680,7 @@ public sealed class QrDemoRouteService
 
             foreach (var next in graph[state.Node])
             {
+                if (blocked.Contains(next)) continue;
                 // Physical-clearance safety lock: do not plan INTO this QR.
                 if (traffic.TryGetValue(next, out var intersection) &&
                     intersection.BlockedPendingPhysicalClearance)
