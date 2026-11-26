@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { Icon, IC } from "../components/Icons";
 import { useAuth } from "../context/AuthContext";
+import fleetLogo from "../../Icon/icon4.svg";
 
 // Eye Icon for showing password
 const EyeIcon = () => (
@@ -70,8 +71,7 @@ export function LoginPage() {
             >
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-12 h-12 flex items-center justify-center mb-4">
-                        {/* Replace 'logo.svg' with the path to your file */}
-                        <img src="./icon/icon3.svg" alt="SmartFleet Logo" className="w-full h-full object-cover rounded-xl shadow-sm" />
+                        <img src={fleetLogo} alt="SmartFleet Logo" className="w-full h-full object-contain" />
                     </div>
                     <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
                         SmartFleet WMS

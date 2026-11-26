@@ -184,7 +184,7 @@ export function OperatorDashboard() {
                             ))}
                         </div>
                     </div>
-                    <div className="flex-1 overflow-hidden relative" style={{ background: "var(--surface-3)", minHeight: "400px" }}>
+                    <div className="flex-1 overflow-hidden relative" style={{ background: "var(--surface-3)", minHeight: "560px" }}>
                         <LiveFleetMap robots={dbRobots} />
                     </div>
                     <div className="shrink-0 px-4 py-3 transition-colors" style={{ borderTop: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>

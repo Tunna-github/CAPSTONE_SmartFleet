@@ -34,10 +34,12 @@ The battery increase while docked is a Webots-only simulation model. A physical
 robot requires its real dock/BMS safety handshake; simulated ground-truth poses
 never authorize arrival, handover, charging readiness or resource release.
 
-The charging profile uses 1.25× straight cruise speed (2.75 rather than 2.2
+The charging profile uses 1.5× straight cruise speed (3.3 rather than 2.2
 wheel rad/s) to shorten simulation testing. Near-QR, final approach, turning and
 overshoot speeds remain unchanged. `SIMULATION_CRUISE_SCALE` can override the
-cruise multiplier within 0.5–1.35. Network presence uses a wall-clock heartbeat,
+cruise multiplier within 0.5–1.5. The earlier two-robot acceptance run used 1.25×;
+1.5× still requires a physical Webots route check before relying on that speed.
+Network presence uses a wall-clock heartbeat,
 so slow rendering does not stretch a simulation-time telemetry interval.
 
 ## Physical layout and QR responsibilities

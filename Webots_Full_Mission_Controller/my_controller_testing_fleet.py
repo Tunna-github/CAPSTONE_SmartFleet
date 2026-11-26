@@ -151,8 +151,8 @@ KP_ALIGN_TILT = 0.03
 # With your current camera, a marker near the robot was about 0.17 wide.
 # ============================================================
 CRUISE_SCALE = float(os.environ.get("SMARTFLEET_CRUISE_SCALE", _sf_controller_arg("cruise-scale", "1.0")))
-if not math.isfinite(CRUISE_SCALE) or not .5 <= CRUISE_SCALE <= 1.35:
-    raise ValueError("Simulation cruise scale must be between 0.5 and 1.35")
+if not math.isfinite(CRUISE_SCALE) or not .5 <= CRUISE_SCALE <= 1.5:
+    raise ValueError("Simulation cruise scale must be between 0.5 and 1.5")
 SEEK_SPEED = 2.2 * CRUISE_SCALE  # cruise only; near-QR/turn/overshoot tuning stays unchanged
 APPROACH_SPEED = 1.35            # marker visible and approaching
 FINAL_APPROACH_SPEED = 0.70     # very close to marker

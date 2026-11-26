@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "../api/client";
 import { useWarehouseMap } from "../context/WarehouseMapContext";
 import type { RobotInfo } from "../api/modules/robots";
@@ -29,6 +29,19 @@ export default function LiveFleetMap({ robots, selectedRobot, onSelectRobot, sho
     const selected = selectedRobot ?? localSelected;
     const setSelected = (code: string) => { setLocalSelected(code); onSelectRobot?.(code); };
     const [error, setError] = useState("");
+    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [directions, setDirections] = useState(true);
+    const drag = useRef<{ x: number; y: number; panX: number; panY: number; sx: number; sy: number } | null>(null);
+    const dragged = useRef(false);
+    const [panning, setPanning] = useState(false);
+    function fitMap() { setZoom(1); setPan({ x: 0, y: 0 }); }
+    function changeZoom(amount: number) {
+        const next = Math.max(1, Math.min(3, Math.round((zoom + amount) * 100) / 100));
+        setZoom(next);
+        setPan(p => next === 1 ? { x: 0, y: 0 } : { x: p.x * next / zoom, y: p.y * next / zoom });
+    }
+    useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, [mapRevision]);
     useEffect(() => {
         const timer=window.setInterval(()=>void reloadMap().catch(()=>{}),15000);
         return ()=>window.clearInterval(timer);
@@ -84,8 +97,39 @@ export default function LiveFleetMap({ robots, selectedRobot, onSelectRobot, sho
         </div>
         <p className="px-3 pb-1 text-[11px] opacity-65">Cyan/colored: measured simulation position · Gray: stale pose · Yellow: last QR only. Simulation ground truth is for visualization.</p>
         {directedLinks&&<p className="px-3 pb-1 text-[11px] opacity-75">Arrows: one-way lanes · Purple: pickup/delivery bays · Amber: charging · Small dots: transit QR checkpoints</p>}
-        <div className="flex-1 min-h-0"><WarehouseGrid robots={markers} grid={warehouseLayout} links={links} focusQrNetwork
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-y border-[var(--border-subtle)]" aria-label="Map view controls">
+            <div className="inline-flex items-center gap-1">
+                <button className="sf-button !px-3 !py-1" aria-label="Zoom out map" disabled={zoom <= 1} onClick={() => changeZoom(-.25)}>−</button>
+                <output aria-label="Map zoom" className="w-12 text-center text-xs tabular-nums">{Math.round(zoom * 100)}%</output>
+                <button className="sf-button !px-3 !py-1" aria-label="Zoom in map" disabled={zoom >= 3} onClick={() => changeZoom(.25)}>+</button>
+                <button className="sf-button !px-2 !py-1 text-xs" onClick={fitMap}>Fit map</button>
+            </div>
+            <label className="inline-flex items-center gap-2 text-xs ml-auto"><input type="checkbox" checked={directions} onChange={e => setDirections(e.target.checked)} />Lane directions</label>
+            {zoom > 1 && <span className="text-xs sf-muted">Drag to move the map</span>}
+        </div>
+        <div className="flex-1 min-h-[280px] overflow-hidden" style={{ cursor: zoom > 1 ? panning ? "grabbing" : "grab" : undefined, touchAction: zoom > 1 ? "none" : "auto" }}
+            onPointerDown={event => {
+                dragged.current = false;
+                if (zoom <= 1 || event.button !== 0) return;
+                const matrix = event.currentTarget.querySelector("svg")?.getScreenCTM();
+                if (matrix) drag.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y, sx: matrix.a, sy: matrix.d };
+            }}
+            onPointerMove={event => {
+                const start = drag.current;
+                if (!start) return;
+                const dx = event.clientX - start.x, dy = event.clientY - start.y;
+                if (!dragged.current && Math.hypot(dx, dy) < 4) return;
+                dragged.current = true; setPanning(true);
+                event.currentTarget.setPointerCapture(event.pointerId);
+                setPan({ x: start.panX + dx / start.sx, y: start.panY + dy / start.sy });
+            }}
+            onPointerUp={event => { drag.current = null; setPanning(false); if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+            onPointerCancel={() => { drag.current = null; setPanning(false); }}
+            onPointerLeave={event => { if (!event.currentTarget.hasPointerCapture(event.pointerId)) drag.current = null; }}
+            onClickCapture={event => { if (dragged.current) { event.preventDefault(); event.stopPropagation(); dragged.current = false; } }}>
+            <WarehouseGrid robots={markers} grid={warehouseLayout} links={links} focusQrNetwork
             directedLinks={directedLinks}
+            scale={zoom} panOffset={pan} showDirections={directions}
             missionRoutes={routes} onRobotClick={setSelected} animateRobots={false} /></div>
         {showRobotStatus && <div className="flex flex-wrap gap-2 p-2 border-t border-[var(--border-subtle)]" aria-label="Live robot status">
             {robots.map((robot,index) => {

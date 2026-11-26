@@ -91,6 +91,8 @@ export function WarehouseGrid({
     links,
     directedLinks = false,
     scale = 1,
+    panOffset = { x: 0, y: 0 },
+    showDirections = true,
     onCellClick,
     onStationClick,
     onPointClick,
@@ -113,6 +115,8 @@ export function WarehouseGrid({
     links?: Array<[string, string]>;
     directedLinks?: boolean;
     scale?: number;
+    panOffset?: { x: number; y: number };
+    showDirections?: boolean;
     onCellClick?: (row: number, col: number) => void;
     onStationClick?: (label: string) => void;
     onPointClick?: (label: string) => void;
@@ -337,7 +341,7 @@ export function WarehouseGrid({
     }, [focusQrNetwork, stations, robots]);
     const centerX = viewport.x + viewport.width / 2;
     const centerY = viewport.y + viewport.height / 2;
-    const transform = `translate(${centerX} ${centerY}) scale(${scale}) translate(${-centerX} ${-centerY})`;
+    const transform = `translate(${centerX + panOffset.x} ${centerY + panOffset.y}) scale(${scale}) translate(${-centerX} ${-centerY})`;
 
     // Selection changes do not need to rebuild the static map cells.
     const mapCells = useMemo(() => gridWithRoads.map((row, ri) => row.map((cell, ci) => {
@@ -429,17 +433,41 @@ export function WarehouseGrid({
                     const pa = stations.find((s) => s.label === a);
                     const pb = stations.find((s) => s.label === b);
                     if (!pa || !pb) return null;
+                    const x1 = pa.c * CELL + CELL / 2, y1 = pa.r * CELL + CELL / 2;
+                    const x2 = pb.c * CELL + CELL / 2, y2 = pb.r * CELL + CELL / 2;
+                    const horizontal = Math.abs(x2 - x1), vertical = Math.abs(y2 - y1);
+                    const length = horizontal + vertical;
+                    if (!length) return null;
+                    // A small chevron sits halfway along the road, outside QR nodes.
+                    // Opposite directions on a shared bay spur get separate offsets.
+                    const reverse = directedLinks && linksToDraw.some(([from, to]) => from === b && to === a);
+                    const mid = length / 2;
+                    const dx = mid <= horizontal ? Math.sign(x2 - x1) : 0;
+                    const dy = mid > horizontal ? Math.sign(y2 - y1) : 0;
+                    const mx = mid <= horizontal ? x1 + dx * mid : x2;
+                    const my = mid <= horizontal ? y1 : y1 + dy * (mid - horizontal);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    const arrow = (opposite: boolean) => {
+                        const direction = opposite ? -1 : 1;
+                        const offset = reverse || !directedLinks ? 3 * direction : 0;
+                        return <path key={String(opposite)} data-lane-direction={`${opposite ? b : a} to ${opposite ? a : b}`}
+                            d="M-3,-2.5 L1,0 L-3,2.5" fill="none"
+                            stroke={isLight ? "#0891b2" : "#67c6d8"} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"
+                            opacity="0.75" pointerEvents="none"
+                            transform={`translate(${mx - dy * offset} ${my + dx * offset}) rotate(${angle + (opposite ? 180 : 0)})`} />;
+                    };
                     return (
-                        <polyline
-                            key={`${a}::${b}`}
+                        <g key={`${a}::${b}`}>
+                        {(!reverse || a.localeCompare(b) < 0) && <polyline
                             points={`${pa.c * CELL + CELL / 2},${pa.r * CELL + CELL / 2} ${pb.c * CELL + CELL / 2},${pa.r * CELL + CELL / 2} ${pb.c * CELL + CELL / 2},${pb.r * CELL + CELL / 2}`}
                             fill="none"
                             stroke={isLight ? "rgba(6,182,212,0.35)" : "rgba(34,211,238,0.25)"}
                             strokeWidth="6"
                             strokeLinecap="round"
-                            markerStart={directedLinks ? undefined : "url(#arrow)"}
-                            markerEnd="url(#arrow)"
-                        />
+                        />}
+                        {showDirections && arrow(false)}
+                        {showDirections && !directedLinks && arrow(true)}
+                        </g>
                     );
                 })}
 
