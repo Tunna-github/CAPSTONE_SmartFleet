@@ -3,6 +3,7 @@ import { apiClient } from "../client";
 export interface InterventionRow {
   taskId: number; assignmentId: number; robotId: number; robotCode: string; taskTrackingCode: string;
   taskStatus: string; operationalStatus: string; connectionStatus: string; missionStatus: string;
+  assignmentStatus?: string; pickupVerified?: boolean;
   pickupStationId?: number; pickupStationName?: string;
   intervention: { state: string; paused: boolean; commandAcknowledged: boolean } | null;
 }

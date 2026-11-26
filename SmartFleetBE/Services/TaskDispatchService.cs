@@ -34,6 +34,19 @@ public sealed class TaskDispatchService : ITaskDispatchService
     // GET ROBOTS AVAILABLE FOR MANUAL ASSIGNMENT
     // =====================================================
 
+    private IQueryable<TaskAssignment> FailedWithoutSafeReturn(long taskId)
+    {
+        var failures = _db.TaskAssignments.Where(a => a.TaskId == taskId && a.AssignmentStatus == "FAILED");
+        if (!_configuration.GetValue<bool>("Charging:Enabled")) return failures;
+        // Manual selection is an explicit retry, after a NEW camera-confirmed
+        // recovery/docking cycle. An old READY cycle or AVAILABLE flag is insufficient.
+        // AUTO keeps its independent rule excluding all robots that failed this task.
+        return failures.Where(a => a.EndedAt == null || !_db.ChargingJobs.Any(j =>
+            j.RobotId == a.RobotId && j.State == "READY" && j.StationId != null &&
+            j.CreatedAt >= a.EndedAt && j.LastStoppedAt >= a.EndedAt &&
+            _db.StationBerths.Any(b => b.RobotId == j.RobotId && b.StationId == j.StationId)));
+    }
+
     public async Task<
         TransportTaskServiceResult<
             IReadOnlyCollection<AvailableRobotResponse>>>
@@ -102,7 +115,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
         var allRobots = await _db.Robots.AsNoTracking().OrderBy(r => r.RobotCode).ToListAsync(cancellationToken);
         var busy = (await _db.TaskAssignments.Where(a => a.AssignmentStatus == "ACTIVE")
             .Select(a => a.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
-        var failed = (await _db.TaskAssignments.Where(a => a.TaskId == taskId && a.AssignmentStatus == "FAILED")
+        var failed = (await FailedWithoutSafeReturn(taskId)
             .Select(a => a.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
         var maintenance = (await _db.RobotMaintenanceRecords.Where(m =>
             m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS")
@@ -138,7 +151,7 @@ public sealed class TaskDispatchService : ITaskDispatchService
             if (robot.BatteryPercent == null || robot.BatteryPercent < MinimumBatteryPercent) reasons.Add("Battery must be at least 20%");
             if (robot.MaxPayloadWeightKg < weightKg) reasons.Add("Insufficient payload capacity");
             if (busy.Contains(robot.RobotId)) reasons.Add("Has ACTIVE assignment");
-            if (failed.Contains(robot.RobotId)) reasons.Add("Previously failed this task");
+            if (failed.Contains(robot.RobotId)) reasons.Add("Previously failed this task; recover the robot and finish safe return to charging before manual retry");
             if (maintenance.Contains(robot.RobotId)) reasons.Add("Maintenance scheduled or in progress");
             if (incidents.Contains(robot.RobotId)) reasons.Add("Unresolved serious incident");
             var eligible = reasons.Count == 0;
@@ -295,10 +308,9 @@ public sealed class TaskDispatchService : ITaskDispatchService
             return TransportTaskServiceResult<ManualAssignTaskResponse>
                 .Conflict("Task is waiting for its scheduled/recovery time or has a safety hold.");
 
-        if (await _db.TaskAssignments.AnyAsync(a => a.TaskId == taskId && a.RobotId == robotId &&
-            a.AssignmentStatus == "FAILED", cancellationToken))
+        if (await FailedWithoutSafeReturn(taskId).AnyAsync(a => a.RobotId == robotId, cancellationToken))
             return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .Conflict("This robot previously failed this task. Select another robot.");
+                .Conflict("This robot previously failed this task. Recover it and finish safe return to charging before manual retry, or select another robot.");
 
         // STEP 2: CHECK TASK IS NOT ALREADY ASSIGNED
 

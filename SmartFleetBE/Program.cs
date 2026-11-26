@@ -197,6 +197,7 @@ builder.Services.AddScoped<MissionExecutionService>();
 builder.Services.AddScoped<ChargingService>();
 builder.Services.AddHostedService<ChargingWorker>();
 builder.Services.AddScoped<TaskInterventionService>();
+builder.Services.AddScoped<CancelledTaskService>();
 builder.Services.AddScoped<RobotHealthMonitor>();
 
 bool enableMqttWorkers =

@@ -142,6 +142,11 @@ public sealed class QrDemoRouteService
     }
 
     public bool HasFreshLocalization(string code) => GetRobotLocalizations().ContainsKey(code);
+
+    public void RequireFreshLocalization(string code)
+    {
+        lock(_gate) { _freshRobotPositions.Remove(code); _localizations.Remove(code); }
+    }
     public int CurrentMapRevision => _navigation.GetMap().Revision;
 
     public void RestoreMission(MissionView snapshot, string payload)

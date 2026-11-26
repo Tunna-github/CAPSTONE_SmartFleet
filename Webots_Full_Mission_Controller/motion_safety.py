@@ -2,6 +2,18 @@
 import math
 
 
+def measured_motion(previous, current, wheel_radius=.033):
+    """Encoder speed in simulation time plus wall-clock rendering throughput."""
+    if previous is None:return {}
+    dt_sim=current[0]-previous[0];dt_wall=current[1]-previous[1]
+    if dt_sim<=0 or dt_wall<=0:return {}
+    left=(current[2]-previous[2])/dt_sim;right=(current[3]-previous[3])/dt_sim
+    return {'leftMeasuredRadPerSimSecond':left,'rightMeasuredRadPerSimSecond':right,
+            'simulationRealtimeFactor':dt_sim/dt_wall,
+            'linearMetersPerSimSecond':(left+right)*.5*wheel_radius,
+            'linearMetersPerWallSecond':(left+right)*.5*wheel_radius*dt_sim/dt_wall}
+
+
 def front_lidar_report(ranges, fov, mounting_yaw=-math.pi/12):
     if not ranges or any(math.isnan(v) or v < 0 for v in ranges):
         return {'status':'NO_SCAN_DATA','distanceCm':None}

@@ -111,7 +111,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (task.taskId === undefined || task.taskId === null || task.taskId === "") {
             throw new Error("This task has no backend ID. Reload the task list before deleting.");
         }
-        await deleteTransportTask(task.taskId);
+        await deleteTransportTask(task.taskId, task.status === "CANCELLED");
         setTasks(prev => prev.filter(item => item.taskId !== task.taskId));
         addLog({ level: "INFO", robot: "SYSTEM", message: `Task ${task.id} deleted successfully.` });
     };

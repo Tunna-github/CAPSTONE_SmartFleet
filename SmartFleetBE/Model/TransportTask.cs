@@ -62,6 +62,10 @@ public partial class TransportTask
 
     public string? CancellationReason { get; set; }
 
+    // Operational removal retains assignments, verification and cancellation audits.
+    public DateTime? DeletedAt { get; set; }
+    public int? DeletedBy { get; set; }
+
     public virtual User CreatedByNavigation { get; set; } = null!;
 
     public virtual Station DeliveryStation { get; set; } = null!;

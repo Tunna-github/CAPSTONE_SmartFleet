@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using SmartFleetBE.DTOs;
 using SmartFleetBE.Model;
@@ -43,10 +44,14 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length > 400)
             throw new ArgumentException("A reason of 1..400 characters is required.");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var task = await db.TransportTasks.SingleOrDefaultAsync(t => t.TaskId == taskId, ct)
+        var task = await db.TransportTasks.SingleOrDefaultAsync(t => t.TaskId == taskId && t.DeletedAt == null, ct)
             ?? throw new KeyNotFoundException("Task not found.");
         var assignment = await db.TaskAssignments.Include(a => a.Robot).Include(a => a.Mission)
             .SingleOrDefaultAsync(a => a.TaskId == taskId && a.AssignmentStatus == "ACTIVE", ct);
+        if(assignment==null && action=="return-to-charge" && task.TaskStatus=="QUEUED")
+            assignment=await db.TaskAssignments.Include(a=>a.Robot).Include(a=>a.Mission)
+                .SingleOrDefaultAsync(a=>a.TaskId==taskId&&a.AssignmentId==request.ExpectedAssignmentId&&a.AssignmentStatus=="FAILED"&&
+                    a.Robot.OperationalStatus=="MAINTENANCE"&&!db.TaskAssignments.Any(active=>active.RobotId==a.RobotId&&active.AssignmentStatus=="ACTIVE"),ct);
         var control = await db.TaskInterventions.SingleOrDefaultAsync(x => x.TaskId == taskId, ct);
         if (control == null)
         {
@@ -56,7 +61,7 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         if (action == "cancel" && task.TaskStatus == "CANCELLED")
             return new { message = "Cancellation already recorded; safety hold remains until confirmed." };
         if (task.TaskStatus == "COMPLETED" || task.TaskStatus == "CANCELLED" &&
-            !(assignment != null && action is "pause" or "request-cancel" or "force-cancel"))
+            !(assignment != null && action is "pause" or "request-cancel" or "force-cancel" or "return-to-charge" or "recover-requeue"))
             throw new InvalidOperationException("Task is terminal.");
         if (action is "cancel" or "request-cancel" && control.State != "NORMAL" &&
             !(action == "request-cancel" && control.State is "CANCELLED_HOLD" or "RETURNING_HOME" or "CANCEL_STOP_PENDING"))
@@ -69,6 +74,18 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         Audit(action, taskId, userId, request.Reason.Trim(), assignment, control, now, request);
         switch (action)
         {
+            case "return-to-charge":
+                var recovered=task.TaskStatus=="QUEUED" && assignment?.AssignmentStatus=="FAILED" && control.State=="NORMAL";
+                if(!configuration.GetValue<bool>("Charging:Enabled") || !(task.TaskStatus=="CANCELLED"||recovered) ||
+                    assignment?.Mission==null || request.ExpectedAssignmentId!=assignment.AssignmentId ||
+                    !(control.State=="CANCELLED_HOLD"||recovered) || !control.CommandAcknowledged ||
+                    !request.PhysicalSafetyConfirmed || !request.LoadRemovedConfirmed ||
+                    !await EmptyAndHealthy(assignment,ct,recovered))
+                    throw new InvalidOperationException("Maintenance must confirm a stopped, empty, healthy cancelled robot with its current assignment.");
+                if(!routes.GetRobotPositions().TryGetValue(robot!.RobotCode,out var anchor))
+                    throw new InvalidOperationException("No fresh camera QR. Inspect/relocalize the stopped robot at a checkpoint before requesting return; no blind movement is allowed.");
+                PrepareReturn(control,assignment,anchor,now);
+                break;
             case "recover-requeue":
                 if (assignment == null || request.ExpectedAssignmentId != assignment.AssignmentId)
                     throw new InvalidOperationException("Assignment changed or was not specified. Refresh and physically confirm recovery for the current assignment.");
@@ -192,8 +209,36 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
             paused = control.Paused, retryAt = task.ScheduledTime,
             message = action == "recover-requeue" ?
                 $"Recovered at pickup. Task QUEUED; eligible for {(task.DispatchMode == "AUTO" ? "AUTO" : "manual")} assignment at {task.ScheduledTime:O}. Failed robot remains in Maintenance." :
+                action=="return-to-charge" ? "Stopped-position validation requested. The empty robot will remain unavailable until its charging return is confirmed." :
                 command == null ? "Task cancelled." :
                 "Intervention saved. Robot command pending acknowledgement; robot is not available for dispatch." };
+    }
+
+    private async Task<bool> EmptyAndHealthy(TaskAssignment a,CancellationToken ct,bool recovered=false)
+    {
+        if(a.Mission==null || a.Robot.ConnectionStatus!="ONLINE" || !(a.Robot.OperationalStatus=="BUSY"||recovered&&a.Robot.OperationalStatus=="MAINTENANCE") ||
+            !RobotPresencePolicy.IsFresh(a.Robot,DateTime.UtcNow,configuration) ||
+            !(a.Mission.MissionStatus is "INITIALIZING" or "NAVIGATING_TO_PICKUP" || recovered&&a.Mission.MissionStatus=="FAILED") ||
+            await db.DeliveryVerifications.AnyAsync(v=>v.MissionId==a.Mission.MissionId&&v.VerificationStage=="PICKUP"&&v.IsVerified,ct) ||
+            await db.RobotIncidents.AnyAsync(i=>i.RobotId==a.RobotId&&!i.IsResolved&&(i.Severity=="ERROR"||i.Severity=="FATAL"||i.Severity=="HIGH"||i.Severity=="CRITICAL"),ct) ||
+            await db.RobotMaintenanceRecords.AnyAsync(m=>m.RobotId==a.RobotId&&(m.MaintenanceStatus=="SCHEDULED"||m.MaintenanceStatus=="IN_PROGRESS"),ct))return false;
+        if(routes.GetMission(a.Mission.MissionId)?.PickupReached==true)return false;
+        var execution=await db.MissionExecutions.AsNoTracking().SingleOrDefaultAsync(e=>e.MissionId==a.Mission.MissionId,ct);
+        if(execution==null)return !configuration.GetValue<bool>("DemoRoute:Enabled")||a.Mission.MissionStatus=="INITIALIZING";
+        using var payload=JsonDocument.Parse(execution.RoutePayloadJson);
+        return execution.NextWaypointIndex<=payload.RootElement.GetProperty("pickupWaypointIndex").GetInt32();
+    }
+
+    private void PrepareReturn(TaskIntervention control,TaskAssignment assignment,int anchor,DateTime now)
+    {
+        var charging=configuration.GetValue<bool>("Charging:Enabled");
+        var home=charging?anchor:configuration.GetValue<int?>("Cancellation:HomeArUcoId")
+            ?? throw new InvalidOperationException("No return destination is configured.");
+        var route=JsonSerializer.SerializeToNode(routes.BuildHomeRoute(anchor,home,assignment.Robot.RobotCode),ChargingService.Json)!.AsObject();
+        route["chargeAfterHome"]=charging;
+        route["recoveredAssignment"]=assignment.AssignmentStatus=="FAILED";
+        control.Paused=false;control.State="RETURNING_HOME";
+        Queue(control,assignment,"RETURN_HOME",now,route);
     }
 
     private void CancelTask(TransportTask task, string reason, int? userId, DateTime now)
@@ -273,34 +318,47 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
             if (sent == "CANCEL_STOP")
             {
                 c.State = "CANCELLED_HOLD"; // No pose/route => retain ACTIVE assignment.
-                if (configuration.GetValue<bool>("DemoRoute:Enabled") &&
-                    e.CurrentArUcoId.HasValue && configuration.GetValue<int?>("Cancellation:HomeArUcoId") is int home)
+                if (!c.Paused && configuration.GetValue<bool>("DemoRoute:Enabled") && e.CurrentArUcoId.HasValue &&
+                    await EmptyAndHealthy(a,ct))
                 {
                     try
                     {
-                        var route = routes.BuildHomeRoute(e.CurrentArUcoId.Value, home, code);
-                        c.State = "RETURNING_HOME";
-                        Queue(c, a, "RETURN_HOME", now, route);
+                        PrepareReturn(c,a,e.CurrentArUcoId.Value,now);
                     }
                     catch (InvalidOperationException) { /* Physical recovery is required. */ }
                 }
             }
         }
         else if (e.Event == "HOME_REACHED" && sent == "RETURN_HOME" && c.State == "RETURNING_HOME" &&
-            !c.Paused && e.CurrentArUcoId == configuration.GetValue<int?>("Cancellation:HomeArUcoId"))
+            !c.Paused && e.CurrentArUcoId == JsonDocument.Parse(command.Payload).RootElement.GetProperty("route").GetProperty("homeArUcoId").GetInt32())
         {
             command.DeliveredAt = now;
             c.CommandAcknowledged = true;
             // Keep robot unavailable if health changed on the return journey.
+            var recovering=JsonDocument.Parse(command.Payload).RootElement.GetProperty("route").TryGetProperty("recoveredAssignment",out var wasRecovered)&&wasRecovered.GetBoolean();
             var fault = a.Robot.ConnectionStatus != "ONLINE" ||
-                a.Robot.OperationalStatus != "BUSY" || await db.RobotIncidents.AnyAsync(i =>
+                !(a.Robot.OperationalStatus=="BUSY" || recovering&&a.Robot.OperationalStatus=="MAINTENANCE") || await db.RobotIncidents.AnyAsync(i =>
                     i.RobotId == a.RobotId && !i.IsResolved && (i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" || i.Severity == "CRITICAL"), ct) ||
                 await db.RobotMaintenanceRecords.AnyAsync(m => m.RobotId == a.RobotId &&
                     (m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS"), ct);
-            FinishAssignment(a, fault ? "MAINTENANCE" : "AVAILABLE", null, "Robot confirmed home after cancellation.", now);
+            var charging=configuration.GetValue<bool>("Charging:Enabled") &&
+                JsonDocument.Parse(command.Payload).RootElement.GetProperty("route").TryGetProperty("chargeAfterHome",out var handoff) && handoff.GetBoolean();
+            if(recovering) {
+                if(a.AssignmentStatus!="FAILED" || !await db.TransportTasks.AnyAsync(t=>t.TaskId==a.TaskId&&t.TaskStatus=="QUEUED",ct))return MissionEventResult.Rejected;
+                var status=fault?"MAINTENANCE":"BUSY";
+                db.RobotStatusHistories.Add(new(){RobotId=a.RobotId,PreviousOperationalStatus=a.Robot.OperationalStatus,NewOperationalStatus=status,
+                    Reason="Maintenance confirmed empty recovered robot at camera checkpoint; charging return required",ChangedAt=now});
+                a.Robot.OperationalStatus=status;a.Robot.UpdatedAt=now;
+            } else FinishAssignment(a, fault ? "MAINTENANCE" : charging?"BUSY":"AVAILABLE", null, "Robot confirmed stopped after cancellation.", now);
             if (configuration.GetValue<bool>("Charging:Enabled") && e.CurrentArUcoId is int clearedMarker)
-                await ChargingService.ConfirmDeparture(db, a.RobotId, clearedMarker, ct);
-            c.State = "CANCELLED_HOME";
+                await ChargingService.FinishCancelledDeparture(db, a.RobotId, clearedMarker, ct);
+            if(charging&&!fault) {
+                // The task's last READY may describe its old departure point.
+                // Wait for a new idle-camera handshake before freezing a charge route.
+                routes.RequireFreshLocalization(code);
+                await ChargingService.QueueAfterDelivery(db,a.Robot,a.Mission.MissionId,ct);
+            }
+            c.State = recovering?"NORMAL":charging&&!fault?"CANCELLED_CHARGING":"CANCELLED_HOME";
         }
         else return MissionEventResult.Rejected;
         c.UpdatedAt = now;

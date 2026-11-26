@@ -1,7 +1,7 @@
 import { useState, useEffect, useId, useRef } from "react";
 import { TaskCreateForm } from "./TaskCreationPage";
 import { getAvailableRobotsForTask, assignRobotToTask, getTransportTaskDetailsById, updateTransportTask, priorityToLevel,
-    type TransportTaskDetails, type AvailableRobot, type ManualAssignTaskResponse } from "../api/modules/tasks";
+    requeueCancelledTask, type TransportTaskDetails, type AvailableRobot, type ManualAssignTaskResponse } from "../api/modules/tasks";
 import { useData } from "../context/DataContext";
 import { Priority, Task } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
@@ -31,6 +31,12 @@ export function TasksPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const deleteInFlight = useRef(false);
     const [deleteError, setDeleteError] = useState("");
+    const [requeueTarget, setRequeueTarget] = useState<Task | null>(null);
+    const [requeueReason, setRequeueReason] = useState("");
+    const [goodsAtPickup, setGoodsAtPickup] = useState(false);
+    const [requeueBusy, setRequeueBusy] = useState(false);
+    const [requeueError, setRequeueError] = useState("");
+    const requeueInFlight = useRef(false);
     const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
 
     const [isCreating, setIsCreating] = useState(false);
@@ -170,6 +176,16 @@ export function TasksPage() {
     const handleDelete = (task: Task) => {
         setDeleteError("");
         setDeleteTarget(task);
+    };
+
+    const confirmRequeue = async () => {
+        if (!requeueTarget?.taskId || requeueInFlight.current) return;
+        requeueInFlight.current = true; setRequeueBusy(true); setRequeueError("");
+        try {
+            const message = await requeueCancelledTask(requeueTarget.taskId, requeueReason.trim(), goodsAtPickup);
+            await refreshTasks(); setToast({ msg: message, type: "success" }); setRequeueTarget(null);
+        } catch (error) { setRequeueError((error as Error).message); }
+        finally { requeueInFlight.current = false; setRequeueBusy(false); }
     };
 
     const handleReload = async () => {
@@ -417,18 +433,21 @@ export function TasksPage() {
                                                             CANCEL
                                                         </button>
                                                     )}
-                                                    {task.status === "PENDING" && (
+                                                    {task.status === "CANCELLED" && task.taskId != null && <button type="button"
+                                                        aria-label={`Requeue task ${task.id}`} className="sf-button !px-2.5 !py-1 !text-xs"
+                                                        onClick={() => { setRequeueTarget(task); setRequeueReason(""); setGoodsAtPickup(false); setRequeueError(""); }}>Requeue</button>}
+                                                    {["PENDING", "CANCELLED"].includes(task.status) && (
                                                         <button
                                                             onClick={() => handleDelete(task)}
                                                             aria-label={`Delete task ${task.id}`}
-                                                            className="w-7 h-7 rounded-md flex items-center justify-center transition-all hover:-translate-y-0.5 hover:brightness-125 hover:shadow-md active:translate-y-0 active:scale-95 duration-200"
+                                                            className="px-2 py-1 rounded-md flex items-center justify-center gap-1 text-xs transition-all hover:brightness-125"
                                                             style={{
                                                                 background: "rgba(239,68,68,0.1)",
                                                                 color: "#f87171",
                                                                 border: "1px solid rgba(239,68,68,0.3)",
                                                             }}
                                                         >
-                                                            <Icon d={IC.trash} size={12} />
+                                                            <Icon d={IC.trash} size={12} />{task.status === "CANCELLED" && "Delete"}
                                                         </button>
                                                     )}
                                                 </div>
@@ -543,9 +562,22 @@ export function TasksPage() {
                 </ModalShell>
             )}
 
+            {requeueTarget && <ModalShell title="Requeue cancelled task" sub={`${requeueTarget.id} · ${requeueTarget.pickup} → ${requeueTarget.delivery}`}
+                busy={requeueBusy} onClose={() => setRequeueTarget(null)} width={520}>
+                <form className="p-6 space-y-4" onSubmit={event => { event.preventDefault(); void confirmRequeue(); }}>
+                    <p className="sf-muted text-sm">This returns the task to QUEUED after cancellation is safely completed. AUTO may assign after a minimum 30-second wait; MANUAL waits for your selection. Existing future schedules are kept. Robot return and charging continue independently.</p>
+                    <InputField label="Requeue reason" value={requeueReason} onChange={setRequeueReason} placeholder="For example: goods are ready for another delivery attempt" autoFocus />
+                    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={goodsAtPickup} onChange={e => setGoodsAtPickup(e.target.checked)} className="mt-1" />
+                        I confirm the goods are available at the original pickup point: {requeueTarget.pickup}.</label>
+                    {requeueError && <p role="alert" className="sf-notice sf-notice-danger">{requeueError}</p>}
+                    <div className="flex justify-end gap-3"><button type="button" className="sf-button" disabled={requeueBusy} onClick={() => setRequeueTarget(null)}>Back</button>
+                        <button type="submit" className="sf-button sf-button-primary" disabled={requeueBusy || !goodsAtPickup || !requeueReason.trim() || requeueReason.trim().length > 400}>{requeueBusy ? "Requeuing…" : "Confirm requeue"}</button></div>
+                </form>
+            </ModalShell>}
+
             {/* ══ Delete Confirm ══ */}
             {deleteTarget && (
-                <ModalShell title="Confirm Deletion" sub="This action cannot be undone." busy={isDeleting} onClose={() => { setDeleteTarget(null); setDeleteError(""); }} width={400}>
+                <ModalShell title="Confirm Deletion" sub={deleteTarget.status === "CANCELLED" ? "Remove from the operations list; mission and audit history stay available." : "This action cannot be undone."} busy={isDeleting} onClose={() => { setDeleteTarget(null); setDeleteError(""); }} width={440}>
                     <div className="p-6 text-center">
                         <div
                             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -558,7 +590,7 @@ export function TasksPage() {
                             <Icon d={IC.trash} size={24} />
                         </div>
                         <p className="text-[13px] leading-relaxed mb-6" style={{ color: "var(--text-muted)" }}>
-                            You are about to permanently delete <br />
+                            {deleteTarget.status === "CANCELLED" ? "Remove this cancelled task from the operations list?" : "You are about to permanently delete"} <br />
                             <strong style={{ color: "var(--text-primary)" }}>{deleteTarget.id}</strong>.
                         </p>
                         {deleteError && <p role="alert" className="mb-4 rounded-lg p-3 text-[12px] text-red-400 bg-red-500/10">{deleteError}</p>}
@@ -588,7 +620,7 @@ export function TasksPage() {
                                     border: "1px solid rgba(239,68,68,0.4)",
                                 }}
                             >
-                                {isDeleting ? "Deleting..." : "Delete Permanently"}
+                                {isDeleting ? "Deleting..." : deleteTarget.status === "CANCELLED" ? "Delete cancelled task" : "Delete Permanently"}
                             </button>
                         </div>
                     </div>

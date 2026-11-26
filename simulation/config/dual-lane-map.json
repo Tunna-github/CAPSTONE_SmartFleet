@@ -572,7 +572,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR3"
+        "label": "QR3",
+        "displayName": "Beverages"
       },
       {
         "type": "floor",
@@ -611,7 +612,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR2"
+        "label": "QR2",
+        "displayName": "Snacks & Sweets"
       },
       {
         "type": "floor",
@@ -650,7 +652,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR8"
+        "label": "QR8",
+        "displayName": "Household Goods"
       },
       {
         "type": "floor",
@@ -1306,7 +1309,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR4"
+        "label": "QR4",
+        "displayName": "Rice & Cereals"
       },
       {
         "type": "floor",
@@ -1342,10 +1346,11 @@
         "arucoId": 1,
         "markerYawDeg": -90.0,
         "markerSizeM": 0.04,
-        "operationalRole": "NAVIGATION",
-        "isIntersection": true,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
         "type": "qr",
-        "label": "QR1"
+        "label": "QR1",
+        "displayName": "Instant Noodles"
       },
       {
         "type": "floor",
@@ -1384,7 +1389,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR7"
+        "label": "QR7",
+        "displayName": "Cleaning Supplies"
       },
       {
         "type": "floor",
@@ -2040,7 +2046,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR5"
+        "label": "QR5",
+        "displayName": "Condiments"
       },
       {
         "type": "floor",
@@ -2079,7 +2086,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR0"
+        "label": "QR0",
+        "displayName": "Dairy Area"
       },
       {
         "type": "floor",
@@ -2118,7 +2126,8 @@
         "operationalRole": "TRANSFER",
         "isIntersection": false,
         "type": "qr",
-        "label": "QR6"
+        "label": "QR6",
+        "displayName": "Canned Food"
       },
       {
         "type": "floor",

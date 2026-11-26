@@ -254,12 +254,12 @@ export function TaskCreateForm({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <label className="text-sm">Pickup point (QR) *
                             <select aria-label="Pickup station" name="pickupStationId" className={inputClass} style={inputStyle} required value={pickupSelected||""} onChange={e=>setPickupSelected(Number(e.target.value))}>
-                                <option value="">Select pickup point</option>{transportPoints.map(p=><option value={p.stationId??`blocked-${p.arucoId}`} key={p.arucoId??p.stationId} disabled={!p.pickupEligible || p.stationId===deliverySelected}>QR{p.arucoId??"?"} · {p.stationName || "Navigation checkpoint"}{p.pickupEligible ? "" : ` — ${p.unavailableReason || "Not enabled for pickup."}`}</option>)}
+                                <option value="">Select pickup point</option>{transportPoints.map(p=><option value={p.stationId??`blocked-${p.arucoId}`} key={p.arucoId??p.stationId} disabled={!p.pickupEligible || p.stationId===deliverySelected}>{p.stationName || "Navigation checkpoint"} · QR{p.arucoId??"?"}{p.pickupEligible ? "" : ` — ${p.unavailableReason || "Not enabled for pickup."}`}</option>)}
                             </select>
                         </label>
                         <label className="text-sm">Delivery point (QR) *
                             <select aria-label="Delivery station" name="deliveryStationId" className={inputClass} style={inputStyle} required value={deliverySelected||""} onChange={e=>setDeliverySelected(Number(e.target.value))}>
-                                <option value="">Select delivery point</option>{transportPoints.map(p=><option value={p.stationId??`blocked-${p.arucoId}`} key={p.arucoId??p.stationId} disabled={!p.deliveryEligible || p.stationId===pickupSelected}>QR{p.arucoId??"?"} · {p.stationName || "Navigation checkpoint"}{p.deliveryEligible ? "" : ` — ${p.unavailableReason || "Not enabled for delivery."}`}</option>)}
+                                <option value="">Select delivery point</option>{transportPoints.map(p=><option value={p.stationId??`blocked-${p.arucoId}`} key={p.arucoId??p.stationId} disabled={!p.deliveryEligible || p.stationId===pickupSelected}>{p.stationName || "Navigation checkpoint"} · QR{p.arucoId??"?"}{p.deliveryEligible ? "" : ` — ${p.unavailableReason || "Not enabled for delivery."}`}</option>)}
                             </select>
                         </label>
                     </div>

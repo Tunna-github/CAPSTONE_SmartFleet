@@ -17,11 +17,14 @@ public sealed class TaskInterventionsController(TaskInterventionService service,
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var rows = await db.TaskAssignments.AsNoTracking()
-            .Where(a => a.AssignmentStatus == "ACTIVE")
-            .Select(a => new { a.TaskId, a.AssignmentId, a.RobotId, a.Robot.RobotCode,
+            .Where(a => a.AssignmentStatus == "ACTIVE" || a.AssignmentStatus=="FAILED"&&a.Task.TaskStatus=="QUEUED"&&a.Robot.OperationalStatus=="MAINTENANCE"&&
+                !db.TaskAssignments.Any(active=>active.RobotId==a.RobotId&&active.AssignmentStatus=="ACTIVE")&&
+                !db.DeliveryVerifications.Any(v=>a.Mission!=null&&v.MissionId==a.Mission.MissionId&&v.VerificationStage=="PICKUP"&&v.IsVerified))
+            .Select(a => new { a.TaskId, a.AssignmentId,a.AssignmentStatus, a.RobotId, a.Robot.RobotCode,
                 a.Task.TaskTrackingCode, a.Task.TaskStatus, a.Robot.OperationalStatus,
                 a.Task.PickupStationId, pickupStationName = a.Task.PickupStation.StationName,
                 a.Robot.ConnectionStatus, missionStatus = a.Mission == null ? null : a.Mission.MissionStatus,
+                pickupVerified=db.DeliveryVerifications.Any(v=>a.Mission!=null&&v.MissionId==a.Mission.MissionId&&v.VerificationStage=="PICKUP"&&v.IsVerified),
                 intervention = db.TaskInterventions.FirstOrDefault(c => c.TaskId == a.TaskId) })
             .ToListAsync(ct);
         return Ok(rows);
@@ -51,6 +54,11 @@ public sealed class TaskInterventionsController(TaskInterventionService service,
     [HttpPost("{taskId:long}/pause")]
     public Task<IActionResult> Pause(long taskId, InterventionRequest request, CancellationToken ct) =>
         Execute(taskId, "pause", request, ct);
+
+    [HttpPost("{taskId:long}/return-to-charge")]
+    [Authorize(Roles=AppRoles.MaintenanceTechnician)]
+    public Task<IActionResult> ReturnToCharge(long taskId,InterventionRequest request,CancellationToken ct)=>
+        Execute(taskId,"return-to-charge",request,ct);
 
     private async Task<IActionResult> Execute(long id, string action, InterventionRequest request, CancellationToken ct)
     {

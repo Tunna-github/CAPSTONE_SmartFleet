@@ -34,7 +34,7 @@ test("Maintenance can recover only after all three physical confirmations", asyn
   const calls = await prepare(page, "Maintenance Technician");
   await page.goto("/profile");
   await page.getByRole("button", { name: "Robot safety / Pause", exact: true }).click();
-  await expect(page.getByText("Original pickup: Original Pickup A", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Pickup: Original Pickup A/)).toBeVisible();
   const recover = page.getByRole("button", { name: "Recover & Requeue (wait 30s)", exact: true });
   await expect(recover).toBeDisabled();
   await page.getByRole("textbox", { name: "Reason" }).fill("Goods returned to original pickup");
@@ -47,7 +47,7 @@ test("Maintenance can recover only after all three physical confirmations", asyn
   expect(calls[0].body).toMatchObject({ physicalSafetyConfirmed: true, loadRemovedConfirmed: true,
     loadReturnedToPickupConfirmed: true, expectedAssignmentId: 1 });
   await expect(page.getByRole("status")).toContainText("QUEUED; wait 30 seconds");
-  await expect(page.getByText("No active robot assignments.", { exact: true })).toBeVisible();
+  await expect(page.getByText("No transport tasks need intervention", { exact: true })).toBeVisible();
 });
 
 test("Operator sees FAILED as FAILED and cannot use Maintenance recovery", async ({ page }) => {

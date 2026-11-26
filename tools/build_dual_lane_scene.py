@@ -1,7 +1,7 @@
 """Build an explicitly commissioned alternative scene; never edits a running map.
 
-Each of the original nine QR points has a circulation ring. Eight transfer bays
-sit inside rings, outside through lanes; QR1 stays reserved. Charging bays are
+Each of the original nine QR points has a circulation ring. Nine transfer bays
+sit inside rings, outside through lanes. Charging bays are
 pull-through between separate entry/exit buses. All dimensions are metres.
 """
 import hashlib
@@ -17,6 +17,7 @@ def build():
     import numpy as np
     root = ROOT / 'simulation'
     old = json.loads((root / 'config/scene-manifest.json').read_text())
+    area_names = json.loads((root / 'config/transfer-area-names.json').read_text(encoding='utf-8'))
     original = (root / 'worlds/smartfleet.wbt').read_text()
     anchors, by_pos, edges = {}, {}, []
     next_id = 9
@@ -45,7 +46,7 @@ def build():
     for ri, row in enumerate(order):
         for ci, marker in enumerate(row):
             r, c = 3 + ri * 4, 4 + ci * 6
-            center = point(r, c, marker, 'NAVIGATION' if marker == 1 else 'TRANSFER', marker == 1)
+            center = point(r, c, marker, 'TRANSFER')
             nw, north, ne, se, sw = [point(y, x) for y, x in
                 [(r-1,c-1),(r-1,c),(r-1,c+1),(r+1,c+1),(r+1,c-1)]]
             rings[ri, ci] = (nw, north, ne, se, sw)
@@ -84,6 +85,8 @@ def build():
     cells = [[dict(type='floor',label=None,arucoId=None,isIntersection=False) for _ in range(28)] for _ in range(18)]
     for a in anchors.values():
         cells[a['row']][a['col']] = {k:a[k] for k in ['arucoId','markerYawDeg','markerSizeM','operationalRole','isIntersection']} | dict(type='qr',label=f"QR{a['arucoId']}")
+        if str(a['arucoId']) in area_names:
+            cells[a['row']][a['col']]['displayName'] = area_names[str(a['arucoId'])]
     doc = dict(rows=18,columns=28,revision=1,cells=cells,
         directedLinks=True,markerDictionary='DICT_4X4_250',links=[[f'QR{a}',f'QR{b}'] for a,b in edges])
     (root / 'config/dual-lane-map.json').write_text(json.dumps(doc,indent=2)+'\n')
@@ -117,7 +120,7 @@ Solid { translation 0 0 -0.05 children [ Shape { appearance PBRAppearance { base
             color = '0.55 0.86 0.63' if a['operationalRole']=='CHARGING' else '0.61 0.79 0.94'
             world += f'Solid {{ translation {x} {y} 0.002 children [ Shape {{ appearance PBRAppearance {{ baseColor {color} roughness 1 metalness 0 }} geometry Plane {{ size 0.40 0.40 }} }} ] name "bay-{m}" }}\n'
         world += f'Solid {{ translation {x} {y} 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape {{ appearance PBRAppearance {{ baseColorMap ImageTexture {{ url [ "textures/dual-lane/QR{m}.png" ] }} metalness 0 roughness 1 }} geometry Plane {{ size 0.04 0.04 }} }} ] name "QR{m}" }}\n'
-    for code,marker in [('R01',0),('R02',4)]:
+    for code,marker in [('R01',0),('R02',67)]:
         # Existing validated robot and downward camera assembly. This is only
         # initial placement; heading is determined from camera + IMU.
         block = re.search(r'DEF SF_'+code+r' TurtleBot3Burger \{.*?\n\}',original,re.S).group()
@@ -136,7 +139,7 @@ Solid { translation 0 0 -0.05 children [ Shape { appearance PBRAppearance { base
         directedLinks=True,markerDictionary='DICT_4X4_250',metersPerGridCell=.5,
         worldToGrid=[[0,2,10],[2,0,7]],worldToMapYawDeg=180.,
         anchors=[{k:v for k,v in a.items() if k != 'isIntersection'} for a in sorted(anchors.values(),key=lambda a:a['arucoId'])],
-        corridors=edges,intersections=[1],assets=assets,robots=old['robots'],chargingBays=bays)
+        corridors=edges,intersections=[],assets=assets,robots=old['robots'],chargingBays=bays)
     (root/'config/dual-lane-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print(f'Built {len(anchors)} markers, {len(edges)} directed links, four charging bays. Existing nine station IDs retained.')
 

@@ -19,9 +19,27 @@ public sealed class ChargingService(SmartFleetDbContext db, QrDemoRouteService r
         if (await db.ChargingJobs.AnyAsync(j => j.RobotId == robot.RobotId && j.State != "COMPLETED", ct))
             throw new InvalidOperationException("Robot already has an unfinished charging cycle.");
         var generation = (await db.ChargingJobs.Where(j => j.RobotId == robot.RobotId).MaxAsync(j => (int?)j.Generation, ct) ?? 0) + 1;
-        db.ChargingJobs.Add(new() { Id = Guid.NewGuid(), RobotId = robot.RobotId, SourceMissionId = missionId,
+        var ownedBerth = await db.StationBerths.Where(b=>b.RobotId==robot.RobotId).Select(b=>(int?)b.StationId).SingleOrDefaultAsync(ct);
+        db.ChargingJobs.Add(new() { Id = Guid.NewGuid(), RobotId = robot.RobotId, SourceMissionId = missionId, StationId=ownedBerth,
             Generation = generation, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow });
         robot.OperationalStatus = "BUSY";
+    }
+
+    // A cancelled departure may still physically occupy its original berth.
+    // Transfer ownership to the new return cycle without exposing the bay as free.
+    public static async Task FinishCancelledDeparture(SmartFleetDbContext db,int robotId,int cameraMarker,CancellationToken ct)
+    {
+        await ConfirmDeparture(db,robotId,cameraMarker,ct);
+        await db.SaveChangesAsync(ct);
+        var old=await db.ChargingJobs.SingleOrDefaultAsync(j=>j.RobotId==robotId&&j.State=="DEPARTING",ct);
+        if(old==null)return;
+        var berth=await db.StationBerths.SingleOrDefaultAsync(b=>b.RobotId==robotId&&b.StationId==old.StationId,ct);
+        var marker=await db.StationCheckpoints.Where(p=>p.StationId==old.StationId).Select(p=>(int?)p.ArucoId).SingleOrDefaultAsync(ct);
+        if(berth==null||marker!=cameraMarker)throw new InvalidOperationException("Cannot transfer an unconfirmed charging berth.");
+        old.State="COMPLETED";old.UpdatedAt=DateTime.UtcNow;old.Revision++;
+        // Save before creating a second open job: the PostgreSQL partial unique
+        // index must see this cycle closed first, within the outer transaction.
+        await db.SaveChangesAsync(ct);
     }
 
     public static async Task BeginDeparture(SmartFleetDbContext db, int robotId, CancellationToken ct, QrDemoRouteService? routes = null)

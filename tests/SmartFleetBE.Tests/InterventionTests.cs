@@ -431,6 +431,56 @@ public sealed class InterventionTests
         Assert.Equal("QUEUED", db.TransportTasks.Single().TaskStatus);
     }
 
+    [Theory]
+    [InlineData("READY", true)]
+    [InlineData("OLD_CYCLE", false)]
+    [InlineData("RETURNING", false)]
+    [InlineData("NO_STOP", false)]
+    [InlineData("NO_BERTH", false)]
+    [InlineData("OPEN_FAILURE", false)]
+    [InlineData("NEW_FAILURE", false)]
+    [InlineData("OFFLINE", false)]
+    public async Task ManualRetryRequiresSafeDockingAfterEveryFailedAttempt(string scenario, bool allowed)
+    {
+        var (db, _, _) = Fixture();
+        var now = DateTime.UtcNow;
+        var task = db.TransportTasks.Single(); task.TaskStatus = "QUEUED"; task.DispatchMode = "AUTO";
+        var old = db.TaskAssignments.Single(); old.AssignmentStatus = "FAILED";
+        old.EndedAt = scenario == "OPEN_FAILURE" ? null : now.AddMinutes(-2);
+        db.Missions.Single().MissionStatus = "FAILED";
+        var robot = db.Robots.Single(); robot.OperationalStatus = "AVAILABLE";
+        if (scenario == "OFFLINE") robot.ConnectionStatus = "OFFLINE";
+        var job = new ChargingJob { Id = Guid.NewGuid(), RobotId = 1, SourceMissionId = 1, StationId = 3,
+            State = scenario == "RETURNING" ? "RETURNING" : "READY",
+            CreatedAt = scenario == "OLD_CYCLE" ? now.AddMinutes(-3) : now.AddMinutes(-1),
+            LastStoppedAt = scenario == "NO_STOP" ? null : now, UpdatedAt = now };
+        db.ChargingJobs.Add(job);
+        if (scenario != "NO_BERTH") db.StationBerths.Add(new() { StationId = 3, RobotId = 1, ReservedAt = now });
+        if (scenario == "NEW_FAILURE") db.TaskAssignments.Add(new() { TaskId = 1, RobotId = 1,
+            AssignmentStatus = "FAILED", EndedAt = now.AddSeconds(-10) });
+        await db.SaveChangesAsync();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
+            ["AutoDispatch:VerifiedPayloadLimitKg"] = "10", ["Charging:Enabled"] = "true" }).Build();
+        var service = new TaskDispatchService(db, config, NullLogger<TaskDispatchService>.Instance);
+        var candidates = await service.GetAvailableRobotsAsync(1, includeIneligible: true);
+        Assert.Equal(allowed, Assert.Single(candidates.Value!).IsEligible);
+
+        if (allowed) {
+            var options = (DbContextOptions<SmartFleetDbContext>)db.GetService<IDbContextOptions>();
+            using var provider = new ServiceCollection().AddScoped(_ => new SmartFleetDbContext(options)).BuildServiceProvider();
+            var factory = provider.GetRequiredService<IServiceScopeFactory>();
+            var auto = new AutoDispatchService(factory, config, new FleetRealtimePublisher(new SinkHub(), factory),
+                NullLogger<AutoDispatchService>.Instance);
+            Assert.False(await auto.TryAssignAsync(1)); // even recovered/docked robot stays excluded from AUTO
+        }
+        var result = await service.AssignManualAsync(1, 1, 42);
+        Assert.Equal(allowed, result.Status == SmartFleetBE.Services.Results.TransportTaskResultStatus.Success);
+        Assert.Equal("FAILED", old.AssignmentStatus); // retain original evidence
+        Assert.Equal("FAILED", db.Missions.Single(m => m.MissionId == 1).MissionStatus);
+        Assert.Equal(allowed ? 1 : 0, db.TaskAssignments.Count(a => a.AssignmentStatus == "ACTIVE"));
+        Assert.Equal(allowed ? "DEPARTING" : job.State, db.ChargingJobs.Single().State);
+    }
+
     private static IConfiguration DispatchConfig() => new ConfigurationBuilder()
         .AddInMemoryCollection(new Dictionary<string, string?> { ["AutoDispatch:VerifiedPayloadLimitKg"] = "10" }).Build();
 

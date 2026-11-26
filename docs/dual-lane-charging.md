@@ -8,8 +8,10 @@ a physical marker or changes a Webots world.
 
 ## Business flow
 
-1. Operator creates a transport task using the original transfer points QR0,
-   QR2–QR8. QR1 remains reserved, unavailable as a goods-transfer stop.
+1. Operator creates a transport task using the nine named transfer areas
+   QR0–QR8. After logical commissioning version 7, QR1 is an off-road transfer
+   bay on the separated-lane scene. It remains a reserved intersection on the
+   legacy single-lane scene and cannot be a transfer endpoint there.
 2. Camera + IMU initialize position and heading automatically. Every road
    segment requires an ordered backend navigation grant.
 3. Operator confirms pickup and delivery beside the live tracking view. The
@@ -34,17 +36,22 @@ The battery increase while docked is a Webots-only simulation model. A physical
 robot requires its real dock/BMS safety handshake; simulated ground-truth poses
 never authorize arrival, handover, charging readiness or resource release.
 
-The charging profile uses 1.5× straight cruise speed (3.3 rather than 2.2
-wheel rad/s) to shorten simulation testing. Near-QR, final approach, turning and
-overshoot speeds remain unchanged. `SIMULATION_CRUISE_SCALE` can override the
-cruise multiplier within 0.5–1.5. The earlier two-robot acceptance run used 1.25×;
-1.5× still requires a physical Webots route check before relying on that speed.
+The charging profile requests 4× straight cruise speed. A request of 8.8 rad/s
+exceeds the model's 6.67 rad/s motor limit and the controller's conservative
+6 rad/s software cap. The controller explicitly limits cruise to 6 rad/s
+(2.73× the original 2.2), reports both requested/effective multipliers, and never
+claims a clipped command is full 4×. Near-QR, final approach, turning and overshoot
+speeds remain unchanged. `SIMULATION_CRUISE_SCALE` accepts 0.5–4.0.
+Encoder measurements and simulation-time/wall-time throughput are published in
+`telemetry.motion`. The cancel-return test measured a peak 5.94 rad/s against
+6 rad/s wheel commands. Slow software rendering and approach/turn phases still
+make a complete mission slower than its straight-cruise multiplier suggests.
 Network presence uses a wall-clock heartbeat,
 so slow rendering does not stretch a simulation-time telemetry interval.
 
 ## Physical layout and QR responsibilities
 
-- Existing service IDs: 0–8; QR1 remains reserved.
+- Existing service IDs: 0–8. All nine are off-road transfer bays in this scene.
 - Each grid location has a directed circulation ring and an internal stop bay.
   Opposite through directions use different physical lanes and checkpoints.
   Shared bay spurs use current/next occupancy and exit-clear checks.
@@ -67,7 +74,41 @@ Occupancy survives disconnects and backend restarts; a timeout cannot clear it.
 Routes initially avoid occupied checkpoints. Temporary traffic can still cause
 safe waiting; a physically blocked route is not declared clear automatically.
 
+Area names are stored in `simulation/config/transfer-area-names.json`, in each
+map cell's `displayName`, and in the operational station's name. Task selectors
+show the area name first, with the QR ID retained for navigation/confirmation.
+Station IDs, existing codes and QR payloads remain stable. QR1 uses payload
+`QR1`; its old reserved flag is removed only after checking the complete
+commissioned directed graph and the QR1 ↔ QR30 dead-end spur.
+
+The logical version-7 upgrade requires no active assignments/failed holds and
+actual stop ACKs for any paused charging cycles. It preserves berth ownership,
+mission history and frozen verification payloads. Charging recovery then uses a
+new generation and a route on the new map revision, even when already docked.
+It does not alter the world hash or move simulated markers/robots. Geometry
+changes and actual reserved intersections still require separate commissioning.
+
 ## Lost QR, faults and recovery
+
+Direct cancellation of an empty, healthy transport now finishes only its
+already-authorized current leg if it is between camera checkpoints. Pause and
+Force Cancel still stop immediately. At the next camera-confirmed QR, a stopped
+control handshake fences the transport and hands off to a persisted charging
+job. The assignment becomes CANCELLED and mission ABORTED; the robot stays BUSY
+until an actual reserved-berth arrival and charging-readiness checks. No fixed
+`Cancellation:HomeArUcoId` is needed in the charging profile.
+
+No fresh camera anchor, a Pause during cancellation, an obstacle or unsafe
+device condition keeps the robot held for Maintenance. Maintenance's explicit
+empty-robot return action requires physical confirmations, the current
+assignment identity and fresh camera localization. A recovered empty failed
+assignment can return without rewriting its failed mission or queued task.
+The last transport READY is invalidated at handoff, so a stale departure QR
+cannot be frozen into the new charging route.
+
+The canonical scene paints QR1's transfer bay and starts R02 at charging QR67.
+This is not an automatic reset of an active mission. Existing installations
+must stop/recover interrupted tasks before recreating the simulator.
 
 After a previously seen QR disappears, the robot stops and retries stationary
 camera acquisition for up to eight seconds. Encoders bound travel on a segment

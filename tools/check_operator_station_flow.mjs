@@ -30,9 +30,10 @@ try {
   assert.equal(pickup.arucoId,2);assert.equal(delivery.arucoId,7);
   if(allQr) {
     assert.equal(catalog.transportPoints.length,9);
-    assert.deepEqual(catalog.transportPoints.filter(p=>p.pickupEligible&&p.deliveryEligible).map(p=>p.arucoId),[0,2,3,4,5,6,7,8]);
-    const intersection=catalog.transportPoints.find(p=>p.arucoId===1);
-    assert.ok(!intersection.pickupEligible&&!intersection.deliveryEligible);
+    const map=await page.request.get(base+'/api/v1/navigation/map',{headers}).then(r=>r.json());
+    const qr1=map.cells.flat().find(c=>c.arucoId===1);
+    const eligible=qr1.isIntersection ? [0,2,3,4,5,6,7,8] : [0,1,2,3,4,5,6,7,8];
+    assert.deepEqual(catalog.transportPoints.filter(p=>p.pickupEligible&&p.deliveryEligible).map(p=>p.arucoId),eligible);
   }
   await page.getByRole('button',{name:'Transport tasks',exact:true}).click();
   const scenarios=allQr&&create ? [[0,8,'MANUAL'],[7,2,'MANUAL'],[3,5,'MANUAL'],[4,6,'MANUAL'],[8,0,'AUTO']] :
@@ -50,7 +51,9 @@ try {
     await page.screenshot({path:path.join(output,`operator-create-${mode.toLowerCase()}-${pickupQr}-${deliveryQr}.png`),fullPage:true});
     if(allQr) {
       assert.equal(await page.getByLabel('Pickup station',{exact:true}).locator('option').count(),10);
-      assert.equal(await page.getByLabel('Pickup station',{exact:true}).locator('option[value="blocked-1"]').isDisabled(),true);
+      const point=catalog.transportPoints.find(p=>p.arucoId===1);
+      const value=point.stationId??'blocked-1';
+      assert.equal(await page.getByLabel('Pickup station',{exact:true}).locator(`option[value="${value}"]`).isDisabled(),!point.pickupEligible);
     }
     if(!create) {await page.getByRole('button',{name:'Cancel',exact:true}).click();break;}
     const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/transport-tasks'&&r.request().method()==='POST');
@@ -66,7 +69,10 @@ try {
   const denied=await page.request.put(base+`/api/v1/warehouse-catalog/stations/${pickup.stationId}`,{headers,data:{}});
   assert.equal(denied.status(),403,'Operator must not gain station-configuration permissions');
   assert.deepEqual(errors,[]);
-  const result={operatorOnlyLogin:true,stations:{P1:2,D1:7},allMapQrShown:allQr,intersectionTransitOnly:allQr,created,operatorCannotConfigureStations:true,errors};
+  const qr1=catalog.transportPoints?.find(p=>p.arucoId===1);
+  const result={operatorOnlyLogin:true,stations:{P1:2,D1:7},allMapQrShown:allQr,
+    qr1TransferEnabled:!!(qr1?.pickupEligible&&qr1?.deliveryEligible),
+    intersectionTransitOnly:!!qr1?.unavailableReason?.includes('Reserved intersection'),created,operatorCannotConfigureStations:true,errors};
   fs.writeFileSync(path.join(output,'operator-station-flow.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result,null,2));
 } finally {await browser.close();}

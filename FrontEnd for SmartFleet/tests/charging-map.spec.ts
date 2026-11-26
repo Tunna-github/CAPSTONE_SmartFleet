@@ -56,5 +56,5 @@ test('Operator sees charging safety controls in live tracking and the global Pau
   await expect.poll(()=>state.pauses).toBe(1);
   await expect(page.getByRole('button',{name:'Resume safe return'})).toHaveCount(0);
   await page.getByRole('button',{name:'Robot safety / Pause',exact:true}).click();
-  await expect(page.getByRole('region',{name:'Robot safety controls'}).getByRole('button',{name:'Pause robot',exact:true})).toBeVisible();
+  await expect(page.getByRole('dialog',{name:'Robot safety controls'}).getByRole('button',{name:'Pause robot',exact:true})).toBeVisible();
 });

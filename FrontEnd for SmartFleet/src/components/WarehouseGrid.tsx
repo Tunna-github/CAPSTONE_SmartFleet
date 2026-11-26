@@ -353,6 +353,7 @@ export function WarehouseGrid({
         const transit = directedLinks && cell.type === "qr" && cell.operationalRole === "NAVIGATION" && !cell.isIntersection;
         if (transit) return <g key={`${ri}-${ci}`}><title>{`QR${cell.arucoId} · lane checkpoint (no goods transfer)`}</title><rect x={x+16} y={y+16} width={8} height={8} rx={2} fill={isLight ? "#0e7490" : "#22d3ee"} /><text x={x+20} y={y+12} textAnchor="middle" fontSize={5} fill={isLight ? "#0e7490" : "#67e8f9"}>{cell.arucoId}</text></g>;
         const annotated = !compactLabels && !!(cell.displayName?.trim() || station || (cell.operationalRole && cell.operationalRole !== "NAVIGATION"));
+        const compactHeading = compactLabels && (cell.operationalRole === "CHARGING" || !!(cell.displayName?.trim() || station?.name));
         return (
             <g key={`${ri}-${ci}`} pointerEvents="none">
                 {compactLabels && !(cell.displayName && cell.operationalRole !== "CHARGING") && <title>{[cell.arucoId != null ? `QR${cell.arucoId}` : cell.label,cell.displayName || station?.name,cell.operationalRole,station?.isOccupied ? "Occupied or reserved" : null].filter(Boolean).join(" · ")}</title>}
@@ -360,7 +361,7 @@ export function WarehouseGrid({
                 {(cell.type === "station" || cell.type === "qr" || cell.type === "charge") && (
                     <>
                         <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
-                        <text x={x + CELL / 2} y={y + (compactLabels && cell.operationalRole === "CHARGING" ? 16 : annotated ? 19 : CELL / 2 + 4)} textAnchor="middle" fontSize={compactLabels ? 14 : qrOnly ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>
+                        <text x={x + CELL / 2} y={y + (compactHeading ? 16 : annotated ? 19 : CELL / 2 + 4)} textAnchor="middle" fontSize={compactLabels ? 14 : qrOnly ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>
                             {cell.type === "qr" && cell.arucoId !== undefined ? `QR${cell.arucoId}` : cell.label}
                         </text>
                         {compactLabels && cell.operationalRole === "CHARGING" && <text x={x+CELL/2} y={y+31} textAnchor="middle" fontSize={12} fontWeight="bold" fill={style.stroke}>{station?.code??"CHG"}</text>}
@@ -381,22 +382,22 @@ export function WarehouseGrid({
         const station = cell?.type === "qr" && cell.arucoId !== undefined ? stationByMarker.get(cell.arucoId) : undefined;
         if (cell?.type !== "qr") return null;
         const fullName = cell.displayName?.trim() || station?.name;
-        if(compactLabels && (!cell.displayName || cell.operationalRole === "CHARGING")) return null;
+        if(compactLabels && (!fullName || cell.operationalRole === "CHARGING")) return null;
         const role = cell.isIntersection ? "Intersection" : cell.operationalRole ?? station?.type;
         const roleLabel = role && (stationRoles[role as keyof typeof stationRoles] ?? (role === "NAVIGATION" ? "Navigation" : role));
         if (!fullName && (!roleLabel || roleLabel === "Navigation" || roleLabel === "Intersection")) return null;
         const description = station && !station.isActive ? `${roleLabel ?? ""} (inactive)` : roleLabel;
         const primary = fullName || description || "";
         const name = primary.length > 19 ? `${primary.slice(0, 18)}…` : primary;
-        const detail = fullName && description;
+        const detail = !compactLabels && fullName && description;
         const color = isLight ? "#4c1d95" : "#f3e8ff";
         const x = c * CELL + CELL / 2;
         const y = r * CELL;
-        const badgeWidth = CELL * 2 - 4;
+        const badgeWidth = compactLabels ? CELL * 3 - 4 : CELL * 2 - 4;
         return <g key={label} pointerEvents="none" aria-label={[fullName, description].filter(Boolean).join(" — ")}>
             <title>{[station?.code, fullName, description].filter(Boolean).join(" · ")}</title>
             <rect x={x - badgeWidth / 2} y={y + 23} width={badgeWidth} height={detail ? 23 : 15} rx="3" fill={cellTypeStyles.qr.fill} stroke={cellTypeStyles.qr.stroke} strokeWidth="0.6" />
-            <text x={x} y={y + 33} textAnchor="middle" fontSize="9" fontWeight="bold" fill={color}
+            <text x={x} y={y + 33} textAnchor="middle" fontSize={compactLabels ? 11 : 9} fontWeight="bold" fill={color}
                 textLength={name.length > 13 ? badgeWidth - 8 : undefined} lengthAdjust="spacingAndGlyphs">{name}</text>
             {detail && <text x={x} y={y + 43} textAnchor="middle" fontSize="8" fill={color}
                 textLength={detail.length > 16 ? badgeWidth - 8 : undefined} lengthAdjust="spacingAndGlyphs">{detail}</text>}

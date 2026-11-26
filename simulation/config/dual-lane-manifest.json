@@ -2,7 +2,7 @@
   "sceneId": "smartfleet-dual-lane-r2025a-v2",
   "warehouseId": 1,
   "world": "worlds/smartfleet-dual-lane.wbt",
-  "worldSha256": "88718429a9164b664b548f2aa67b4262528ab8083f07024fa3ab9aacaf55a343",
+  "worldSha256": "769e511ad9057d918e4b1586634f2cec7f00a45aad40aa7fb6842097db5f0a57",
   "mapFile": "config/dual-lane-map.json",
   "mapRevisionAtExport": 1,
   "directedLinks": true,
@@ -40,7 +40,7 @@
       "worldY": 0.0,
       "markerYawDeg": -90.0,
       "markerSizeM": 0.04,
-      "operationalRole": "NAVIGATION"
+      "operationalRole": "TRANSFER"
     },
     {
       "arucoId": 2,
@@ -1171,9 +1171,7 @@
       61
     ]
   ],
-  "intersections": [
-    1
-  ],
+  "intersections": [],
   "assets": {
     "textures/dual-lane/QR3.png": "45a678a92bb9b330ce07b5d18fc48cddf84e711636ee0b4b70d7d820f529c89d",
     "textures/dual-lane/QR9.png": "730fffc8b8c213885647ea12e1449765f7ba8703fe154d6e77ababb3015c1ca4",

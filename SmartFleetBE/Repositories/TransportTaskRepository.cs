@@ -137,6 +137,7 @@ public sealed class TransportTaskRepository : ITransportTaskRepository
     private IQueryable<TransportTask> BaseQuery(bool asNoTracking)
     {
         IQueryable<TransportTask> query = _dbContext.TransportTasks
+            .Where(t => t.DeletedAt == null)
             .Include(t => t.Warehouse)
             .Include(t => t.PickupStation)
             .Include(t => t.DeliveryStation);

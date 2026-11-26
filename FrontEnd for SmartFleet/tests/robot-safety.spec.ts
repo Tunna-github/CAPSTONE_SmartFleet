@@ -16,7 +16,7 @@ for (const role of ["Warehouse Operator", "Maintenance Technician", "Administrat
       if (path === "/api/v1/task-interventions" && request.method() === "GET")
         return route.fulfill({ json: [{ taskId: 1, assignmentId: 1, robotId: 1, robotCode: "TEST-R1", taskTrackingCode: "TASK-TEST",
           taskStatus: "EXECUTING", missionStatus: "NAVIGATING_TO_PICKUP", connectionStatus: "ONLINE",
-          operationalStatus: "BUSY", intervention: { state: "CANCEL_REQUESTED", paused: true, commandAcknowledged: false } }] });
+          operationalStatus: "BUSY", intervention: { state: role === "Maintenance Technician" ? "CANCEL_REQUESTED" : "NORMAL", paused: true, commandAcknowledged: false } }] });
       if (path.startsWith("/api/v1/task-interventions/") && request.method() === "POST") {
         calls.push({ url: path, body: request.postDataJSON() });
         return route.fulfill({ json: { message: "Saved; waiting for robot acknowledgement" } });
@@ -26,14 +26,14 @@ for (const role of ["Warehouse Operator", "Maintenance Technician", "Administrat
     });
     await page.goto("/profile");
     await page.getByRole("button", { name: "Robot safety / Pause", exact: true }).click();
-    await expect(page.getByText("TEST-R1 · TASK-TEST")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "TEST-R1", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Pause / Stop", exact: true }).click();
     await expect.poll(() => calls.length).toBe(1);
     expect(calls[0].url).toMatch(/\/pause$/);
     expect(calls[0].body.reason).toBeTruthy();
     await expect(page.getByText("Waiting for robot acknowledgement", { exact: true })).toBeVisible();
     if (role === "Warehouse Operator") {
-      await expect(page.getByRole("button", { name: "Direct cancel → Home" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Cancel task & return" })).toBeDisabled();
       await expect(page.getByRole("button", { name: "Force cancel", exact: false })).toHaveCount(0);
       await page.getByRole("textbox", { name: "Reason" }).fill("Wrong SKU");
       await page.getByRole("button", { name: "Request Maintenance cancel" }).click();
@@ -50,9 +50,9 @@ for (const role of ["Warehouse Operator", "Maintenance Technician", "Administrat
       await expect.poll(() => calls.length).toBe(2);
       expect(calls[1].body.physicalSafetyConfirmed).toBe(true);
       expect(calls[1].body.loadRemovedConfirmed).toBe(true);
-      await expect(page.getByRole("button", { name: "Direct cancel → Home" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Cancel task & return" })).toHaveCount(0);
     } else {
-      await expect(page.getByRole("button", { name: "Direct cancel → Home" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Cancel task & return" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Force cancel", exact: false })).toHaveCount(0);
     }
   });

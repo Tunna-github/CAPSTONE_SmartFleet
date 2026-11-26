@@ -15,7 +15,7 @@ services:
       SMARTFLEET_WORLD: worlds/smartfleet-dual-lane.wbt
       SMARTFLEET_SCENE_MANIFEST: config/dual-lane-manifest.json
       SMARTFLEET_REAL_SIM_LIDAR: 'true'
-      SMARTFLEET_CRUISE_SCALE: ${SIMULATION_CRUISE_SCALE:-1.5}
+      SMARTFLEET_CRUISE_SCALE: ${SIMULATION_CRUISE_SCALE:-4.0}
     volumes:
       - simulator-dual-lane-state:/state
 volumes:

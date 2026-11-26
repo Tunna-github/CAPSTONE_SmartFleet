@@ -133,7 +133,8 @@ detector = cv2.aruco.ArucoDetector(aruco_dict, aruco_params)
 DIRECTION_YAW = {"N": 0.0, "W": 90.0, "S": 180.0, "E": -90.0}
 
 # Original working motion tuning (all wheel speeds under 6.67 rad/s)
-ROBOT_MAX_VEL = 6.0
+MOTOR_HARDWARE_LIMIT = min(left_motor.getMaxVelocity(), right_motor.getMaxVelocity())
+ROBOT_MAX_VEL = min(6.0, MOTOR_HARDWARE_LIMIT)
 MAX_SPEED = 3.5
 TURN_SPEED = 3.0
 OVERSHOOT_TIME = 0.45
@@ -151,9 +152,9 @@ KP_ALIGN_TILT = 0.03
 # With your current camera, a marker near the robot was about 0.17 wide.
 # ============================================================
 CRUISE_SCALE = float(os.environ.get("SMARTFLEET_CRUISE_SCALE", _sf_controller_arg("cruise-scale", "1.0")))
-if not math.isfinite(CRUISE_SCALE) or not .5 <= CRUISE_SCALE <= 1.5:
-    raise ValueError("Simulation cruise scale must be between 0.5 and 1.5")
-SEEK_SPEED = 2.2 * CRUISE_SCALE  # cruise only; near-QR/turn/overshoot tuning stays unchanged
+if not math.isfinite(CRUISE_SCALE) or not .5 <= CRUISE_SCALE <= 4.0:
+    raise ValueError("Simulation cruise scale must be between 0.5 and 4.0")
+SEEK_SPEED = min(2.2 * CRUISE_SCALE, ROBOT_MAX_VEL)  # explicit limit, never claim clipped commands are full speed
 APPROACH_SPEED = 1.35            # marker visible and approaching
 FINAL_APPROACH_SPEED = 0.70     # very close to marker
 RECOVERY_CRAWL_SPEED = 0.65     # briefly reacquire a far marker
@@ -824,12 +825,25 @@ def handle_safety_command(data):
         return
     kind = data.get("command")
     if kind in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL"):
+        marker = current_marker if current_marker is not None and visible_marker(current_marker) is not None else None
+        if (kind == 'CANCEL_STOP' and marker is None and not safety_hold and mission is not None
+                and mission.get('phase') == 'MOVING' and mission.get('encoder_origin') is not None
+                and not mission.get('home_command_id') and not mission.get('chargingJobId')):
+            # A business cancellation may finish ONLY the already-authorized leg.
+            # Keep its original encoder travel bound, LiDAR and navigation gates.
+            # Camera arrival, never odometry, supplies the new return anchor.
+            safety_generation[task_id] = generation
+            latch_safety(data)  # restart remains stopped even during this short leg
+            mission['cancel_at_next_marker'] = dict(data)
+            safety_hold = False
+            print('[CANCEL] Finishing current leg to a camera-confirmed checkpoint before returning to charge')
+            return
         stop_robot()
         safety_generation[task_id] = generation
         latch_safety(data)
         pending = None
         # Last scanned QR is NOT a fresh position while between waypoints.
-        marker = current_marker if current_marker is not None and visible_marker(current_marker) is not None else None
+        if mission is not None: mission.pop('cancel_at_next_marker',None)
         safety_commands[command_id] = ("CONTROL_STOPPED", marker)
         safety_ack(data, marker=marker)
         return
@@ -889,7 +903,7 @@ def finish_home(data):
 
 
 from charging_protocol import ChargingJournal, validate_route as validate_charging_route
-from motion_safety import front_lidar_report
+from motion_safety import front_lidar_report, measured_motion
 charging_journal = ChargingJournal(os.path.join(SAFETY_DIRECTORY, '.smartfleet-charging-' + ROBOT_CODE + '.json'))
 charging_saved = charging_journal.saved
 charging_dock = None
@@ -1448,6 +1462,13 @@ def reached_marker(data, detected_id):
     current_state = STATE_IDLE
     stable_counter = 0
     last_detected_id = -1
+    if data.get('cancel_at_next_marker'):
+        control = data.pop('cancel_at_next_marker')
+        latch_safety(control)
+        safety_commands[control['commandId']] = ('CONTROL_STOPPED', current_marker)
+        safety_ack(control, marker=current_marker)
+        print('[CANCEL] Stopped at camera-confirmed QR{}; waiting for charging handoff'.format(current_marker))
+        return
     if INTERSECTION_PILOT and sf_active_intersection is not None and i > 0 and             data["waypoints"][i - 1]["arucoId"] == sf_active_intersection:
         if data["waypoints"][i].get("isIntersection"):
             raise ValueError("Cannot exit directly into a second intersection")
@@ -1510,6 +1531,9 @@ def tick_mission():
             if os.path.exists(SAFETY_FILE):
                 os.remove(SAFETY_FILE)
             mission = None
+            ready_acknowledged = False
+            ready_event_id = None
+            ready_last_sent = 0.0
             current_state = STATE_IDLE
             stop_robot()
             return
@@ -1750,6 +1774,21 @@ def tick_bootstrap():
 
 
 
+last_motion_sample = None
+
+
+def read_motion_metrics():
+    global last_motion_sample
+    current=(robot.getTime(),time.monotonic(),left_encoder.getValue(),right_encoder.getValue())
+    metrics=measured_motion(last_motion_sample,current)
+    last_motion_sample=current
+    metrics.update({'requestedCruiseMultiplier':CRUISE_SCALE,'effectiveCruiseMultiplier':SEEK_SPEED/2.2,
+                    'cruiseWheelRadPerSecond':SEEK_SPEED,'hardwareWheelLimit':MOTOR_HARDWARE_LIMIT,
+                    'softwareWheelLimit':ROBOT_MAX_VEL,'leftCommand':left_motor.getVelocity(),
+                    'rightCommand':right_motor.getVelocity(),'state':current_state})
+    return metrics
+
+
 def tick_telemetry():
     global last_telemetry_at
     # Presence deadlines are wall-clock deadlines. Slow rendering must not turn
@@ -1766,12 +1805,14 @@ def tick_telemetry():
         "heading": round(get_yaw_deg(), 2),
         "localizationStatus": "LOCALIZED" if localization_valid else "LOCALIZING",
         "localizationReason": localization_reason,
+        "motion": read_motion_metrics(),
     }, qos=0)
 
 
 print("[BOOT] SmartFleet Webots CAMERA ArUco full-mission driver", ROBOT_CODE)
 print("[BOOT] Automatic camera pose + IMU localization; no start pose arguments")
-print("[BOOT] Cruise scale {:.2f}; approach, QR arrival and turn speeds unchanged".format(CRUISE_SCALE))
+print("[BOOT] Cruise requested {:.2f}x; effective {:.2f}x = {:.2f} rad/s; hardware limit {:.2f}; software limit {:.2f}".format(CRUISE_SCALE,SEEK_SPEED/2.2,SEEK_SPEED,MOTOR_HARDWARE_LIMIT,ROBOT_MAX_VEL))
+print("[BOOT] Approach, QR arrival and turn speeds unchanged; encoder speed and renderer realtime factor are published in telemetry.motion")
 print("[BOOT] Waiting for a camera-visible QR and Backend READY ACK")
 print("[BOOT] MANUAL 0-8 keyboard mission controls are disabled; Q stops the pilot")
 if INTERSECTION_PILOT:

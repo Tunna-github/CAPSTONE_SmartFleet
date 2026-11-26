@@ -41,7 +41,7 @@ class ChargingProtocolTests(unittest.TestCase):
         clock=SimpleNamespace(now=100.);sent=[]
         scope=dict(connected=True,last_telemetry_at=-100.,time=SimpleNamespace(monotonic=lambda:clock.now),
             publish=lambda topic,body,**kwargs:sent.append(body),TELEMETRY_TOPIC='test',SIMULATED_BATTERY_PERCENT=85,
-            SIMULATED_BATTERY_VOLTAGE=12,get_yaw_deg=lambda:0,localization_valid=True,localization_reason='test')
+            SIMULATED_BATTERY_VOLTAGE=12,get_yaw_deg=lambda:0,localization_valid=True,localization_reason='test',read_motion_metrics=lambda:{})
         exec(compile(ast.Module(body=[function],type_ignores=[]),str(source),'exec'),scope)
         for now in [100.,101.,102.1]:clock.now=now;scope['tick_telemetry']()
         self.assertEqual(2,len(sent))

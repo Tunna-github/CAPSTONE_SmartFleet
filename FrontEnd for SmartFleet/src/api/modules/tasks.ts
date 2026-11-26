@@ -324,11 +324,16 @@ export async function createTransportTask(
 // =====================================================
 
 export async function deleteTransportTask(
-    taskId: number | string
+    taskId: number | string, cancelled = false
 ): Promise<void> {
     await apiClient.delete(
-        ENDPOINTS.transportTasks.delete(taskId)
+        cancelled ? `/api/v1/transport-tasks/${taskId}/cancelled` : ENDPOINTS.transportTasks.delete(taskId)
     );
+}
+
+export async function requeueCancelledTask(taskId: number | string, reason: string, goodsAtPickupConfirmed: boolean): Promise<string> {
+    const { data } = await apiClient.post(`/api/v1/transport-tasks/${taskId}/requeue`, { reason, goodsAtPickupConfirmed });
+    return data.message;
 }
 
 // =====================================================

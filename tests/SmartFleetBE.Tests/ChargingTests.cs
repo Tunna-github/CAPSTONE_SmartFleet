@@ -27,6 +27,7 @@ public sealed class ChargingTests
         public readonly QrDemoRouteService Routes;
         public readonly ChargingService Charging;
         public readonly WarehouseMapDocument Map;
+        public readonly IConfiguration Config;
         private readonly Env env=new();
         public Fixture()
         {
@@ -35,7 +36,8 @@ public sealed class ChargingTests
             Map=JsonSerializer.Deserialize<WarehouseMapDocument>(File.ReadAllText(Path.Combine(root,"simulation/config/dual-lane-map.json")),ChargingService.Json)!;
             Db=new(new DbContextOptionsBuilder<SmartFleetDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString(),b=>b.EnableNullChecks(false))
                 .ConfigureWarnings(w=>w.Ignore(InMemoryEventId.TransactionIgnoredWarning)).Options);
-            var cfg=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["Charging:Enabled"]="true",["Navigation:Enabled"]="true" }).Build();
+            var cfg=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?> { ["Charging:Enabled"]="true",["Navigation:Enabled"]="true",["DemoRoute:Enabled"]="true",["Mqtt:EnableWorkers"]="true" }).Build();
+            Config=cfg;
             Nav=new(env,cfg,NullLogger<NavigationCoordinator>.Instance,new Store(Map));
             Routes=new(Nav,env,cfg,NullLogger<QrDemoRouteService>.Instance);
             Charging=new(Db,Routes,Nav,cfg);
@@ -73,6 +75,38 @@ public sealed class ChargingTests
         using var f=new Fixture();var j=await f.Queue();await f.Queue();
         Assert.Single(await f.Db.ChargingJobs.ToListAsync());Assert.Equal("BUSY",j.Robot.OperationalStatus);
         await Assert.ThrowsAsync<InvalidOperationException>(()=>ChargingService.BeginDeparture(f.Db,1,default));
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CancelledAndRecoveredEmptyRobotsHandoffToChargingWithoutBecomingAvailable(bool recovered) {
+        using var f=new Fixture();var robot=await f.Db.Robots.SingleAsync(r=>r.RobotId==1);
+        var task=new TransportTask {TaskId=101,WarehouseId=1,PickupStationId=1,DeliveryStationId=2,TaskStatus=recovered?"QUEUED":"EXECUTING"};
+        var assignment=new TaskAssignment {AssignmentId=101,Task=task,Robot=robot,AssignmentStatus=recovered?"FAILED":"ACTIVE"};
+        var mission=new Mission {MissionId=101,Assignment=assignment,MissionStatus=recovered?"FAILED":"INITIALIZING",FailureReason=recovered?"Original navigation fault":null};
+        f.Db.Missions.Add(mission);
+        if(recovered) {
+            robot.OperationalStatus="MAINTENANCE";
+            f.Db.TaskInterventions.Add(new(){TaskId=101,State="NORMAL",CommandAcknowledged=true});
+            f.Db.MissionExecutions.Add(new(){MissionId=101,RoutePayloadJson="{\"pickupWaypointIndex\":5}",NextWaypointIndex=1});
+        }
+        await f.Db.SaveChangesAsync();var service=new TaskInterventionService(f.Db,f.Routes,f.Config);
+        if(recovered) await service.Act(101,"return-to-charge",new("Inspected empty recovered robot",true,true,false,101),42,default);
+        else {
+            await service.Act(101,"cancel",new("Duplicate order"),42,default);
+            var stopped=f.Db.TaskInterventions.Single();
+            Assert.Equal(MissionEventResult.Applied,await service.HandleEvent("R01",new(){Event="CONTROL_STOPPED",TaskId=101,AssignmentId=101,MissionId=101,CommandId=stopped.CommandId,CurrentArUcoId=0},default));
+        }
+        var control=f.Db.TaskInterventions.Single();Assert.Equal("RETURNING_HOME",control.State);
+        Assert.Equal(MissionEventResult.Applied,await service.HandleEvent("R01",new(){Event="HOME_REACHED",TaskId=101,AssignmentId=101,MissionId=101,CommandId=control.CommandId,CurrentArUcoId=0},default));
+        Assert.Equal("BUSY",robot.OperationalStatus);Assert.Single(f.Db.ChargingJobs);
+        Assert.DoesNotContain(f.Db.RobotStatusHistories,h=>h.NewOperationalStatus=="AVAILABLE");
+        if(recovered) {Assert.Equal("QUEUED",task.TaskStatus);Assert.Equal("FAILED",assignment.AssignmentStatus);Assert.Equal("FAILED",mission.MissionStatus);Assert.Equal("Original navigation fault",mission.FailureReason);}
+        else {Assert.Equal("CANCELLED",task.TaskStatus);Assert.Equal("CANCELLED",assignment.AssignmentStatus);Assert.Equal("ABORTED",mission.MissionStatus);}
+        Assert.False(f.Routes.HasFreshLocalization("R01"));
+        var job=await f.Db.ChargingJobs.SingleAsync();Assert.Null(await f.Charging.Tick(job.Id,default));
+        f.Routes.RecordCameraProgress("R01",0,0,f.Map.Revision);
+        await f.Start(job);Assert.Equal("RETURNING",job.State);
     }
     [Fact] public async Task FourReturningRobotsReserveFourDistinctPullThroughBays() {
         using var f=new Fixture();
@@ -116,7 +150,7 @@ public sealed class ChargingTests
         using var f=new Fixture();
         var scene=new SimulationScene {Anchors=f.Map.Cells.SelectMany((row,r)=>row.Select((c,col)=>(c,r,col))).Where(p=>p.c.Type=="qr")
             .Select(p=>new SimulationScene.Anchor(p.c.ArucoId!.Value,p.r,p.col,p.c.MarkerYawDeg!.Value,p.c.MarkerSizeM!.Value,p.c.OperationalRole)).ToList(),
-            DirectedLinks=true,MarkerDictionary="DICT_4X4_250",Intersections=[1],Corridors=f.Map.Links.Select(l=>l.Select(s=>int.Parse(s[2..])).ToArray()).ToList()};
+            DirectedLinks=true,MarkerDictionary="DICT_4X4_250",Intersections=f.Map.Cells.SelectMany(r=>r).Where(c=>c.IsIntersection).Select(c=>c.ArucoId!.Value).ToList(),Corridors=f.Map.Links.Select(l=>l.Select(s=>int.Parse(s[2..])).ToArray()).ToList()};
         Assert.True(scene.Matches(f.Map));f.Map.Links[0].Reverse();Assert.False(scene.Matches(f.Map));
         f.Map.Links[0].Reverse();f.Map.Cells[3][4].OperationalRole="NAVIGATION";Assert.False(scene.Matches(f.Map));
     }
@@ -124,6 +158,33 @@ public sealed class ChargingTests
         using var f=new Fixture();var ids=f.Map.Links[0].Select(s=>int.Parse(s[2..])).ToArray();
         var result=f.Nav.OnScan(1,"R01",new() {CurrentArUcoId=ids[1],NextArUcoId=ids[0]});
         Assert.False(result.Success);
+    }
+    [Fact] public async Task QrOneIsAnOffRoadTransferBayInTheSeparatedLaneScene() {
+        using var f=new Fixture();var cell=f.Map.Cells.SelectMany(r=>r).Single(c=>c.ArucoId==1);
+        Assert.False(cell.IsIntersection);Assert.Equal("TRANSFER",cell.OperationalRole);
+        Assert.Equal("Instant Noodles",cell.DisplayName);
+        f.Routes.ValidateTaskSelection(1,2);f.Routes.ValidateTaskSelection(2,1);
+        foreach(var (start,end) in new[]{(1,2),(2,1)}) {
+            using var route=JsonDocument.Parse(JsonSerializer.Serialize(f.Routes.BuildHomeRoute(start,end),ChargingService.Json));
+            var waypoints=route.RootElement.GetProperty("waypoints");
+            Assert.Equal(start,waypoints[0].GetProperty("arucoId").GetInt32());
+            Assert.Equal(end,waypoints[waypoints.GetArrayLength()-1].GetProperty("arucoId").GetInt32());
+            Assert.False(waypoints[0].GetProperty("isIntersection").GetBoolean());
+            Assert.False(waypoints[waypoints.GetArrayLength()-1].GetProperty("isIntersection").GetBoolean());
+        }
+        Assert.Equal(2,f.Map.Links.Count(e=>e.Contains("QR1")));
+        Assert.Contains(f.Map.Links,e=>e.SequenceEqual(new[]{"QR1","QR30"}));
+        Assert.Contains(f.Map.Links,e=>e.SequenceEqual(new[]{"QR30","QR1"}));
+        var zone=await f.Db.Zones.SingleAsync(z=>z.ZoneId==1);
+        foreach(var qr in new[]{1,2}) f.Db.Stations.Add(new Station {StationId=10+qr,ZoneId=1,Zone=zone,
+            StationCode=$"QR{qr}",StationName=qr==1?"Instant Noodles":"Snacks & Sweets",StationType="TRANSFER",IsActive=true,
+            QrCodePayload=$"QR{qr}",Checkpoint=new(){StationId=10+qr,WarehouseId=1,ArucoId=qr}});
+        await f.Db.SaveChangesAsync();
+        Assert.Equal(new TaskLocationPolicy.StationRoute(1,2),await TaskLocationPolicy.ResolveRouteAsync(f.Db,1,11,12,f.Routes,default));
+        Assert.Equal(new TaskLocationPolicy.StationRoute(2,1),await TaskLocationPolicy.ResolveRouteAsync(f.Db,1,12,11,f.Routes,default));
+        // A real intersection designation still makes the same endpoint invalid.
+        cell.IsIntersection=true;
+        Assert.Throws<ArgumentException>(()=>f.Routes.ValidateTaskSelection(1,2));
     }
     [Fact] public void TwoRobotsCanAdvanceAroundSameRingWithoutArtificialTwoHopDeadlock() {
         using var f=new Fixture();f.Nav.RecordCameraCheckpoint("R01",43);f.Nav.RecordCameraCheckpoint("R02",40);
