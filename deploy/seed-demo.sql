@@ -11,7 +11,11 @@ INSERT INTO public."Zones" ("WarehouseID","ZoneCode","ZoneName","ZoneType") VALU
 INSERT INTO public."Stations" ("ZoneID","StationCode","StationName","StationType","CoordX","CoordY","QrCodePayload")
 VALUES (1,'P1','Pickup Station P1','PICKUP',4,5,'P1'),(1,'D1','Delivery Station D1','DELIVERY',6,1,'D1');
 -- Explicit commissioning, independent of numeric StationID values.
-INSERT INTO public."StationCheckpoints" ("StationId","WarehouseId","ArucoId") VALUES (1,1,2),(2,1,7);
+INSERT INTO public."StationCheckpoints" ("StationId","WarehouseId","ArucoId")
+SELECT s."StationID",z."WarehouseID",CASE s."StationCode" WHEN 'P1' THEN 2 ELSE 7 END
+FROM public."Stations" s JOIN public."Zones" z ON z."ZoneID"=s."ZoneID"
+JOIN public."Warehouses" w ON w."WarehouseID"=z."WarehouseID"
+WHERE w."WarehouseCode"='SIM' AND s."StationCode" IN ('P1','D1');
 INSERT INTO public."Roles" ("RoleName") VALUES ('Administrator'),('Warehouse Operator'),('Maintenance Technician');
 INSERT INTO public."Users" ("Username","Email","PasswordHash","FullName") VALUES
 ('admin','admin@smartfleet.local',crypt(:'admin_password',gen_salt('bf',12)),'Simulation Administrator'),

@@ -76,6 +76,35 @@ public sealed class StationCatalogTests
         Assert.Equal(before,JsonSerializer.Serialize(f.Nav.GetMap()));Assert.Equal(2,f.Db.SystemAuditLogs.Count());
     }
 
+    [Fact] public async Task CatalogExplainsMissingMappingAndBecomesUsableAfterCommissioning() {
+        using var f = new Fixture();
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        using var initial = JsonDocument.Parse(JsonSerializer.Serialize(await f.Catalog.Read(default), options));
+        var pickup = initial.RootElement.GetProperty("stations").EnumerateArray().Single(s => s.GetProperty("code").GetString() == "P1");
+        Assert.False(pickup.GetProperty("usable").GetBoolean());
+        Assert.Equal("Navigation checkpoint is not configured.", pickup.GetProperty("unavailableReason").GetString());
+        await f.Catalog.SaveStation(1, f.Request(), 1, default);
+        using var configured = JsonDocument.Parse(JsonSerializer.Serialize(await f.Catalog.Read(default), options));
+        pickup = configured.RootElement.GetProperty("stations").EnumerateArray().Single(s => s.GetProperty("code").GetString() == "P1");
+        Assert.True(pickup.GetProperty("usable").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, pickup.GetProperty("unavailableReason").ValueKind);
+    }
+
+    [Theory]
+    [InlineData("zone", "Station zone is inactive.")]
+    [InlineData("warehouse", "Warehouse is inactive.")]
+    [InlineData("payload", "Station verification QR payload is not configured.")]
+    [InlineData("intersection", "Mapped checkpoint is a reserved intersection.")]
+    public async Task CatalogReadinessReflectsOperationalPrerequisites(string failure, string expected) {
+        using var f = new Fixture(); await f.Catalog.SaveStation(1, f.Request(), 1, default);
+        var station = await f.Db.Stations.Include(s => s.Zone).ThenInclude(z => z.Warehouse).Include(s => s.Checkpoint).SingleAsync(s => s.StationId == 1);
+        if (failure == "zone") station.Zone.IsActive = false;
+        if (failure == "warehouse") station.Zone.Warehouse.IsActive = false;
+        if (failure == "payload") station.QrCodePayload = " ";
+        if (failure == "intersection") station.Checkpoint!.ArucoId = 4;
+        Assert.Equal(expected, StationCatalogService.UnavailableReason(station, f.Nav.GetMap(), 1));
+    }
+
     [Theory][InlineData(4)][InlineData(49)][InlineData(-1)]
     public async Task InvalidMissingOrIntersectionMarkerIsRejected(int qr) {using var f=new Fixture();await Assert.ThrowsAsync<ArgumentException>(()=>f.Catalog.SaveStation(1,f.Request(qr:qr),1,default));Assert.Empty(f.Db.StationCheckpoints);}
 
@@ -96,11 +125,45 @@ public sealed class StationCatalogTests
         await Assert.ThrowsAsync<InvalidOperationException>(()=>f.Catalog.SaveStation(1,f.Request(),1,default));
     }
 
-    [Fact] public async Task WaitingIsNotPickupAndDualUseIsRejected() {
+    [Fact] public async Task DedicatedWaitingIsNotPickupAndUnknownTypesAreRejected() {
         using var f=new Fixture();await f.Catalog.SaveStation(1,f.Request("WAITING"),1,default);
         await f.Catalog.SaveStation(2,f.Request("DELIVERY",7,1,"D1"),1,default);
         await Assert.ThrowsAsync<ArgumentException>(()=>TaskLocationPolicy.ResolveRouteAsync(f.Db,1,1,2,f.Routes,default));
         await Assert.ThrowsAsync<ArgumentException>(()=>f.Catalog.SaveStation(null,f.Request("PICKUP_DELIVERY",0,0,"DUAL"),1,default));
+    }
+
+    [Fact] public async Task TransferPointsSupportAllDistinctPickupDeliveryPairsAndRepositoryValidation() {
+        using var f = new Fixture();
+        var points = new Dictionary<int, int>();
+        foreach (var qr in new[] { 0, 1, 2, 3, 5, 6, 7, 8 }) {
+            var request = f.Request("TRANSFER", qr, 0, $"T{qr}") with { QrCodePayload = $"T{qr}" };
+            points[qr] = await f.Catalog.SaveStation(null, request, 1, default);
+        }
+        var repository = new TransportTaskRepository(f.Db);
+        foreach (var (qr, stationId) in points) {
+            Assert.True(await repository.IsStationActiveInWarehouseAsync(stationId, 1, default, "PICKUP"));
+            Assert.True(await repository.IsStationActiveInWarehouseAsync(stationId, 1, default, "DELIVERY"));
+            foreach (var (otherQr, otherId) in points.Where(p => p.Key != qr)) {
+                var route = await TaskLocationPolicy.ResolveRouteAsync(f.Db, 1, stationId, otherId, f.Routes, default);
+                Assert.Equal(qr, route.PickupArUcoId); Assert.Equal(otherQr, route.DeliveryArUcoId);
+            }
+        }
+        await Assert.ThrowsAsync<ArgumentException>(() => TaskLocationPolicy.ResolveRouteAsync(f.Db, 1, points[2], points[2], f.Routes, default));
+        f.Db.TransportTasks.Add(new() { TaskId = 55, WarehouseId = 1, PickupStationId = points[7], DeliveryStationId = points[2], TaskStatus = "QUEUED" });
+        await f.Db.SaveChangesAsync(); Assert.True(await TaskLocationPolicy.IsValidAsync(f.Db, 55, default));
+    }
+
+    [Fact] public async Task TransportCatalogIncludesReservedQrAsDisabledAndTransferInBothDirections() {
+        using var f = new Fixture();
+        await f.Catalog.SaveStation(1, f.Request("TRANSFER", 2) with { QrCodePayload = "P1" }, 1, default);
+        using var result = JsonDocument.Parse(JsonSerializer.Serialize(await f.Catalog.Read(default), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        var points = result.RootElement.GetProperty("transportPoints").EnumerateArray().ToArray();
+        Assert.Equal(9, points.Length);
+        var transfer = points.Single(p => p.GetProperty("arucoId").GetInt32() == 2);
+        Assert.True(transfer.GetProperty("pickupEligible").GetBoolean()); Assert.True(transfer.GetProperty("deliveryEligible").GetBoolean());
+        var reserved = points.Single(p => p.GetProperty("arucoId").GetInt32() == 4);
+        Assert.False(reserved.GetProperty("pickupEligible").GetBoolean()); Assert.False(reserved.GetProperty("deliveryEligible").GetBoolean());
+        Assert.Contains("Reserved intersection", reserved.GetProperty("unavailableReason").GetString());
     }
 
     [Fact] public async Task BerthCapacityIsOneAndReleaseNeedsPhysicalConfirmation() {

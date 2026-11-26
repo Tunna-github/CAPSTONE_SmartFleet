@@ -49,12 +49,12 @@ export default function WarehouseStationsPage() {
                 <label>Zone type<select className={field} name="type" defaultValue={String(editing.type??"TRANSIT")}>{["TRANSIT","STORAGE","DISPATCH","PICKUP","DELIVERY","WAITING","CHARGING"].map(t=><option key={t}>{t}</option>)}</select></label>{input("Speed limit","speedLimit","number",.18)}
             </>:<>
                 <label>Zone<select className={field} name="zoneId" required defaultValue={String(editing.zoneId??"")}><option value="">Select zone</option>{catalog?.zones.filter(z=>z.warehouseId===selectedWarehouse).map(z=><option key={z.zoneId} value={z.zoneId}>{z.code} — {z.name}</option>)}</select></label>
-                <label>Station type<select className={field} name="type" defaultValue={String(editing.type??"PICKUP")}>{["PICKUP","DELIVERY","WAITING","CHARGING"].map(t=><option key={t}>{t}</option>)}</select></label>
+                <label>Station type<select className={field} name="type" defaultValue={String(editing.type??"PICKUP")}>{["PICKUP","DELIVERY","TRANSFER","WAITING","CHARGING"].map(t=><option key={t}>{t}</option>)}</select></label>
                 {input("X (meters)","coordX","number",0)}{input("Y (meters)","coordY","number",0)}{input("Z (meters)","coordZ","number",0)}{input("Yaw (degrees)","yawAngle","number",0)}
                 {input("Station verification QR payload","qrCodePayload")}
                 <label>ArUco checkpoint<select className={field} name="arucoId" defaultValue={String(editing.arucoId??"")}><option value="">Unmapped (inactive only)</option>{markers.map(m=>{const owner=catalog?.stations.find(s=>s.warehouseId===selectedWarehouse&&s.arucoId===m.arucoId);return <option key={m.arucoId} value={m.arucoId} disabled={!!owner&&owner.stationId!==editing.stationId}>QR{m.arucoId} — {m.label}{owner?` · ${owner.code}`:""}</option>;})}</select></label>
                 <label>Capacity<input className={field} name="capacity" type="number" value={1} readOnly/></label>
-                <p className="text-sm">One type and one physical berth per station. WAITING and CHARGING cannot be selected as pickup/delivery.</p>
+                <p className="text-sm">TRANSFER supports pickup and delivery at one physical checkpoint. WAITING and CHARGING remain dedicated berths.</p>
             </>}
             <label><input type="checkbox" name="isActive" defaultChecked={editing.isActive!==false}/> Active</label>
             <div className="flex gap-2"><button className="rounded bg-cyan-700 text-white px-4 py-2" disabled={busy}>Save {tab.slice(0,-1)}</button><button type="button" className="border rounded p-2" onClick={()=>setEditing(null)}>Close editor</button></div>

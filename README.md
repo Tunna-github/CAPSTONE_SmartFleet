@@ -7,6 +7,13 @@ test constitutes pickup/delivery verification for production.
 
 ## Local setup
 
+For the separated-lane 3×3 layout with four charging bays and mandatory safe
+return after delivery, use `python tools/setup_demo.py --charging-layout` before
+`docker compose up -d --build`. Existing installations must finish/recover active
+work before this explicit physical scene upgrade. See
+[dual-lane charging](docs/dual-lane-charging.md) for the workflow, map editor,
+recovery and acceptance tests.
+
 For a portable isolated demo with PostgreSQL, MQTT, two Webots robots, live 2D
 tracking and shared 3D viewing, run `python tools/setup_demo.py` then
 `docker compose up -d --build`. Open http://localhost:8080. See
@@ -37,6 +44,9 @@ database, review and apply the additive patches in order:
 3. `Database/20261124_auth_uniqueness.sql`
 4. `Database/20261124_mission_verification.sql`
 5. `Database/20261126_station_management.sql`
+6. `Database/20261126_robot_registry.sql`
+7. `Database/20261126_transfer_stations.sql`
+8. `Database/20261127_charging_jobs.sql`
 
 The second patch allows multiple safety controls per assignment while retaining
 uniqueness of its original mission command. It changes indexes, not task rows.
@@ -54,8 +64,15 @@ In **Warehouse & Stations**, Admin commissions each operational StationId agains
 one physical ArUco checkpoint. Operator selects warehouse, pickup and delivery
 stations; the backend resolves navigation markers from these database mappings.
 Legacy requests supplying marker IDs must match the selected stations. Unmapped
-legacy stations cannot dispatch until commissioned; upgrades never guess mappings.
+legacy stations cannot dispatch until commissioned; operational upgrades never guess mappings. The isolated, unmodified SIM demo preset has a one-time explicit P1 → QR2 / D1 → QR7 upgrade, so Operators can create tasks immediately without an Admin account switch. See the [demo upgrade safeguards](docs/simulation-deployment.md#ready-to-use-stations-on-older-demo-volumes).
 See [FE-02 setup and acceptance](docs/warehouse-station-management.md).
+
+Admin can register/configure devices in **Robot Registry**. New devices remain
+OFFLINE with unknown battery until real telemetry arrives; registration does not
+spawn Webots robots or bypass assignment eligibility. Admin/Operator have database
+analytics, filtered reports and dashboard summaries. See
+[robot registration and analytics](docs/robot-registration-analytics.md) for
+permissions, metric definitions, migration and verification commands.
 
 Heartbeat timeout is configured by `Dispatch:PresenceTimeoutSeconds` (default
 45). Missing mission-start acknowledgement uses
@@ -133,3 +150,7 @@ recovery/requeue; historical COMPLETED rows are preserved without fabricating pr
 Deploy the matching `Webots_Full_Mission_Controller` driver/module/calibration into
 the Webots project and reload the world. The legacy JetRacer CIRCLE adapter does
 not implement this handshake and still needs its separate hardware integration.
+
+Live tracking, persistent Webots viewer and pickup/delivery handover workflow: [workspace guide](docs/live-tracking-workspace.md).
+
+Task endpoints: both selectors show all saved QR points. The SIM preset enables QR0, QR2–QR8 for both pickup and delivery via TRANSFER stations; QR1 remains visible and transit-only. P1/QR2 and D1/QR7 are examples, not exclusive choices. See [FE-02 scope clarification](docs/warehouse-station-management.md#scope-clarification-any-eligible-qr-can-be-a-task-endpoint).

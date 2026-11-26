@@ -81,7 +81,7 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                     throw new InvalidOperationException("Maintenance must confirm physical stop, load removal, and return of the load to this task's original pickup station.");
                 if (!await db.Stations.AnyAsync(s => s.StationId == task.PickupStationId &&
                     s.Zone.WarehouseId == task.WarehouseId && s.Zone.IsActive && s.Zone.Warehouse.IsActive &&
-                    s.StationType == "PICKUP" && s.IsActive, ct))
+                    (s.StationType == "PICKUP" || s.StationType == "TRANSFER") && s.IsActive, ct))
                     throw new InvalidOperationException("Original pickup station is missing or inactive.");
                 assignment.AssignmentStatus = "FAILED";
                 assignment.EndedAt = now;
@@ -298,6 +298,8 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                 await db.RobotMaintenanceRecords.AnyAsync(m => m.RobotId == a.RobotId &&
                     (m.MaintenanceStatus == "SCHEDULED" || m.MaintenanceStatus == "IN_PROGRESS"), ct);
             FinishAssignment(a, fault ? "MAINTENANCE" : "AVAILABLE", null, "Robot confirmed home after cancellation.", now);
+            if (configuration.GetValue<bool>("Charging:Enabled") && e.CurrentArUcoId is int clearedMarker)
+                await ChargingService.ConfirmDeparture(db, a.RobotId, clearedMarker, ct);
             c.State = "CANCELLED_HOME";
         }
         else return MissionEventResult.Rejected;

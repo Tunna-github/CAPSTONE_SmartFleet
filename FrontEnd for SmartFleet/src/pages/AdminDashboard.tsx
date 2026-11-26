@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { getRobots, type RobotInfo } from "../api/modules/robots";
 import LiveFleetMap from "../components/LiveFleetMap";
 import { PageHeader } from "../components/SharedUI";
+import OperationalSummary from "../components/OperationalSummary";
 
 export function AdminDashboard() {
     const [robots, setRobots] = useState<RobotInfo[]>([]);
@@ -22,6 +23,7 @@ export function AdminDashboard() {
             <Link to="/dashboard/robots" className="rounded-lg border px-3 py-2 text-sm">Fleet status &amp; maintenance</Link>
         </PageHeader>
         {error && <p role="alert" className="p-4 text-red-400">{error}</p>}
+        <OperationalSummary />
         <p className="px-6 py-3 text-sm">{robots.length} registered robots · {robots.filter(r => r.connectionStatus === "ONLINE").length} online</p>
         <div className="min-h-[420px] h-[520px]"><LiveFleetMap robots={robots} /></div>
         <div className="p-6 overflow-auto"><table className="w-full text-sm text-left">

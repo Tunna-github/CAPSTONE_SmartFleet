@@ -17,6 +17,8 @@ export default function WarehouseMapsPage() {
   const {
     warehouseLayout, setWarehouseLayout, links, setLinks,
     mapRevision, mapDirty, mapLoading, mapSaving, mapError, reloadMap, saveMap,
+    directedLinks,setDirectedLinks,markerDictionary,setMarkerDictionary,
+    loadCommissionedTemplate,
   } = useWarehouseMap();
   const [mode, setMode] = useState<"points" | "links">("points");
   const [adding, setAdding] = useState(false);
@@ -57,6 +59,7 @@ export default function WarehouseMapsPage() {
   const mappedStation = catalog?.stations.find(station =>
     station.warehouseId === catalog.navigationWarehouseId && station.arucoId === checkpoint?.arucoId);
   const busy = mapLoading || mapSaving;
+  const maximumMarkerId = markerDictionary === "DICT_4X4_250" ? 249 : 49;
   const canManageStation = !mapDirty && !busy && catalog?.mapRevision === mapRevision;
 
   function updateCell(row: number, col: number, update: (previous: WarehouseCell) => WarehouseCell) {
@@ -83,16 +86,16 @@ export default function WarehouseMapsPage() {
     }
     if (!adding || mapRevision === null) return;
     const used = new Set(qrCells.map(point => point.arucoId));
-    const id = addId.trim() === "" ? Array.from({ length: 50 }, (_, i) => i).find(i => !used.has(i)) : Number(addId);
-    if (id === undefined || !Number.isInteger(id) || id < 0 || id > 49 || used.has(id)) {
-      setNotice({ message: "Choose an unused ArUco ID from 0 to 49.", error: true });
+    const id = addId.trim() === "" ? Array.from({ length: maximumMarkerId+1 }, (_, i) => i).find(i => !used.has(i)) : Number(addId);
+    if (id === undefined || !Number.isInteger(id) || id < 0 || id > maximumMarkerId || used.has(id)) {
+      setNotice({ message: `Choose an unused ArUco ID from 0 to ${maximumMarkerId}.`, error: true });
       return;
     }
     const stem = `QR${String(id).padStart(2, "0")}`;
     const labels = new Set(warehouseLayout.flat().map(point => point.label?.toLowerCase()));
     let label = stem;
     for (let suffix = 2; labels.has(label.toLowerCase()); suffix++) label = `${stem}-${suffix}`;
-    updateCell(row, col, () => ({ type: "qr", label, arucoId: id }));
+    updateCell(row, col, () => ({ type: "qr", label, arucoId: id, operationalRole: "NAVIGATION" }));
     setSelected({ row, col });
     setAdding(false);
     setAddId("");
@@ -110,7 +113,10 @@ export default function WarehouseMapsPage() {
   function toggleLink(a: string, b: string) {
     if (busy) return;
     const matches = ([from, to]: [string, string]) =>
-      (isSameLabel(from, a) && isSameLabel(to, b)) || (isSameLabel(from, b) && isSameLabel(to, a));
+      (isSameLabel(from, a) && isSameLabel(to, b)) || (!directedLinks && isSameLabel(from, b) && isSameLabel(to, a));
+    const first=warehouseLayout.flatMap((r,y)=>r.map((p,x)=>({...p,x,y}))).find(p=>p.label===a);
+    const last=warehouseLayout.flatMap((r,y)=>r.map((p,x)=>({...p,x,y}))).find(p=>p.label===b);
+    if(first && last && first.x!==last.x && first.y!==last.y) { setNotice({message:"Lanes must be horizontal or vertical. Add a turning checkpoint first.",error:true}); return; }
     setLinks(previous => previous.some(matches) ? previous.filter(link => !matches(link)) : [...previous, [a, b]]);
   }
 
@@ -155,11 +161,17 @@ export default function WarehouseMapsPage() {
     <PageHeader title="Warehouse Maps" sub="Edit QR checkpoints, corridor links and station assignments">
       <Link className={control} to="/warehouse-stations">Advanced warehouse administration</Link>
       <button className={control} type="button" disabled={busy} onClick={() => void syncMap(false)}>Reload Backend Map</button>
+      {simulation?.enabled&&<button className={control} disabled={busy} onClick={()=>void loadCommissionedTemplate().then(()=>setNotice({message:"Commissioned scene loaded as a draft. Review it, then Save to Database. Webots geometry is unchanged."})).catch(e=>setNotice({message:e.message,error:true}))}>Load commissioned scene template</button>}
       <button className={`${control} !bg-teal-700 !text-white`} type="button" disabled={busy || mapRevision === null}
         onClick={() => void syncMap(true)}>{mapSaving ? "Saving…" : "Save to Database"}</button>
     </PageHeader>
     <div className="flex-1 space-y-3 overflow-auto px-6 py-4">
       <p className="text-xs text-[var(--text-faint)]">Saved map revision: {mapRevision ?? "not loaded"}{mapDirty && " · Unsaved map edits"}</p>
+      <div className="sf-card p-3 flex flex-wrap gap-4 items-center text-sm">
+        <label><input type="checkbox" checked={directedLinks} disabled={busy} onChange={e=>setDirectedLinks(e.target.checked)} /> Ordered one-way lanes</label>
+        <label>Marker dictionary <select className={control} value={markerDictionary} disabled={busy} onChange={e=>setMarkerDictionary(e.target.value as typeof markerDictionary)}><option>DICT_4X4_50</option><option>DICT_4X4_250</option></select></label>
+        <span className="sf-muted">Lane geometry, marker family and calibration must match the commissioned physical scene. Web edits do not move Webots markers.</span>
+      </div>
       {simulation?.enabled && !simulation.mapCompatible && <p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm">
         Simulation dispatch is blocked. The saved QR map differs from the commissioned Webots world. Restore the commissioned design or recommission the world before dispatching.
       </p>}
@@ -183,10 +195,10 @@ export default function WarehouseMapsPage() {
             <option value="floor">Paint floor</option>
             <option value="wall">Paint wall</option>
           </select>}
-          {adding && <><input className={`${control} w-32`} type="number" min={0} max={49} value={addId}
+          {adding && <><input className={`${control} w-32`} type="number" min={0} max={maximumMarkerId} value={addId}
             aria-label="New ArUco ID" placeholder="ID (optional)" onChange={event => setAddId(event.target.value)} />
             <span className="text-xs">Click an empty cell to place the checkpoint.</span></>}
-          {mode === "links" && <span className="text-xs">Select two checkpoints to add or remove their corridor. {pendingLink && `Selected ${pendingLink}.`}</span>}
+          {mode === "links" && <span className="text-xs">{directedLinks ? "Select source, then destination. Reverse travel needs a separate ordered link." : "Select two checkpoints to add or remove their corridor."} {pendingLink && `Selected ${pendingLink}.`}</span>}
           <div className="ml-auto flex gap-2">
             <button className={control} type="button" aria-label="Zoom out" onClick={() => setScale(value => Math.max(.5, value - .1))}>−</button>
             <button className={control} type="button" aria-label="Reset zoom" onClick={() => setScale(1)}>{Math.round(scale * 100)}%</button>
@@ -197,7 +209,7 @@ export default function WarehouseMapsPage() {
           <h2 className="text-sm font-semibold">QR{checkpoint.arucoId ?? "?"} checkpoint</h2>
           <fieldset disabled={busy} className="flex flex-wrap items-end gap-3">
             <label className={field}>ArUco ID
-              <input type="number" min={0} max={49} className={`${control} w-24`} value={checkpoint.arucoId ?? ""}
+              <input type="number" min={0} max={maximumMarkerId} className={`${control} w-24`} value={checkpoint.arucoId ?? ""}
                 onChange={event => editCheckpoint({ arucoId: event.target.value === "" ? undefined : Number(event.target.value) })} />
             </label>
             <label className={field}>Display name
@@ -237,6 +249,7 @@ export default function WarehouseMapsPage() {
           <div style={{ width: `${scale * 100}%`, minWidth: 800 * scale,
             height: (simulation?.enabled && !adding && !surface ? 520 : 720) * scale }}>
             <WarehouseGrid robots={[]} animateRobots={false} grid={warehouseLayout} links={qrLinks}
+              directedLinks={directedLinks}
               qrOnly focusQrNetwork={simulation?.enabled && !adding && !surface} catalog={catalog}
               selectedCell={mode === "points" ? selected : null} selectedPoint={pendingLink}
               onCellClick={mode === "points" ? handleCellClick : undefined}
@@ -245,7 +258,7 @@ export default function WarehouseMapsPage() {
         </div>
         {mode === "links" && <div className="flex flex-wrap gap-2 border-t border-[var(--border-subtle)] p-3">
           {qrLinks.map(([a, b]) => <button key={`${a}::${b}`} type="button" className={control} disabled={busy}
-            aria-label={`Remove link ${a} to ${b}`} onClick={() => toggleLink(a, b)}>{a} ↔ {b}</button>)}
+            aria-label={`Remove link ${a} to ${b}`} onClick={() => toggleLink(a, b)}>{a} {directedLinks ? "→" : "↔"} {b}</button>)}
         </div>}
       </section>
     </div>

@@ -3,7 +3,7 @@ import { useData } from "../context/DataContext";
 import { getRobots, type RobotInfo } from "../api/modules/robots";
 import { LogEntry } from "../data/mockData";
 import { Icon, IC } from "../components/Icons";
-import { MetricCard } from "../components/SharedUI";
+import OperationalSummary from "../components/OperationalSummary";
 import LiveFleetMap from "../components/LiveFleetMap";
 
 function HeartbeatRow({ robots }: { robots: RobotInfo[] }) {
@@ -145,15 +145,6 @@ export function OperatorDashboard() {
         return () => window.clearInterval(timer);
     }, [refreshTasks]);
 
-    const onlineCount = dbRobots.filter(r => r.connectionStatus === "ONLINE").length;
-    const lowBatCount = dbRobots.filter(r => (r.batteryPercent ?? 100) < 20).length;
-    const activeTaskCount = tasks.filter(t => t.status === "EXECUTING" || t.status === "ASSIGNED").length;
-    const pendingTaskCount = tasks.filter(t => t.status === "PENDING" || t.status === "QUEUED").length;
-
-    const now = new Date();
-    const completedTodayCount = tasks.filter(t => t.status === "COMPLETED" && t.completedAt &&
-        new Date(t.completedAt).toDateString() === now.toDateString()).length;
-
     return (
         <div className="flex flex-col h-full overflow-y-auto transition-colors" style={{ background: "var(--background)" }}>
             <div className="shrink-0 flex items-center justify-between px-6 py-3 transition-colors" style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
@@ -175,13 +166,7 @@ export function OperatorDashboard() {
                 </div>
             </div>
 
-            <div className="shrink-0 flex gap-3 px-6 py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                <MetricCard label="Active Robots" value={`${onlineCount}/${dbRobots.length}`} sub="Live telemetry connected" trend="vs. yesterday" trendUp={true} accentColor="#22d3ee" glowColor="#06b6d4" iconEl={<Icon d={IC.robots} size={18} />} />
-                <MetricCard label="Tasks in Queue" value={`${pendingTaskCount}`} sub={`${activeTaskCount} executing · ${pendingTaskCount} pending`} trend="2 high priority" trendUp={false} accentColor="#818cf8" glowColor="#6366f1" iconEl={<Icon d={IC.tasks} size={18} />} />
-                <MetricCard label="Battery Low Alerts" value={`${lowBatCount}`} sub="Robots below 20% battery" trend="Critical" trendUp={false} accentColor="#f87171" glowColor="#ef4444" iconEl={<Icon d={IC.battery} size={18} />} />
-                <MetricCard label="Today's Completion" value={`${completedTodayCount}`} sub="tasks completed today" trend="On target" trendUp={true} accentColor="#34d399" glowColor="#10b981" iconEl={<Icon d={IC.check} size={18} />} />
-                <MetricCard label="MQTT Throughput" value="—" sub="No measured broker throughput" trend="Normal" trendUp={true} accentColor="#a78bfa" glowColor="#7c3aed" iconEl={<Icon d={IC.activity} size={18} />} />
-            </div>
+            <OperationalSummary />
 
             <div className="flex-1 flex gap-0 min-h-0">
                 {/* LEFT: Map Area (70%) */}

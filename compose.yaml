@@ -71,6 +71,14 @@ services:
     init: true
     build: {context: ., dockerfile: deploy/simulation.Dockerfile}
     environment:
+      # Portable CPU renderer: avoid the R2025a/LLVMpipe stall reproduced on QR8 -> QR7.
+      # Keep device heartbeat/mission timeouts unchanged; do not mask a stopped simulator.
+      GALLIUM_DRIVER: llvmpipe
+      LP_NUM_THREADS: ${SIMULATION_RENDER_THREADS:-0}
+      LP_NATIVE_VECTOR_WIDTH: '128'
+      OPENCV_FOR_THREADS_NUM: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
       SMARTFLEET_MQTT_HOST: mqtt
       SMARTFLEET_BACKEND_URL: http://backend:8080
       SMARTFLEET_BRIDGE_KEY: ${SIMULATION_BRIDGE_KEY:?}

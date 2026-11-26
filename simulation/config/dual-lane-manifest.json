@@ -1,0 +1,1282 @@
+{
+  "sceneId": "smartfleet-dual-lane-r2025a-v2",
+  "warehouseId": 1,
+  "world": "worlds/smartfleet-dual-lane.wbt",
+  "worldSha256": "88718429a9164b664b548f2aa67b4262528ab8083f07024fa3ab9aacaf55a343",
+  "mapFile": "config/dual-lane-map.json",
+  "mapRevisionAtExport": 1,
+  "directedLinks": true,
+  "markerDictionary": "DICT_4X4_250",
+  "metersPerGridCell": 0.5,
+  "worldToGrid": [
+    [
+      0,
+      2,
+      10
+    ],
+    [
+      2,
+      0,
+      7
+    ]
+  ],
+  "worldToMapYawDeg": 180.0,
+  "anchors": [
+    {
+      "arucoId": 0,
+      "row": 11,
+      "col": 10,
+      "worldX": 2.0,
+      "worldY": 0.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 1,
+      "row": 7,
+      "col": 10,
+      "worldX": 0.0,
+      "worldY": 0.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 2,
+      "row": 3,
+      "col": 10,
+      "worldX": -2.0,
+      "worldY": 0.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 3,
+      "row": 3,
+      "col": 4,
+      "worldX": -2.0,
+      "worldY": -3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 4,
+      "row": 7,
+      "col": 4,
+      "worldX": 0.0,
+      "worldY": -3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 5,
+      "row": 11,
+      "col": 4,
+      "worldX": 2.0,
+      "worldY": -3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 6,
+      "row": 11,
+      "col": 16,
+      "worldX": 2.0,
+      "worldY": 3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 7,
+      "row": 7,
+      "col": 16,
+      "worldX": 0.0,
+      "worldY": 3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 8,
+      "row": 3,
+      "col": 16,
+      "worldX": -2.0,
+      "worldY": 3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "TRANSFER"
+    },
+    {
+      "arucoId": 9,
+      "row": 2,
+      "col": 3,
+      "worldX": -2.5,
+      "worldY": -3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 10,
+      "row": 2,
+      "col": 4,
+      "worldX": -2.5,
+      "worldY": -3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 11,
+      "row": 2,
+      "col": 5,
+      "worldX": -2.5,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 12,
+      "row": 4,
+      "col": 5,
+      "worldX": -1.5,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 13,
+      "row": 4,
+      "col": 3,
+      "worldX": -1.5,
+      "worldY": -3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 14,
+      "row": 2,
+      "col": 9,
+      "worldX": -2.5,
+      "worldY": -0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 15,
+      "row": 2,
+      "col": 10,
+      "worldX": -2.5,
+      "worldY": 0.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 16,
+      "row": 2,
+      "col": 11,
+      "worldX": -2.5,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 17,
+      "row": 4,
+      "col": 11,
+      "worldX": -1.5,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 18,
+      "row": 4,
+      "col": 9,
+      "worldX": -1.5,
+      "worldY": -0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 19,
+      "row": 2,
+      "col": 15,
+      "worldX": -2.5,
+      "worldY": 2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 20,
+      "row": 2,
+      "col": 16,
+      "worldX": -2.5,
+      "worldY": 3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 21,
+      "row": 2,
+      "col": 17,
+      "worldX": -2.5,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 22,
+      "row": 4,
+      "col": 17,
+      "worldX": -1.5,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 23,
+      "row": 4,
+      "col": 15,
+      "worldX": -1.5,
+      "worldY": 2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 24,
+      "row": 6,
+      "col": 3,
+      "worldX": -0.5,
+      "worldY": -3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 25,
+      "row": 6,
+      "col": 4,
+      "worldX": -0.5,
+      "worldY": -3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 26,
+      "row": 6,
+      "col": 5,
+      "worldX": -0.5,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 27,
+      "row": 8,
+      "col": 5,
+      "worldX": 0.5,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 28,
+      "row": 8,
+      "col": 3,
+      "worldX": 0.5,
+      "worldY": -3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 29,
+      "row": 6,
+      "col": 9,
+      "worldX": -0.5,
+      "worldY": -0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 30,
+      "row": 6,
+      "col": 10,
+      "worldX": -0.5,
+      "worldY": 0.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 31,
+      "row": 6,
+      "col": 11,
+      "worldX": -0.5,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 32,
+      "row": 8,
+      "col": 11,
+      "worldX": 0.5,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 33,
+      "row": 8,
+      "col": 9,
+      "worldX": 0.5,
+      "worldY": -0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 34,
+      "row": 6,
+      "col": 15,
+      "worldX": -0.5,
+      "worldY": 2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 35,
+      "row": 6,
+      "col": 16,
+      "worldX": -0.5,
+      "worldY": 3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 36,
+      "row": 6,
+      "col": 17,
+      "worldX": -0.5,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 37,
+      "row": 8,
+      "col": 17,
+      "worldX": 0.5,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 38,
+      "row": 8,
+      "col": 15,
+      "worldX": 0.5,
+      "worldY": 2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 39,
+      "row": 10,
+      "col": 3,
+      "worldX": 1.5,
+      "worldY": -3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 40,
+      "row": 10,
+      "col": 4,
+      "worldX": 1.5,
+      "worldY": -3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 41,
+      "row": 10,
+      "col": 5,
+      "worldX": 1.5,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 42,
+      "row": 12,
+      "col": 5,
+      "worldX": 2.5,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 43,
+      "row": 12,
+      "col": 3,
+      "worldX": 2.5,
+      "worldY": -3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 44,
+      "row": 10,
+      "col": 9,
+      "worldX": 1.5,
+      "worldY": -0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 45,
+      "row": 10,
+      "col": 10,
+      "worldX": 1.5,
+      "worldY": 0.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 46,
+      "row": 10,
+      "col": 11,
+      "worldX": 1.5,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 47,
+      "row": 12,
+      "col": 11,
+      "worldX": 2.5,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 48,
+      "row": 12,
+      "col": 9,
+      "worldX": 2.5,
+      "worldY": -0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 49,
+      "row": 10,
+      "col": 15,
+      "worldX": 1.5,
+      "worldY": 2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 50,
+      "row": 10,
+      "col": 16,
+      "worldX": 1.5,
+      "worldY": 3.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 51,
+      "row": 10,
+      "col": 17,
+      "worldX": 1.5,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 52,
+      "row": 12,
+      "col": 17,
+      "worldX": 2.5,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 53,
+      "row": 12,
+      "col": 15,
+      "worldX": 2.5,
+      "worldY": 2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 54,
+      "row": 15,
+      "col": 3,
+      "worldX": 4.0,
+      "worldY": -3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 55,
+      "row": 15,
+      "col": 5,
+      "worldX": 4.0,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 56,
+      "row": 15,
+      "col": 8,
+      "worldX": 4.0,
+      "worldY": -1.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 57,
+      "row": 15,
+      "col": 11,
+      "worldX": 4.0,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 58,
+      "row": 15,
+      "col": 14,
+      "worldX": 4.0,
+      "worldY": 2.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 59,
+      "row": 15,
+      "col": 17,
+      "worldX": 4.0,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 60,
+      "row": 17,
+      "col": 17,
+      "worldX": 5.0,
+      "worldY": 3.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 61,
+      "row": 17,
+      "col": 14,
+      "worldX": 5.0,
+      "worldY": 2.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 62,
+      "row": 17,
+      "col": 11,
+      "worldX": 5.0,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 63,
+      "row": 17,
+      "col": 8,
+      "worldX": 5.0,
+      "worldY": -1.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 64,
+      "row": 17,
+      "col": 5,
+      "worldX": 5.0,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 65,
+      "row": 17,
+      "col": 1,
+      "worldX": 5.0,
+      "worldY": -4.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 66,
+      "row": 12,
+      "col": 1,
+      "worldX": 2.5,
+      "worldY": -4.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "NAVIGATION"
+    },
+    {
+      "arucoId": 67,
+      "row": 16,
+      "col": 5,
+      "worldX": 4.5,
+      "worldY": -2.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "CHARGING"
+    },
+    {
+      "arucoId": 68,
+      "row": 16,
+      "col": 8,
+      "worldX": 4.5,
+      "worldY": -1.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "CHARGING"
+    },
+    {
+      "arucoId": 69,
+      "row": 16,
+      "col": 11,
+      "worldX": 4.5,
+      "worldY": 0.5,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "CHARGING"
+    },
+    {
+      "arucoId": 70,
+      "row": 16,
+      "col": 14,
+      "worldX": 4.5,
+      "worldY": 2.0,
+      "markerYawDeg": -90.0,
+      "markerSizeM": 0.04,
+      "operationalRole": "CHARGING"
+    }
+  ],
+  "corridors": [
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      11,
+      12
+    ],
+    [
+      12,
+      13
+    ],
+    [
+      13,
+      9
+    ],
+    [
+      10,
+      3
+    ],
+    [
+      3,
+      10
+    ],
+    [
+      14,
+      15
+    ],
+    [
+      15,
+      16
+    ],
+    [
+      16,
+      17
+    ],
+    [
+      17,
+      18
+    ],
+    [
+      18,
+      14
+    ],
+    [
+      15,
+      2
+    ],
+    [
+      2,
+      15
+    ],
+    [
+      19,
+      20
+    ],
+    [
+      20,
+      21
+    ],
+    [
+      21,
+      22
+    ],
+    [
+      22,
+      23
+    ],
+    [
+      23,
+      19
+    ],
+    [
+      20,
+      8
+    ],
+    [
+      8,
+      20
+    ],
+    [
+      24,
+      25
+    ],
+    [
+      25,
+      26
+    ],
+    [
+      26,
+      27
+    ],
+    [
+      27,
+      28
+    ],
+    [
+      28,
+      24
+    ],
+    [
+      25,
+      4
+    ],
+    [
+      4,
+      25
+    ],
+    [
+      29,
+      30
+    ],
+    [
+      30,
+      31
+    ],
+    [
+      31,
+      32
+    ],
+    [
+      32,
+      33
+    ],
+    [
+      33,
+      29
+    ],
+    [
+      30,
+      1
+    ],
+    [
+      1,
+      30
+    ],
+    [
+      34,
+      35
+    ],
+    [
+      35,
+      36
+    ],
+    [
+      36,
+      37
+    ],
+    [
+      37,
+      38
+    ],
+    [
+      38,
+      34
+    ],
+    [
+      35,
+      7
+    ],
+    [
+      7,
+      35
+    ],
+    [
+      39,
+      40
+    ],
+    [
+      40,
+      41
+    ],
+    [
+      41,
+      42
+    ],
+    [
+      42,
+      43
+    ],
+    [
+      43,
+      39
+    ],
+    [
+      40,
+      5
+    ],
+    [
+      5,
+      40
+    ],
+    [
+      44,
+      45
+    ],
+    [
+      45,
+      46
+    ],
+    [
+      46,
+      47
+    ],
+    [
+      47,
+      48
+    ],
+    [
+      48,
+      44
+    ],
+    [
+      45,
+      0
+    ],
+    [
+      0,
+      45
+    ],
+    [
+      49,
+      50
+    ],
+    [
+      50,
+      51
+    ],
+    [
+      51,
+      52
+    ],
+    [
+      52,
+      53
+    ],
+    [
+      53,
+      49
+    ],
+    [
+      50,
+      6
+    ],
+    [
+      6,
+      50
+    ],
+    [
+      11,
+      14
+    ],
+    [
+      18,
+      12
+    ],
+    [
+      12,
+      26
+    ],
+    [
+      24,
+      13
+    ],
+    [
+      16,
+      19
+    ],
+    [
+      23,
+      17
+    ],
+    [
+      17,
+      31
+    ],
+    [
+      29,
+      18
+    ],
+    [
+      22,
+      36
+    ],
+    [
+      34,
+      23
+    ],
+    [
+      26,
+      29
+    ],
+    [
+      33,
+      27
+    ],
+    [
+      27,
+      41
+    ],
+    [
+      39,
+      28
+    ],
+    [
+      31,
+      34
+    ],
+    [
+      38,
+      32
+    ],
+    [
+      32,
+      46
+    ],
+    [
+      44,
+      33
+    ],
+    [
+      37,
+      51
+    ],
+    [
+      49,
+      38
+    ],
+    [
+      41,
+      44
+    ],
+    [
+      48,
+      42
+    ],
+    [
+      46,
+      49
+    ],
+    [
+      53,
+      47
+    ],
+    [
+      54,
+      55
+    ],
+    [
+      55,
+      56
+    ],
+    [
+      56,
+      57
+    ],
+    [
+      57,
+      58
+    ],
+    [
+      58,
+      59
+    ],
+    [
+      60,
+      61
+    ],
+    [
+      61,
+      62
+    ],
+    [
+      62,
+      63
+    ],
+    [
+      63,
+      64
+    ],
+    [
+      64,
+      65
+    ],
+    [
+      43,
+      54
+    ],
+    [
+      59,
+      60
+    ],
+    [
+      65,
+      66
+    ],
+    [
+      66,
+      43
+    ],
+    [
+      55,
+      67
+    ],
+    [
+      67,
+      64
+    ],
+    [
+      56,
+      68
+    ],
+    [
+      68,
+      63
+    ],
+    [
+      57,
+      69
+    ],
+    [
+      69,
+      62
+    ],
+    [
+      58,
+      70
+    ],
+    [
+      70,
+      61
+    ]
+  ],
+  "intersections": [
+    1
+  ],
+  "assets": {
+    "textures/dual-lane/QR3.png": "45a678a92bb9b330ce07b5d18fc48cddf84e711636ee0b4b70d7d820f529c89d",
+    "textures/dual-lane/QR9.png": "730fffc8b8c213885647ea12e1449765f7ba8703fe154d6e77ababb3015c1ca4",
+    "textures/dual-lane/QR10.png": "2955b949cc537ba933fe97668350e6e03124b691f8f6738bfd11ab850be55608",
+    "textures/dual-lane/QR11.png": "1c47a8675c7fe4dd096eb22b99e0a098478cff7d2cd38925624d2c3b5b8b0a4a",
+    "textures/dual-lane/QR12.png": "0e3c9dc7e318e835b7f591d01cceeefb73f3860c7edecabf613ff80d365b6dc0",
+    "textures/dual-lane/QR13.png": "f08940deb872988106fb755defccc68a0b989d31b138e0b5d973327bcbb9f702",
+    "textures/dual-lane/QR2.png": "d9c6c415c2a798aac223f889e4a6249093765072440d5b9dedce70a4101bc3cb",
+    "textures/dual-lane/QR14.png": "f8dabfc8eb150b6ee8abbb90f938abe564d48b65d40fc761eea2b46a9d23a996",
+    "textures/dual-lane/QR15.png": "4f347667f6e0366e20c3958500e0f6355728e1530b64d4ac2758384a22a761e8",
+    "textures/dual-lane/QR16.png": "a122fc75daa66920069f14669b5f3d81521eed18272096c8e4cbd72e98ccf2be",
+    "textures/dual-lane/QR17.png": "6742b36b0da0c58fc67be4c0291d386fbae59676b705fd0ffd61df7fc1764002",
+    "textures/dual-lane/QR18.png": "8d22dc90cbf1ac0ffed4ed60da6daf9f7be83f42b74715756b32227e5051409c",
+    "textures/dual-lane/QR8.png": "09129e812ff18d8473d475bb48e2ce6755da00836632eae504bda1dade300f16",
+    "textures/dual-lane/QR19.png": "dfdc891ef2f12a5b5bf9b622c24bedd499d2854b31e0d96262e0865bb7b078c5",
+    "textures/dual-lane/QR20.png": "cc02e25722dba06483ca03eac28d8a09947f8e606a6ecd2dcb7cb955e7284b91",
+    "textures/dual-lane/QR21.png": "bb0c4b4b7342a1dc54ec6fbbbbde9b056861ca2a9a21abdffa1880b218d64f14",
+    "textures/dual-lane/QR22.png": "517a6a8139dcf0e9c8aa14e9e28268762a6f4195e0f16572d8549db06eb5529a",
+    "textures/dual-lane/QR23.png": "78dfd84c0c068c23ffcc2dcc63547cade11dd1b79354b95eb7bf9ea76f5c72b7",
+    "textures/dual-lane/QR4.png": "89ec5090dfa9560ac3c9d0632ce031b7bff8a19f15eab8df7ac709435ed09b88",
+    "textures/dual-lane/QR24.png": "abbbf66c3ea4275abfe2e15df496af324167f56aed1ccffd17d7ccd081860897",
+    "textures/dual-lane/QR25.png": "324c09c5dfacb3e9ddbddb7cdbd9601859ff513b8a05068dd08be37aa7027708",
+    "textures/dual-lane/QR26.png": "bbdc10d1d28fe82a789a6bc41ceb0889a067b9895be1ecefd2b1023fb1ce04d7",
+    "textures/dual-lane/QR27.png": "b661ae824fb62ab78cc0f4163702081bb0e8003628bb9ecac28a15e3ceeb04ec",
+    "textures/dual-lane/QR28.png": "e67020b30356e78af658abdc20a830fbdbb4c311af5110e3cc6b4a9509f1aa0d",
+    "textures/dual-lane/QR1.png": "a6520e3b090706f72b25666dcfe54ba95884344ebe8dc3ef772d59bcad7b2185",
+    "textures/dual-lane/QR29.png": "70c06b8a0faf76ee1e1c86cd17771cb04439fafe4cadcf045b77125a22be9a02",
+    "textures/dual-lane/QR30.png": "71907cbb6e5ee34d036a57f18c03b44b7ed3e4e4ff5bec6fe567904aee9d9df9",
+    "textures/dual-lane/QR31.png": "0b86695f8bbe03736439ac4d6626aa879b168c4b45208a82c9e9f4a77b344fb8",
+    "textures/dual-lane/QR32.png": "b007ce42e832f288582794861bc57b5e6a2538f5b9b9568312e4accca6fe576a",
+    "textures/dual-lane/QR33.png": "ab631743aa3d7c88e22977eb1f65456c0bfdc7f059320106a96db0daa4b2cfa2",
+    "textures/dual-lane/QR7.png": "d14bd82401163ce89b0a061c31e7cb54ee04cce2b9320f5016ad0fbd979894fb",
+    "textures/dual-lane/QR34.png": "5e485fe1ef16d9635b96820cbeef6f3e8218d4f962c4747ac22492f1e264dc79",
+    "textures/dual-lane/QR35.png": "d97688b1da0c72098f19272ba02b48d1ed39dfebeae244a6bcaee41c54269580",
+    "textures/dual-lane/QR36.png": "a5057d444b94188b8db3e416451451afad938ba57499e669445209aca1352316",
+    "textures/dual-lane/QR37.png": "c19ed7381ac3c4290465a5217f96fc9ee9e54993708c7841b6b99f28829f62a3",
+    "textures/dual-lane/QR38.png": "977b5b13aca7ec8bd818830fdab5e2c1a8a55056b2ca121564af61dae365eb29",
+    "textures/dual-lane/QR5.png": "f3659a9387db908bd4f7d4bb805e8294f4157e610efddabf1eb3e159aa2084dd",
+    "textures/dual-lane/QR39.png": "4b238f35f197b8b1efffc6c0503834242579fb65cb04780161c57ab3cd7c0034",
+    "textures/dual-lane/QR40.png": "d651ad6387c89eb79a38e7458d471e14073af910c0e410c0e6f46504ed744ad3",
+    "textures/dual-lane/QR41.png": "edbb85f60c13605a0ae967f490a9c453f8e680cfa4d339c77c1576eefacd2376",
+    "textures/dual-lane/QR42.png": "2f8b61cf3f921648cb385e32e8b77dc53bc0c77ce7ee1cbe579fbb15d9fc9dbc",
+    "textures/dual-lane/QR43.png": "ba58418a69308cf3289862080527f8f3ced6ded69be3c8386c2d5e284430179c",
+    "textures/dual-lane/QR0.png": "2d430a78eb7ebad0206bdd6e7bd4007d490af6910b4470c3ebf579fe37784b64",
+    "textures/dual-lane/QR44.png": "72c2960896e67a6112c986c8eaa15373cbe738df62781128de15625746d7072d",
+    "textures/dual-lane/QR45.png": "96825f279fe4743dd4c57b1fb7771b032ca84e46b7da73c97d75491541fc909c",
+    "textures/dual-lane/QR46.png": "84238a665a5747cb4389e5c66017e36a438676ef1cb286363a1d8ad23aa04ecb",
+    "textures/dual-lane/QR47.png": "23ded44fc99238a2a1d34bccade9968fe30c4c8d2cb684beba7bedd33cdd26ca",
+    "textures/dual-lane/QR48.png": "f808b379645be07383796eca578e9c782bf27219013c8ee38df79f3ab76c036e",
+    "textures/dual-lane/QR6.png": "d9a4598e4c153c977800df9ca686771915f4cbb7adca3a72d2022c760a3e15f4",
+    "textures/dual-lane/QR49.png": "b337656a7d71246a85d4c236319e29b6949a4895bd40062f1e24492696474a85",
+    "textures/dual-lane/QR50.png": "dc95e0b0c269f69173e22a67be90a4a69be9c4f652d8a5d19d5647b242a429dc",
+    "textures/dual-lane/QR51.png": "87cbb82183a23fdd0b4a7fa3f58d56167c40734bd4c8d313bddcfce8e4a27aa8",
+    "textures/dual-lane/QR52.png": "144b74be5760471c8ae403b6cce6e7e7f44b49a12bbc78adae9fce216235dcdb",
+    "textures/dual-lane/QR53.png": "f06709cde1a991ccf782282023cbcd2a83e4cd93d53855b932887b78dceed691",
+    "textures/dual-lane/QR54.png": "6ad3f6f04e2648188e3b020c8ffecdc55ebb8ba9244c3a07efd162dfc5e94b92",
+    "textures/dual-lane/QR55.png": "0983d53068a3a92722a2f2166e35dd57b4a6349bcecb3bc3e2211a0988a744f4",
+    "textures/dual-lane/QR56.png": "a2d6bc1f69e07152d1d6ed4cf84172dd42c917ac5b550002cc0532d95c5e4ca7",
+    "textures/dual-lane/QR57.png": "f237d7e011f2ca8ad0d00056a9f97cee72735ca2dfe36fde68898db615b60320",
+    "textures/dual-lane/QR58.png": "eecc3cef4fef0d499eaf8e1ab30a002ddd3676dc994341035844f00a2e03411f",
+    "textures/dual-lane/QR59.png": "40a3f73625bf4f58774fdce1c36fe5937d9aced94c89e7c3ffe6e4ea3596eb30",
+    "textures/dual-lane/QR60.png": "228c5f2a0261637553f9266519ab69e711a24663bc8238ef44296718914a366c",
+    "textures/dual-lane/QR61.png": "7c57acb32840926e2387461e457bd2dbe9b9e01a5fe9bf5e0e17645d50e89b98",
+    "textures/dual-lane/QR62.png": "359ca94f71dff3dbbac201da816f36b9c8c07e2cede7cc3a0043b22a70262e3d",
+    "textures/dual-lane/QR63.png": "3176787021ee5b1191e8b42ca29d21ef5a6033b8b9e5b0313234579c4c045d68",
+    "textures/dual-lane/QR64.png": "37d630b51921ca59eaf04042dc844b3ba20021291e6a9e531e4012e3e93f8cb3",
+    "textures/dual-lane/QR65.png": "941f30ad20dd335d437d89959859ccd45b87a5f5e1382412ec0426faca9f66c0",
+    "textures/dual-lane/QR66.png": "b4f11772cb2e1e39abae7d3562733bf9bbed514b34cfb28b6eac8f677e7ed4aa",
+    "textures/dual-lane/QR67.png": "7e90d963eb05bb256c70bca79ac640e9f6371a353812ffbde268c1b45834ed3f",
+    "textures/dual-lane/QR68.png": "0ed5b5b8b7c19376ced00a7a994991a2b38d59e0a5cc3de1f7484ce4908208e8",
+    "textures/dual-lane/QR69.png": "8e31e347218abf411875bbfc30667acece05fcc7bef93eacc617264e0fa2c74f",
+    "textures/dual-lane/QR70.png": "16bcfe5b79881e4948a2280c101c73d7d735ab91f9faf982a6f55c4b812e1929"
+  },
+  "robots": [
+    {
+      "code": "R01",
+      "defName": "SF_R01"
+    },
+    {
+      "code": "R02",
+      "defName": "SF_R02"
+    }
+  ],
+  "chargingBays": [
+    {
+      "code": "CHG1",
+      "arucoId": 67,
+      "capacity": 1
+    },
+    {
+      "code": "CHG2",
+      "arucoId": 68,
+      "capacity": 1
+    },
+    {
+      "code": "CHG3",
+      "arucoId": 69,
+      "capacity": 1
+    },
+    {
+      "code": "CHG4",
+      "arucoId": 70,
+      "capacity": 1
+    }
+  ]
+}

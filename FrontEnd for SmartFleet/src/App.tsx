@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import WarehouseMapProvider from "./context/WarehouseMapContext"
 
 import {
@@ -7,6 +7,7 @@ import {
   Route,
   Navigate,
   Outlet,
+  useLocation,
 } from "react-router-dom"
 
 import { Sidebar } from "./components/Sidebar"
@@ -18,6 +19,8 @@ import { OperatorDashboard } from "./pages/OperatorDashboard"
 import { TasksPage } from "./pages/TasksPage"
 
 import { AdminDashboard } from "./pages/AdminDashboard"
+import RobotRegistryPage from "./pages/RobotRegistryPage"
+import AnalyticsPage from "./pages/AnalyticsPage"
 
 import WarehouseMapsPage from "./pages/WarehouseMapsPage"
 import QrMissionMonitorPage from "./pages/QrMissionMonitorPage"
@@ -49,7 +52,11 @@ function ProtectedLayout() {
 
   // State to track if the sidebar is collapsed
 
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(() => window.matchMedia("(max-width: 640px)").matches)
+  const location = useLocation()
+  const trackingVisible = location.pathname.replace(/\/+$/, "") === "/simulation"
+  const [trackingOpened, setTrackingOpened] = useState(trackingVisible)
+  useEffect(() => { if (trackingVisible) setTrackingOpened(true) }, [trackingVisible])
 
   if (isLoading) {
     return <AuthScreen message="Checking current session..." />
@@ -67,7 +74,7 @@ function ProtectedLayout() {
 
   return (
     <div
-      className="flex h-full overflow-hidden"
+      className="sf-app-shell flex h-full overflow-hidden"
       style={{ background: "var(--background)" }}
     >
       <Sidebar
@@ -78,31 +85,12 @@ function ProtectedLayout() {
       />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
-        {/* Floating Hamburger Button (Shows only when sidebar is collapsed) */}
-        {isCollapsed && (
-          <button
-            onClick={() => setIsCollapsed(false)}
-            className="absolute top-3 left-3 z-50 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border-medium)] text-[var(--text-primary)] shadow-md hover:scale-105 transition-all"
-            title="Open Sidebar"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
-        )}
-
-        <Outlet />
+        {/* The viewer belongs to the authenticated shell, not to a route/tab lifecycle.
+            Leaving tracking hides it; logout still disposes the entire session. */}
+        {(trackingOpened || trackingVisible) && <div style={{ display: trackingVisible ? "flex" : "none" }} className="flex-1 min-h-0 min-w-0 flex-col" aria-hidden={!trackingVisible}>
+          <SimulationPage visible={trackingVisible} />
+        </div>}
+        <div style={{ display: trackingVisible ? "none" : "flex" }} className="flex-1 min-h-0 min-w-0 flex-col"><Outlet /></div>
       </div>
     </div>
   )
@@ -180,7 +168,7 @@ export default function App() {
 
               <Route element={<ProtectedLayout />}>
                 <Route path="/profile" element={<UserProfilePage />} />
-                <Route path="/simulation" element={<SimulationPage />} />
+                <Route path="/simulation" element={null} />
                 <Route path="/warehouse-stations" element={<WarehouseStationsPage />} />
 
                 <Route element={<RequireRole allow={["operator"]} />}>
@@ -188,13 +176,11 @@ export default function App() {
 
                   <Route path="/dashboard/tasks" element={<TasksPage />} />
 
-                  <Route
-                    path="/dashboard/analytics"
-                    element={<div className="p-6">Analytics (Coming Soon)</div>}
-                  />
                 </Route>
 
                 <Route element={<RequireRole allow={["operator", "admin"]} />}>
+                  <Route path="/dashboard/analytics" element={<AnalyticsPage />} />
+                  <Route path="/admin/analytics" element={<AnalyticsPage />} />
                   <Route path="/dashboard/qr-missions" element={<QrMissionMonitorPage />} />
                   <Route path="/dashboard/navigation" element={<NavigationTrafficPage />} />
                 </Route>
@@ -232,7 +218,7 @@ export default function App() {
                   <Route
                     path="/admin/robots"
                     element={
-                      <div className="p-6">Admin Robots (Coming Soon)</div>
+                      <RobotRegistryPage />
                     }
                   />
 

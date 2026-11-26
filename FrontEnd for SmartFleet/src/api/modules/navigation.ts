@@ -2,7 +2,7 @@ import { apiClient } from "../client";
 
 // Matches SmartFleetBE.Navigation.NavigationModels, NOT a mock dataset.
 export type NavigationCellType = "wall" | "floor" | "station" | "qr" | "charge";
-export type CheckpointRole = "NAVIGATION" | "PICKUP" | "DELIVERY" | "WAITING" | "CHARGING";
+export type CheckpointRole = "NAVIGATION" | "PICKUP" | "DELIVERY" | "TRANSFER" | "WAITING" | "CHARGING";
 
 export interface NavigationMapCell {
   type: NavigationCellType;
@@ -21,6 +21,8 @@ export interface NavigationMapDocument {
   columns: number;
   cells: NavigationMapCell[][];
   links: string[][];
+  directedLinks?: boolean;
+  markerDictionary?: "DICT_4X4_50" | "DICT_4X4_250";
 }
 
 export interface ApproachingRobot {
@@ -64,6 +66,10 @@ export async function getMapReadiness(): Promise<MapReadiness> {
 
 export async function getNavigationMap(): Promise<NavigationMapDocument> {
   const { data } = await apiClient.get<NavigationMapDocument>(`${BASE}/map`);
+  return data;
+}
+export async function getCommissionedMapTemplate(): Promise<NavigationMapDocument> {
+  const {data}=await apiClient.get<NavigationMapDocument>("/api/v1/simulation/map-template");
   return data;
 }
 

@@ -11,6 +11,7 @@ import {
 import { useAuth } from "./AuthContext";
 import {
   getNavigationMap,
+  getCommissionedMapTemplate,
   putNavigationMap,
   navigationErrorMessage,
   type NavigationMapDocument,
@@ -28,12 +29,17 @@ interface WarehouseMapState {
   links: Array<[string, string]>;
   setLinks: Dispatch<SetStateAction<Array<[string, string]>>>;
   mapRevision: number | null;
+  directedLinks: boolean;
+  markerDictionary: "DICT_4X4_50" | "DICT_4X4_250";
+  setDirectedLinks: Dispatch<SetStateAction<boolean>>;
+  setMarkerDictionary: Dispatch<SetStateAction<"DICT_4X4_50" | "DICT_4X4_250">>;
   mapDirty: boolean;
   mapLoading: boolean;
   mapSaving: boolean;
   mapError: string | null;
   reloadMap: () => Promise<void>;
   saveMap: () => Promise<void>;
+  loadCommissionedTemplate: () => Promise<void>;
 }
 
 export function computeDefaultLinks(layout: WarehouseLayout): Array<[string, string]> {
@@ -73,11 +79,11 @@ function mapFromBackend(document: NavigationMapDocument): WarehouseLayout {
   } satisfies WarehouseCell)));
 }
 
-function arucoFromCell(cell: WarehouseCell): number {
+function arucoFromCell(cell: WarehouseCell, maxId: number): number {
   const idFromLabel = /^QR0*([0-9]+)$/i.exec(cell.label ?? "");
   const id = cell.arucoId ?? (idFromLabel ? Number(idFromLabel[1]) : undefined);
-  if (id === undefined || !Number.isInteger(id) || id < 0 || id > 49) {
-    throw new Error(`QR marker ${cell.label ?? "(unnamed)"} needs an ArUco ID from 0 to 49.`);
+  if (id === undefined || !Number.isInteger(id) || id < 0 || id > maxId) {
+    throw new Error(`QR marker ${cell.label ?? "(unnamed)"} needs an ArUco ID from 0 to ${maxId}.`);
   }
   return id;
 }
@@ -86,12 +92,14 @@ function mapToBackend(
   layout: WarehouseLayout,
   links: Array<[string, string]>,
   revision: number,
+  directedLinks: boolean,
+  markerDictionary: "DICT_4X4_50" | "DICT_4X4_250",
 ): NavigationMapDocument {
   const seenIds = new Set<number>();
   const cells: NavigationMapCell[][] = layout.map(row => row.map(cell => {
     const type = cell.type;
     const point = type === "qr" || type === "station" || type === "charge";
-    const arucoId = type === "qr" ? arucoFromCell(cell) : null;
+    const arucoId = type === "qr" ? arucoFromCell(cell,markerDictionary === "DICT_4X4_250" ? 249 : 49) : null;
     if (arucoId !== null) {
       if (seenIds.has(arucoId)) throw new Error(`Duplicate ArUco ID ${arucoId}. Each marker needs a unique ID.`);
       seenIds.add(arucoId);
@@ -107,7 +115,7 @@ function mapToBackend(
       markerSizeM: type === "qr" ? cell.markerSizeM ?? null : null,
     };
   }));
-  return { revision, rows: 18, columns: 28, cells, links: links.map(([a, b]) => [a, b]) };
+  return { revision, rows: 18, columns: 28, cells, directedLinks, markerDictionary, links: links.map(([a, b]) => [a, b]) };
 }
 
 const WarehouseMapContext = createContext<WarehouseMapState | null>(null);
@@ -117,6 +125,9 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
   const [warehouseLayout, setWarehouseLayout] = useState(createDefaultWarehouseLayout);
   const [links, setLinks] = useState(() => computeDefaultLinks(warehouseLayout));
   const [mapRevision, setMapRevision] = useState<number | null>(null);
+  const [directedLinks,setDirectedLinks] = useState(false);
+  const [markerDictionary,setMarkerDictionary] = useState<"DICT_4X4_50" | "DICT_4X4_250">("DICT_4X4_50");
+  const [savedSettings,setSavedSettings] = useState("");
   const [savedMap, setSavedMap] = useState<{ layout: WarehouseLayout; links: Array<[string, string]> } | null>(null);
   const [mapLoading, setMapLoading] = useState(false);
   const [mapSaving, setMapSaving] = useState(false);
@@ -129,6 +140,9 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
     setLinks(snapshotLinks);
     setSavedMap({ layout, links: snapshotLinks });
     setMapRevision(snapshot.revision);
+    setDirectedLinks(!!snapshot.directedLinks);
+    setMarkerDictionary(snapshot.markerDictionary ?? "DICT_4X4_50");
+    setSavedSettings(JSON.stringify([!!snapshot.directedLinks,snapshot.markerDictionary ?? "DICT_4X4_50"]));
     setMapError(null);
   }, []);
 
@@ -158,7 +172,7 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
     setMapSaving(true);
     try {
       // Save only on explicit click; never push partial edits automatically.
-      const request = mapToBackend(warehouseLayout, links, mapRevision);
+      const request = mapToBackend(warehouseLayout, links, mapRevision,directedLinks,markerDictionary);
       applySnapshot(await putNavigationMap(request));
     } catch (error) {
       const msg = navigationErrorMessage(error);
@@ -167,13 +181,20 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
     } finally {
       setMapSaving(false);
     }
-  }, [applySnapshot, links, mapLoading, mapRevision, role, warehouseLayout]);
+  }, [applySnapshot, links, mapLoading, mapRevision, role, warehouseLayout,directedLinks,markerDictionary]);
+  const loadCommissionedTemplate=useCallback(async()=>{
+    if(role!=="admin" || mapLoading || mapSaving) throw new Error("Load the Admin map before choosing its scene template.");
+    const template=await getCommissionedMapTemplate();
+    setWarehouseLayout(mapFromBackend(template));setLinks(template.links.map(e=>[e[0],e[1]]));
+    setDirectedLinks(!!template.directedLinks);setMarkerDictionary(template.markerDictionary??"DICT_4X4_50");
+  },[role,mapLoading,mapSaving]);
 
   return (
     <WarehouseMapContext.Provider value={{
       warehouseLayout, setWarehouseLayout, links, setLinks,
-      mapDirty: savedMap !== null && (warehouseLayout !== savedMap.layout || links !== savedMap.links),
-      mapRevision, mapLoading, mapSaving, mapError, reloadMap, saveMap,
+      directedLinks,setDirectedLinks,markerDictionary,setMarkerDictionary,
+      mapDirty: savedMap !== null && (warehouseLayout !== savedMap.layout || links !== savedMap.links || savedSettings !== JSON.stringify([directedLinks,markerDictionary])),
+      mapRevision, mapLoading, mapSaving, mapError, reloadMap, saveMap,loadCommissionedTemplate,
     }}>
       {children}
     </WarehouseMapContext.Provider>

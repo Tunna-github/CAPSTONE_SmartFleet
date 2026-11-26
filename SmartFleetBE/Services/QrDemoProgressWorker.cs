@@ -34,7 +34,9 @@ public sealed class QrDemoProgressWorker(IServiceScopeFactory scopes, IConfigura
                     return;
                 }
                 ProgressDecision result;
-                if (report.Event is "WAYPOINT_REACHED" or "VERIFICATION_STATUS")
+                if (report.Event is "CHARGE_WAYPOINT" or "CHARGE_DOCK_STATUS" or "CHARGE_FAILED" or "CHARGE_STOPPED")
+                    result = await scope.ServiceProvider.GetRequiredService<ChargingService>().Progress(parts[2], report, stoppingToken);
+                else if (report.Event is "WAYPOINT_REACHED" or "VERIFICATION_STATUS")
                     result = await scope.ServiceProvider.GetRequiredService<MissionExecutionService>().ProgressAsync(parts[2], report, stoppingToken);
                 else
                 {

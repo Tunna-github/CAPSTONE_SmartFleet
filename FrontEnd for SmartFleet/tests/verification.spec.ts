@@ -7,7 +7,7 @@ async function setup(page: Page, role = "Warehouse Operator") {
         startArUcoId: 0, pickupArUcoId: 1, deliveryArUcoId: 2, pickupWaypointIndex: 1, nextWaypointIndex: 2,
         lastReachedArUcoId: 1, pickupReached: true, deliveryReached: false,
         missionStatus: "AT_PICKUP", assignmentStatus: "ACTIVE", pickupVerified: false, deliveryVerified: false,
-        packageRequired: true, maxQrAttempts: 3, pickupQrAttempts: 0, deliveryQrAttempts: 0,
+        packageRequired: true, pickupVerificationCode: "P1", deliveryVerificationCode: "D1", maxQrAttempts: 3, pickupQrAttempts: 0, deliveryQrAttempts: 0,
         held: false, stationPresenceFresh: true, attempts: [] as any[], verifications: [] as any[],
         waypoints: [0,1,2].map((arucoId,i) => ({ arucoId, row: 0, col: i, stage: i===1 ? "PICKUP" : i===2 ? "DELIVERY" : "TO_PICKUP" })) };
     const posts: any[] = [];

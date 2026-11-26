@@ -444,7 +444,9 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
                     ? "ERROR"
                     : maintenance
                         ? "MAINTENANCE"
-                        : "AVAILABLE";
+                        : configuration.GetValue<bool>("Charging:Enabled") ? "BUSY" : "AVAILABLE";
+            if (message.Event == "MISSION_COMPLETED" && !maintenance && !anotherAssignment && configuration.GetValue<bool>("Charging:Enabled"))
+                await ChargingService.QueueAfterDelivery(db, robot, mission.MissionId, ct);
 
             // =================================================
             // 18. RELEASE ROBOT

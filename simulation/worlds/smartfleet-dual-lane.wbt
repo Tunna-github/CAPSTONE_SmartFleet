@@ -1,0 +1,254 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/CircleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/TurtleBot3Burger.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotis/protos/RobotisLds01.proto"
+
+WorldInfo { basicTimeStep 64 }
+Viewpoint { orientation 0.50 0 -0.866 3.14159 position 10 0 14 }
+TexturedBackground { }
+TexturedBackgroundLight { castShadows FALSE }
+Solid { translation 0 0 -0.05 children [ Shape { appearance PBRAppearance { baseColor 0.89 0.91 0.93 roughness 1 metalness 0 } geometry Box { size 14 14 0.1 } } ] boundingObject Box { size 14 14 0.1 } name "warehouse-floor" }
+Solid { translation 7 0 .2 children [ Shape { appearance PBRAppearance { baseColor .6 .65 .7 } geometry Box { size 0.1 14 .4 } } ] boundingObject Box { size 0.1 14 .4 } name "warehouse-wall-0" }
+Solid { translation -7 0 .2 children [ Shape { appearance PBRAppearance { baseColor .6 .65 .7 } geometry Box { size 0.1 14 .4 } } ] boundingObject Box { size 0.1 14 .4 } name "warehouse-wall-1" }
+Solid { translation 0 7 .2 children [ Shape { appearance PBRAppearance { baseColor .6 .65 .7 } geometry Box { size 14 0.1 .4 } } ] boundingObject Box { size 14 0.1 .4 } name "warehouse-wall-2" }
+Solid { translation 0 -7 .2 children [ Shape { appearance PBRAppearance { baseColor .6 .65 .7 } geometry Box { size 14 0.1 .4 } } ] boundingObject Box { size 14 0.1 .4 } name "warehouse-wall-3" }
+Solid { translation -2.5 -3.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-9-10" }
+Solid { translation -2.5 -2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-10-11" }
+Solid { translation -2.0 -2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-11-12" }
+Solid { translation -1.5 -3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-12-13" }
+Solid { translation -2.0 -3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-13-9" }
+Solid { translation -2.25 -3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-3-10" }
+Solid { translation -2.5 -0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-14-15" }
+Solid { translation -2.5 0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-15-16" }
+Solid { translation -2.0 0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-16-17" }
+Solid { translation -1.5 0.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-17-18" }
+Solid { translation -2.0 -0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-18-14" }
+Solid { translation -2.25 0.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-2-15" }
+Solid { translation -2.5 2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-19-20" }
+Solid { translation -2.5 3.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-20-21" }
+Solid { translation -2.0 3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-21-22" }
+Solid { translation -1.5 3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-22-23" }
+Solid { translation -2.0 2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-23-19" }
+Solid { translation -2.25 3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-8-20" }
+Solid { translation -0.5 -3.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-24-25" }
+Solid { translation -0.5 -2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-25-26" }
+Solid { translation 0.0 -2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-26-27" }
+Solid { translation 0.5 -3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-27-28" }
+Solid { translation 0.0 -3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-28-24" }
+Solid { translation -0.25 -3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-4-25" }
+Solid { translation -0.5 -0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-29-30" }
+Solid { translation -0.5 0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-30-31" }
+Solid { translation 0.0 0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-31-32" }
+Solid { translation 0.5 0.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-32-33" }
+Solid { translation 0.0 -0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-33-29" }
+Solid { translation -0.25 0.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-1-30" }
+Solid { translation -0.5 2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-34-35" }
+Solid { translation -0.5 3.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-35-36" }
+Solid { translation 0.0 3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-36-37" }
+Solid { translation 0.5 3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-37-38" }
+Solid { translation 0.0 2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-38-34" }
+Solid { translation -0.25 3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-7-35" }
+Solid { translation 1.5 -3.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-39-40" }
+Solid { translation 1.5 -2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-40-41" }
+Solid { translation 2.0 -2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-41-42" }
+Solid { translation 2.5 -3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-42-43" }
+Solid { translation 2.0 -3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-43-39" }
+Solid { translation 1.75 -3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-5-40" }
+Solid { translation 1.5 -0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-44-45" }
+Solid { translation 1.5 0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-45-46" }
+Solid { translation 2.0 0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-46-47" }
+Solid { translation 2.5 0.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-47-48" }
+Solid { translation 2.0 -0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-48-44" }
+Solid { translation 1.75 0.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-0-45" }
+Solid { translation 1.5 2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-49-50" }
+Solid { translation 1.5 3.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 0.5 } } ] name "lane-50-51" }
+Solid { translation 2.0 3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-51-52" }
+Solid { translation 2.5 3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-52-53" }
+Solid { translation 2.0 2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-53-49" }
+Solid { translation 1.75 3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-6-50" }
+Solid { translation -2.5 -1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-11-14" }
+Solid { translation -1.5 -1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-18-12" }
+Solid { translation -1.0 -2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-12-26" }
+Solid { translation -1.0 -3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-24-13" }
+Solid { translation -2.5 1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-16-19" }
+Solid { translation -1.5 1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-23-17" }
+Solid { translation -1.0 0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-17-31" }
+Solid { translation -1.0 -0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-29-18" }
+Solid { translation -1.0 3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-22-36" }
+Solid { translation -1.0 2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-34-23" }
+Solid { translation -0.5 -1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-26-29" }
+Solid { translation 0.5 -1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-33-27" }
+Solid { translation 1.0 -2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-27-41" }
+Solid { translation 1.0 -3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-39-28" }
+Solid { translation -0.5 1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-31-34" }
+Solid { translation 0.5 1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-38-32" }
+Solid { translation 1.0 0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-32-46" }
+Solid { translation 1.0 -0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-44-33" }
+Solid { translation 1.0 3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-37-51" }
+Solid { translation 1.0 2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-49-38" }
+Solid { translation 1.5 -1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-41-44" }
+Solid { translation 2.5 -1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-48-42" }
+Solid { translation 1.5 1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-46-49" }
+Solid { translation 2.5 1.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-53-47" }
+Solid { translation 4.0 -3.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-54-55" }
+Solid { translation 4.0 -1.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-55-56" }
+Solid { translation 4.0 -0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-56-57" }
+Solid { translation 4.0 1.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-57-58" }
+Solid { translation 4.0 2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-58-59" }
+Solid { translation 5.0 2.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-60-61" }
+Solid { translation 5.0 1.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-61-62" }
+Solid { translation 5.0 -0.25 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-62-63" }
+Solid { translation 5.0 -1.75 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.5 } } ] name "lane-63-64" }
+Solid { translation 5.0 -3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 2.0 } } ] name "lane-64-65" }
+Solid { translation 3.25 -3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.5 0.25 } } ] name "lane-43-54" }
+Solid { translation 4.5 3.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 1.0 0.25 } } ] name "lane-59-60" }
+Solid { translation 3.75 -4.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 2.5 0.25 } } ] name "lane-65-66" }
+Solid { translation 2.5 -4.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.25 1.0 } } ] name "lane-66-43" }
+Solid { translation 4.25 -2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-55-67" }
+Solid { translation 4.75 -2.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-67-64" }
+Solid { translation 4.25 -1.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-56-68" }
+Solid { translation 4.75 -1.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-68-63" }
+Solid { translation 4.25 0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-57-69" }
+Solid { translation 4.75 0.5 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-69-62" }
+Solid { translation 4.25 2.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-58-70" }
+Solid { translation 4.75 2.0 0.001 children [ Shape { appearance PBRAppearance { baseColor 0.70 0.78 0.81 roughness 1 metalness 0 } geometry Plane { size 0.5 0.25 } } ] name "lane-70-61" }
+Solid { translation -2.0 -3.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-3" }
+Solid { translation -2.0 -3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR3.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR3" }
+Solid { translation -2.5 -3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR9.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR9" }
+Solid { translation -2.5 -3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR10.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR10" }
+Solid { translation -2.5 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR11.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR11" }
+Solid { translation -1.5 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR12.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR12" }
+Solid { translation -1.5 -3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR13.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR13" }
+Solid { translation -2.0 0.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-2" }
+Solid { translation -2.0 0.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR2.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR2" }
+Solid { translation -2.5 -0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR14.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR14" }
+Solid { translation -2.5 0.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR15.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR15" }
+Solid { translation -2.5 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR16.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR16" }
+Solid { translation -1.5 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR17.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR17" }
+Solid { translation -1.5 -0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR18.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR18" }
+Solid { translation -2.0 3.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-8" }
+Solid { translation -2.0 3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR8.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR8" }
+Solid { translation -2.5 2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR19.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR19" }
+Solid { translation -2.5 3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR20.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR20" }
+Solid { translation -2.5 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR21.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR21" }
+Solid { translation -1.5 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR22.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR22" }
+Solid { translation -1.5 2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR23.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR23" }
+Solid { translation 0.0 -3.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-4" }
+Solid { translation 0.0 -3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR4.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR4" }
+Solid { translation -0.5 -3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR24.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR24" }
+Solid { translation -0.5 -3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR25.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR25" }
+Solid { translation -0.5 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR26.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR26" }
+Solid { translation 0.5 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR27.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR27" }
+Solid { translation 0.5 -3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR28.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR28" }
+Solid { translation 0.0 0.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR1.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR1" }
+Solid { translation -0.5 -0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR29.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR29" }
+Solid { translation -0.5 0.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR30.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR30" }
+Solid { translation -0.5 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR31.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR31" }
+Solid { translation 0.5 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR32.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR32" }
+Solid { translation 0.5 -0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR33.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR33" }
+Solid { translation 0.0 3.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-7" }
+Solid { translation 0.0 3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR7.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR7" }
+Solid { translation -0.5 2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR34.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR34" }
+Solid { translation -0.5 3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR35.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR35" }
+Solid { translation -0.5 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR36.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR36" }
+Solid { translation 0.5 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR37.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR37" }
+Solid { translation 0.5 2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR38.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR38" }
+Solid { translation 2.0 -3.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-5" }
+Solid { translation 2.0 -3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR5.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR5" }
+Solid { translation 1.5 -3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR39.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR39" }
+Solid { translation 1.5 -3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR40.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR40" }
+Solid { translation 1.5 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR41.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR41" }
+Solid { translation 2.5 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR42.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR42" }
+Solid { translation 2.5 -3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR43.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR43" }
+Solid { translation 2.0 0.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-0" }
+Solid { translation 2.0 0.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR0.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR0" }
+Solid { translation 1.5 -0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR44.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR44" }
+Solid { translation 1.5 0.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR45.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR45" }
+Solid { translation 1.5 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR46.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR46" }
+Solid { translation 2.5 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR47.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR47" }
+Solid { translation 2.5 -0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR48.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR48" }
+Solid { translation 2.0 3.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.61 0.79 0.94 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-6" }
+Solid { translation 2.0 3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR6.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR6" }
+Solid { translation 1.5 2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR49.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR49" }
+Solid { translation 1.5 3.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR50.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR50" }
+Solid { translation 1.5 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR51.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR51" }
+Solid { translation 2.5 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR52.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR52" }
+Solid { translation 2.5 2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR53.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR53" }
+Solid { translation 4.0 -3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR54.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR54" }
+Solid { translation 4.0 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR55.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR55" }
+Solid { translation 4.0 -1.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR56.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR56" }
+Solid { translation 4.0 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR57.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR57" }
+Solid { translation 4.0 2.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR58.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR58" }
+Solid { translation 4.0 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR59.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR59" }
+Solid { translation 5.0 3.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR60.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR60" }
+Solid { translation 5.0 2.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR61.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR61" }
+Solid { translation 5.0 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR62.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR62" }
+Solid { translation 5.0 -1.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR63.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR63" }
+Solid { translation 5.0 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR64.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR64" }
+Solid { translation 5.0 -4.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR65.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR65" }
+Solid { translation 2.5 -4.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR66.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR66" }
+Solid { translation 4.5 -2.5 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.55 0.86 0.63 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-67" }
+Solid { translation 4.5 -2.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR67.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR67" }
+Solid { translation 4.5 -1.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.55 0.86 0.63 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-68" }
+Solid { translation 4.5 -1.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR68.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR68" }
+Solid { translation 4.5 0.5 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.55 0.86 0.63 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-69" }
+Solid { translation 4.5 0.5 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR69.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR69" }
+Solid { translation 4.5 2.0 0.002 children [ Shape { appearance PBRAppearance { baseColor 0.55 0.86 0.63 roughness 1 metalness 0 } geometry Plane { size 0.40 0.40 } } ] name "bay-70" }
+Solid { translation 4.5 2.0 0.005 rotation 0 0 1 1.5707963267948966 children [ Shape { appearance PBRAppearance { baseColorMap ImageTexture { url [ "textures/dual-lane/QR70.png" ] } metalness 0 roughness 1 } geometry Plane { size 0.04 0.04 } } ] name "QR70" }
+DEF SF_R01 TurtleBot3Burger {
+  translation 2.075 0.0 -0.0004935372
+  rotation 0 0 1 3.141592653589793
+  name "R01"
+  controller "my_controller_testing_fleet"
+  controllerArgs [
+    "--traffic-test-hold=0"
+    "--sim-lidar=true"
+    "--intersection-pilot=true"
+    "--robot-code=R01"
+  ]
+  extensionSlot [
+    Camera {
+      translation 0.080866 0.0077265 0.0906544
+      rotation 0 -1 0 -1.56271
+      fieldOfView 0.85404
+      width 626
+      height 250
+    }
+    InertialUnit {
+    }
+    RobotisLds01 {
+      rotation 0 0 -1 0.261798
+    }
+  ]
+}
+DEF SF_R02 TurtleBot3Burger {
+  translation 0.075 -3.0 -0.0004935372
+  rotation 0 0 1 3.141592653589793
+  name "R02"
+  controller "my_controller_testing_fleet"
+  controllerArgs [
+    "--traffic-test-hold=0"
+    "--sim-lidar=true"
+    "--intersection-pilot=true"
+    "--robot-code=R02"
+  ]
+  extensionSlot [
+    Camera {
+      translation 0.080866 0.0077265 0.0906544
+      rotation 0 -1 0 -1.56271
+      fieldOfView 0.85404
+      width 626
+      height 250
+    }
+    InertialUnit {
+    }
+    RobotisLds01 {
+      rotation 0 0 -1 0.261798
+    }
+  ]
+}
+Robot { name "SmartFleet simulation observer" supervisor TRUE controller "smartfleet_observer" }

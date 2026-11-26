@@ -38,20 +38,29 @@ for username,variable in [('admin','DEMO_ADMIN_PASSWORD'),('operator','DEMO_OPER
     token=session['accessToken']
     saved=json.loads(request('/api/v1/navigation/map',token))
     assert saved['revision']>=5
-    assert json.loads(request('/api/v1/simulation',token))['mapCompatible']
-    poses=json.loads(request('/api/v1/simulation/poses',token))['poses']
-    assert {p['robotCode'] for p in poses}=={'R01','R02'}
+    scene=json.loads(request('/api/v1/simulation',token))
+    assert scene['mapCompatible']
+    manifest_name='dual-lane-manifest.json' if scene['sceneId']=='smartfleet-dual-lane-r2025a-v2' else 'scene-manifest.json'
+    commissioned=json.loads((root/'simulation/config'/manifest_name).read_text())
+    asset='textures/dual-lane/QR1.png' if commissioned.get('directedLinks') else 'textures/QR_1.png'
+    expected_robots={r['code'] for r in commissioned['robots']}
+    # The HTTP process becomes healthy before Webots finishes loading the world.
+    for attempt in range(60):
+        poses=json.loads(request('/api/v1/simulation/poses',token))['poses']
+        if {p['robotCode'] for p in poses}==expected_robots:break
+        time.sleep(1)
+    assert {p['robotCode'] for p in poses}==expected_robots, 'Webots did not publish all commissioned robot poses'
     if username=='maintenance':
         request('/api/v1/navigation/map',token,saved,'PUT',403)
         request('/api/v1/navigation/robots/R01/scan',token,{'currentArUcoId':0,'nextArUcoId':1},expected=403)
     opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
     request('/api/v1/simulation/session',token,{},opener=opener)
-    assert request('/api/v1/simulation/view/textures/QR_1.png',opener=opener).startswith(b'\x89PNG')
+    assert request('/api/v1/simulation/view/'+asset,opener=opener).startswith(b'\x89PNG')
     request('/api/v1/simulation/view/controllers/my_controller_testing_fleet/my_controller_testing_fleet.py',expected=404,opener=opener)
     request('/api/v1/simulation/view/%252e%252e/config/scene-manifest.json',expected=404,opener=opener)
     summary.append({'role':session['user']['roles'][0],'mapRevision':saved['revision'],'robots':len(poses),'assetWhitelist':True})
 request('/api/v1/simulation/session',data={},expected=401)
-request('/api/v1/simulation/view/textures/QR_1.png',expected=401)
+request('/api/v1/simulation/view/'+asset,expected=401)
 if '--map-write-check' in sys.argv:
     # Explicit opt-in: no active assignments, change/restore one marker yaw,
     # prove dispatch fails closed, and cancel the unassigned probe task.
@@ -59,6 +68,7 @@ if '--map-write-check' in sys.argv:
         return json.loads(request('/api/v1/auth/login',data={'usernameOrEmail':name,'password':env[key]}))['accessToken']
     admin=login('admin','DEMO_ADMIN_PASSWORD');operator=login('operator','DEMO_OPERATOR_PASSWORD')
     assert json.loads(request('/api/v1/task-interventions',operator))==[], 'Finish active demo assignments first'
+    assert not json.loads(request('/api/v1/charging',operator))['jobs'], 'Finish/recover reserved charging cycles before the map-write probe'
     original=json.loads(request('/api/v1/navigation/map',admin));probe=None;edited=False
     changed=json.loads(json.dumps(original))
     marker=next(cell for row in changed['cells'] for cell in row if cell['type']=='qr')
@@ -70,7 +80,11 @@ if '--map-write-check' in sys.argv:
             'deliveryStationId':2,'priorityLevel':2,'payloadWeightKg':1,'dispatchMode':'MANUAL',
             },expected=201))['taskId']
         eligible=json.loads(request(f'/api/v1/transport-tasks/{probe}/available-robots?includeIneligible=true',operator))
-        assert len(eligible)==2 and all(not r['isEligible'] and 'Simulation world' in r['ineligibilityReason'] for r in eligible)
+        expected_codes={r['code'] for r in json.loads((root/'simulation/config/scene-manifest.json').read_text())['robots']}
+        simulated=[r for r in eligible if r['robotCode'] in expected_codes]
+        assert {r['robotCode'] for r in simulated}==expected_codes
+        assert all(not r['isEligible'] for r in eligible)
+        assert all('Simulation world' in r['ineligibilityReason'] for r in simulated)
     finally:
         if edited:
             original['revision']=json.loads(request('/api/v1/navigation/map',admin))['revision']

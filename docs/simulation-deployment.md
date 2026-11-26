@@ -38,6 +38,7 @@ Set `SIMULATION_SECURE_COOKIES=true` in the server's private `.env` when TLS is 
 * Camera heading candidates are checked for projection error, floor orientation and ambiguity. A rejected checkpoint frame keeps the robot stopped and does not send waypoint progress or an intersection EXIT; stopped retries are bounded to five seconds. IPPE and SQPnP candidates share the same validation bounds, including on the pinned Docker OpenCV version.
 * Gray markers mean stale position. Yellow markers mean only a camera-confirmed QR is known. The frontend does not invent motion between checkpoints.
 * Routing excludes another robot's camera-confirmed QR and claimed corridor endpoints, including idle/offline robots. Losing heartbeat does not prove a road is physically clear. Runtime navigation also holds a robot before a destination claimed by another robot; a new camera checkpoint releases the previous corridor. These guards do not replace physical obstacle sensing.
+* Compose uses a single-thread LLVMpipe renderer with 128-bit vectors and bounded OpenCV/BLAS threads. During regression the default renderer reproducibly stopped all simulation steps on QR8 → QR7; limiting it to two threads alone did not resolve that case. The single-thread/128-bit run completed the problematic leg. Heartbeat and mission safety timeouts remain enforced, and failed load holds are preserved. This is a software-renderer workaround, not a hardware certification. `SIMULATION_RENDER_THREADS` can override the default `0`; validate stability before enabling parallel rendering. See the [Mesa environment settings](https://docs.mesa3d.org/envvars.html) and [LLVMpipe vector settings](https://docs.mesa3d.org/drivers/llvmpipe.html).
 * If Webots stops advancing, the viewer refuses new sessions without fresh pose reports and reports connection timeouts instead of loading forever. Check `docker compose logs --tail 100 webots backend`. A simulator restart resets the simulated scene to its saved starting positions; it does not resolve failed missions or confirm that their loads were recovered.
 
 ## Operation and validation
@@ -65,6 +66,33 @@ node tools/check_simulation_browser.mjs
 
 Browser checks use Edge and write screenshots under ignored `test-results/simulation`. The normal frontend/backend/Python regression suites remain separate. A container build and a second browser session on one host do not constitute validation on every operating system or on physical JetRacer hardware.
 
-For the GUI flow on a fresh installation, create an AUTO task using Warehouse 1, Pickup Station 1/P1, Delivery Station 2/D1 and a 1 kg payload. The seeded database mappings resolve P1 to QR2 and D1 to QR7; the task form has no independent marker selectors. Existing installations must commission mappings as Admin in **Warehouse & Stations** first. In **QR Mission Monitor**, confirm pickup using station payload `P1`, then delivery using `D1`. Those confirmations represent simulated handling in this demo. The mission check uses available commissioned station pairs (one pair on a fresh seed). `python tools/check_simulation_api.py --map-write-check` explicitly tests save/restore and blocked dispatch for mismatched marker geometry; it requires no active assignments and cancels its own unassigned probe task.
+For the GUI flow on a fresh installation, create an AUTO task using Warehouse 1, Pickup Station 1/P1, Delivery Station 2/D1 and a 1 kg payload. Both task selectors list QR0–QR8; QR1 is disabled as a goods-transfer stop. All eight remaining points support pickup and delivery via explicit TRANSFER stations. P1/QR2 and D1/QR7 remain a smoke-test example, not a task restriction. Older unmodified SIM demo databases receive the same mappings through the one-time `deploy/commission-demo-stations.sql` upgrade. Operators do not need an Admin login to create each task. Customized warehouses still require explicit commissioning once by an Administrator. In **Live tracking & handover**, confirm using the code saved for that mission: new assignments at QR2/QR7 use `QR2`/`QR7`; missions assigned before the code upgrade retain their original `P1`/`D1` codes. Those confirmations represent simulated handling in this demo. The mission check uses available commissioned station pairs (one pair on a fresh seed). `python tools/check_simulation_api.py --map-write-check` explicitly tests save/restore and blocked dispatch for mismatched marker geometry; it requires no active assignments and cancels its own unassigned probe task.
 
-On a fresh isolated world, first commission a PICKUP station at QR2 and a DELIVERY station at QR5 as Admin (the seeded D1 is at QR7, so explicitly edit it or add a distinct station). Then `python tools/check_simulation_occupancy.py` reproduces the parked-robot regression: R02 stays at QR4 while R01 collects at QR2 and delivers at QR5 using a route around QR4. It creates one MANUAL task and confirms both simulated transfers. Set `SMARTFLEET_DEMO_URL` to select a separate test stack; do not run it on an installation with active user assignments. The script never overrides database station mappings.
+On a fresh isolated world, QR2 and QR5 are already commissioned transfer points. Then `python tools/check_simulation_occupancy.py` reproduces the parked-robot regression: R02 stays at QR4 while R01 collects at QR2 and delivers at QR5 using a route around QR4. It creates one MANUAL task and confirms both simulated transfers. Set `SMARTFLEET_DEMO_URL` to select a separate test stack; do not run it on an installation with active user assignments. The script never overrides database station mappings.
+
+
+## Ready-to-use stations on older demo volumes
+
+`db-init` now upgrades the original SIM preset as well as installing fresh databases. It identifies P1/D1 by station codes/types and links them to QR2/QR7 without assuming their numeric StationIDs. The upgrade records system audit entries and an applied version, and never replaces existing mappings, map geometry, robot state, tasks or mission history. It only runs for recognized demo databases whose physical QR geometry and corridor topology match the shipped scene; customized/occupied stations, marker conflicts and active assignments/failed holds defer it. It does not infer mappings for a real warehouse.
+
+To apply additive updates to an older demo volume after pulling:
+
+```sh
+docker compose run --rm --no-deps db-init
+```
+
+The normal `docker compose up` also runs `db-init`. Operators can then reload stations in Create Task without switching accounts. The task form shows unavailable pickup/delivery stations with reasons instead of silently hiding them, and enables creation after both stations are selected and ready. WAITING and CHARGING remain separate from goods-transfer stations.
+
+Regression commands, using a separate disposable test installation:
+
+```sh
+docker compose -p smartfleet-station-flow up -d database
+docker compose -p smartfleet-station-flow run --rm --no-deps db-init
+python tools/check_demo_station_upgrade.py --project smartfleet-station-flow
+```
+
+The upgrade check creates/removes database clones and tests fresh/idempotent initialization, legacy StationID changes, deliberate customization, changed QR geometry/corridors, conflicting markers, active failed holds and non-demo databases. `node tools/check_operator_station_flow.mjs http://localhost:8080` checks the main form without creating a task. Adding `--create` is restricted to the isolated acceptance installation on port 8086 and exercises real MANUAL/AUTO task creation with an Operator-only login; robots there remain offline so both tasks stay queued.
+
+The subsequent SIM preset v3 upgrade (`deploy/commission-demo-qr-stations.sql`) commissions all eight non-intersection QR points as TRANSFER stations. It extends the earlier two-point legacy repair. See [QR endpoint scope and model](warehouse-station-management.md#scope-clarification-any-eligible-qr-can-be-a-task-endpoint). Run the PostgreSQL upgrade suite with `--qr-transfer` to include dedicated-berth and missing-verification safeguards.
+
+Preset v5 unifies the verification payloads at QR2/QR7. It preserves existing mission snapshots and historical scans; the UI displays the frozen mission code. See [verification-code cutover semantics](warehouse-station-management.md#unified-verification-codes-sim-preset-v5). Validate with `python tools/check_verification_code_upgrade.py --project smartfleet-station-qr-flow` against an isolated stopped test database.

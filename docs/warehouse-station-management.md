@@ -64,18 +64,20 @@ outside the map document.
    yaw, active state, verification payload and commissioned ArUco checkpoint.
    Active stations require active parents and a mapping. Active PICKUP/DELIVERY
    stations also require distinct, nonempty station verification QR payloads.
-4. For the acceptance example, edit P1 to QR2 and D1 to QR7. A fresh demo already
-   seeds these exact mappings. An upgrade deliberately leaves historical stations
-   unmapped until an Admin verifies their physical meaning. No legacy task or
-   mission is rewritten by the SQL patch.
-5. Sign in as Operator, create a task and select the warehouse, P1 and D1.
-   The form displays P1 → QR2 / D1 → QR7 but sends only StationIds. The backend
-   resolves the current database mappings, validates the graph, and freezes the
-   route and transfer expectations when assigning a mission. The approach route
-   depends on robot position/occupancy; pickup must be QR2 and delivery QR7.
-6. In **QR Mission Monitor**, confirm simulated loading with payload `P1` and
-   unloading with `D1` (plus package code if specified). ArUco2/7 are navigation
-   identities, not the station QR verification payloads.
+4. The isolated SIM preset commissions a TRANSFER station at every non-intersection
+   QR (0, 2, 3, 4, 5, 6, 7, 8), including both pickup and delivery capability.
+   P1 at QR2 and D1 at QR7 retain their identities and verification payloads; they
+   are examples, not the only allowed task endpoints. QR1 is shown but disabled
+   as a goods-transfer stop, and remains available for route transit.
+5. Sign in as Operator and choose any two different enabled QR points in Create
+   Task. Both lists show the map's QR markers, with disabled entries explaining
+   reserved intersections or missing/inactive mappings. Only the selected
+   StationIds are sent; the backend resolves and validates their QR checkpoints.
+   A TRANSFER station can be used at either end, including QR7 → QR2.
+6. In **Live tracking & handover**, confirm loading/unloading using the selected
+   station's verification payload (and package code when required). Newly assigned missions use `QR2`/`QR7` at those points; the other shipped points use `QR0`, `QR3`, etc. Mission snapshots created before the code upgrade keep their original `P1`/`D1` expectations. These text
+   payloads are separate from the camera's numeric ArUco navigation IDs. The stage
+   is PICKUP or DELIVERY according to the mission, not according to a station's name.
 
 Station coordinates are logical local metric metadata. They do not change a
 physical marker's map row/column, pose or size. The selected marker's commissioned
@@ -92,10 +94,11 @@ map/world incompatibility still blocks simulation dispatch.
   per warehouse, including inactive stations. Unknown, duplicated, uncommissioned
   and reserved-intersection markers are rejected. Map saves cannot invalidate
   these mappings either.
-- Station types remain PICKUP, DELIVERY, WAITING and CHARGING. The current model
-  has a single StationType and task validation depends on it. Dual-use stations
-  therefore require a separate capability/model change and are deliberately not
-  introduced here. WAITING/CHARGING cannot be chosen as task pickup/delivery.
+- Station types are PICKUP, DELIVERY, TRANSFER, WAITING and CHARGING. TRANSFER
+  explicitly supports both ends of a goods mission while keeping one StationId,
+  one marker and one verification payload. PICKUP/DELIVERY remain available for
+  dedicated business stations. WAITING/CHARGING are dedicated berths and do not
+  automatically become transfer points.
 - Updates use revision checks and serializable PostgreSQL transactions. Audit
   entries include actor, timestamp and before/after values. Concurrent requests
   claiming the same marker cannot both succeed.
@@ -162,3 +165,91 @@ simulated transfers. Its `--api-only` mode adds concurrent mapping checks on an
 already exercised, idle isolated installation. Evidence is written to
 `SMARTFLEET_EVIDENCE_DIR` (default `test-results/simulation`). Neither command is
 an operational database repair tool or a physical hardware acceptance test.
+
+
+## Scope clarification: any eligible QR can be a task endpoint
+
+The replacement BA's UC05/SC-04 describes selection of pickup and delivery stations;
+its P1/D1 scenario is an example, not an exclusive QR2/QR7 restriction. The user's
+2026-11-26 clarification explicitly requires selection across all QR points at both
+ends, with QR1 visible but transit-only. Supporting this required an explicit
+TRANSFER type because the previous schema and service validation allowed only one
+pickup/delivery role per station. `Database/20261126_transfer_stations.sql` updates
+the type constraint. Task creation, dispatch revalidation, recovery, map editing,
+station labels and verification all retain the same station identity and mapping.
+
+`deploy/commission-demo-qr-stations.sql` upgrades only the matching SIM preset, once,
+with audit entries. It preserves the physical scene, saved marker geometry,
+missions, verification payloads and existing station IDs. Active work/failed load
+holds, conflicting mappings, inactive stations and dedicated waiting/charging
+berths prevent automatic commissioning. Real warehouses still use explicit Admin
+commissioning, independently of the packaged simulation preset.
+
+Validation includes all 56 distinct ordered pairs among eight transfer points,
+reverse-direction task creation, same-point rejection, reserved-intersection
+blocking, role restrictions, and migration idempotency. Use the isolated Operator
+browser acceptance tool with `--all-qr --create` to exercise QR0→8, QR7→2,
+QR3→5, QR4→6 and AUTO QR8→0 without starting physical robot missions.
+
+
+## Neutral point names and verification labels
+
+The SIM preset's display names are `Transfer point QR2` and `Transfer point QR7`
+in place of `Pickup Station P1` and `Delivery Station D1`. All eight transfer
+points use the same neutral naming scheme. Task dropdowns show the point name;
+route summaries use QR IDs. Pickup/delivery identifies the current mission stage.
+
+`deploy/rename-demo-transfer-points.sql` is an idempotent, audited metadata-only
+update of the two default names. It preserves stable StationIds/codes, printed
+station verification payloads P1/D1, frozen mission expectations, mappings and
+physical geometry. It also preserves user-customized names. The confirmation
+form explicitly shows the point's QR ID, display name and station verification
+code without filling or submitting the scan input. This keeps QR7 usable as a
+pickup point while still verifying its existing D1 station label.
+
+To validate metadata migration independently on a stopped isolated test stack:
+`python tools/check_demo_station_upgrade.py --project smartfleet-station-qr-flow --rename-labels`.
+The checks cover active assignments, unchanged barcode/route data, custom-name
+preservation and repeated initialization.
+
+
+## Unified verification codes (SIM preset v5)
+
+The current station catalog uses `QR0`, `QR2` ... `QR8` as verification payloads,
+independent of whether the point is pickup or delivery in a task. Stable station
+codes P1/D1 are database identities; their canonical payloads are now QR2/QR7.
+`deploy/unify-demo-verification-codes.sql` updates only those two catalog payloads,
+records before/after audit data and refuses conflicting/customized payloads.
+It never rewrites MissionExecutions, historical scans or verification results.
+
+A mission freezes its pickup/delivery codes when assignment creates its durable
+execution record. Already assigned/running/held missions retain their original
+codes until completion/recovery. An unassigned queued task uses the new catalog
+codes when it is eventually assigned. An assignment that started before the
+cutover can retain the older snapshot; the authoritative value is always its
+persisted execution record, not the task's creation date or today's catalog.
+
+Mission API fields `pickupVerificationCode` and `deliveryVerificationCode` expose
+that snapshot. Both verification screens display these values, with an explicit
+legacy notice for P1/D1. They never derive a mission's expected code from mutable
+catalog data or automatically fill/submit the scanner input. Missing snapshot
+codes keep QR verification disabled until mission data is refreshed. Package,
+physical-transfer, retry, idempotency, role and safety checks remain enforced.
+
+For an application update, deploy the snapshot-aware backend and frontend in an
+idle window before applying the catalog cutover; refresh old browser clients.
+Do not restart a controller/backend merely to change codes while a robot carries
+a load. The additive database cutover itself preserves active/failed load holds.
+Printed station labels must correspond to the applicable configured code; Webots
+ArUco navigation images are independent and are not regenerated by this change.
+
+
+The live cutover regression uses a dedicated Compose test stack: an initial
+legacy P1/D1 mission is assigned before the cutover, the migration runs while it
+waits at pickup, and it completes using its immutable original codes. A second
+mission at QR7 → QR2 then rejects D1 and completes with QR7/QR2. The harness
+`tools/check_simulation_mission.py --manual --cutover-project <isolated-project>`
+is restricted to a station test project on port 8086, never the operational
+stack. Its cutover fixture requires old P1/D1 catalog payloads before assignment;
+that fixture preparation is for disposable test data only. Mission checks now
+read verification codes directly from the mission snapshot.

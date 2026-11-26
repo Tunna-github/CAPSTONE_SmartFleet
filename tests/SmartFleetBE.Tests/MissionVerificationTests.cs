@@ -206,6 +206,60 @@ public sealed class MissionVerificationTests
     }
 
     [Fact]
+    public async Task ActiveMissionAndItsViewKeepFrozenCodesAfterCatalogCutover()
+    {
+        using var f = new Fixture(); await f.ReachPickup();
+        var frozenRoute = f.Db.MissionExecutions.Single().RoutePayloadJson;
+        f.Db.Stations.Single(s => s.StationId == 1).QrCodePayload = "QR2";
+        f.Db.Stations.Single(s => s.StationId == 2).QrCodePayload = "QR7";
+        await f.Db.SaveChangesAsync();
+        var view = JsonSerializer.SerializeToElement(await f.Service().ViewAsync(1, default));
+        Assert.Equal("STATION:P1", view.GetProperty("PickupVerificationCode").GetString());
+        Assert.Equal("STATION:D1", view.GetProperty("DeliveryVerificationCode").GetString());
+        Assert.False((await f.Service().VerifyAsync(1, 1, Request() with { ScannedQr = "QR2" }, default)).Accepted);
+        Assert.Equal("AT_PICKUP", f.Db.Missions.Single().MissionStatus);
+        Assert.True((await f.Service().VerifyAsync(1, 1, Request(), default)).Accepted);
+        Assert.True((await f.Service().ProgressAsync("R01", f.Report(2), default)).Accepted);
+        Assert.False((await f.Service().VerifyAsync(1, 1, Request("DELIVERY") with { ScannedQr = "QR7" }, default)).Accepted);
+        Assert.True((await f.Service().VerifyAsync(1, 1, Request("DELIVERY"), default)).Accepted);
+        Assert.Equal("ACTIVE", f.Db.TaskAssignments.Single().AssignmentStatus);
+        Assert.Equal(frozenRoute, f.Db.MissionExecutions.Single().RoutePayloadJson);
+        Assert.All(f.Db.DeliveryVerifications, v => Assert.StartsWith("STATION:", v.ExpectedQrPayload));
+    }
+
+    [Fact]
+    public async Task NewlyAssignedMissionUsesCanonicalCodesAndRejectsLegacyCodes()
+    {
+        using var f = new Fixture();
+        f.Db.Stations.Single(s => s.StationId == 1).QrCodePayload = "QR2";
+        f.Db.Stations.Single(s => s.StationId == 2).QrCodePayload = "QR7";
+        f.Db.TaskAssignments.Single().AssignmentStatus = "COMPLETED";
+        f.Db.Missions.Single().MissionStatus = "COMPLETED";
+        f.Db.TransportTasks.Add(new() { TaskId = 2, TaskTrackingCode = "T2", WarehouseId = 1, PickupStationId = 1,
+            DeliveryStationId = 2, CreatedBy = 1, PackageCode = "BOX-1", PriorityLevel = 2, PayloadWeightKg = 1,
+            TaskStatus = "EXECUTING", DispatchMode = "MANUAL", CreatedAt = DateTime.UtcNow });
+        f.Db.TaskAssignments.Add(new() { AssignmentId = 2, TaskId = 2, RobotId = 1, AssignmentType = "MANUAL", AssignmentStatus = "ACTIVE", AssignedAt = DateTime.UtcNow });
+        f.Db.Missions.Add(new() { MissionId = 2, AssignmentId = 2, MissionCode = "M2", MissionStatus = "NAVIGATING_TO_PICKUP", CreatedAt = DateTime.UtcNow });
+        await f.Db.SaveChangesAsync();
+        await MissionExecutionService.PrepareAsync(f.Db, f.Routes, f.Db.TaskAssignments.Single(a => a.AssignmentId == 2), default);
+        await f.Db.SaveChangesAsync();
+        Assert.Equal("STATION:P1", f.Db.MissionExecutions.Single(e => e.MissionId == 1).ExpectedPickupQr);
+        for (var index = 0; index <= 1; index++) {
+            var report = f.Report(index); report.MissionId = 2;
+            Assert.True((await f.Service().ProgressAsync("R01", report, default)).Accepted);
+        }
+        Assert.False((await f.Service().VerifyAsync(2, 1, Request(), default)).Accepted);
+        Assert.True((await f.Service().VerifyAsync(2, 1, Request() with { ScannedQr = "QR2" }, default)).Accepted);
+        var delivery = f.Report(2); delivery.MissionId = 2;
+        Assert.True((await f.Service().ProgressAsync("R01", delivery, default)).Accepted);
+        Assert.False((await f.Service().VerifyAsync(2, 1, Request("DELIVERY"), default)).Accepted);
+        Assert.True((await f.Service().VerifyAsync(2, 1, Request("DELIVERY") with { ScannedQr = "QR7" }, default)).Accepted);
+        var view = JsonSerializer.SerializeToElement(await f.Service().ViewAsync(2, default));
+        Assert.Equal("QR2", view.GetProperty("PickupVerificationCode").GetString());
+        Assert.Equal("QR7", view.GetProperty("DeliveryVerificationCode").GetString());
+    }
+
+    [Fact]
     public void OnlyWarehouseOperatorCanSubmitVerification()
     {
         var roles=typeof(MissionsController).GetMethod(nameof(MissionsController.Verify))!

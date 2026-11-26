@@ -89,6 +89,7 @@ export function WarehouseGrid({
     robots,
     grid = DEFAULT_GRID,
     links,
+    directedLinks = false,
     scale = 1,
     onCellClick,
     onStationClick,
@@ -110,6 +111,7 @@ export function WarehouseGrid({
     catalog?: Catalog | null;
     grid?: WarehouseLayout;
     links?: Array<[string, string]>;
+    directedLinks?: boolean;
     scale?: number;
     onCellClick?: (row: number, col: number) => void;
     onStationClick?: (label: string) => void;
@@ -126,6 +128,7 @@ export function WarehouseGrid({
         .map(station => [station.arucoId, station])), [catalog]);
     const isLight = theme === "light";
     const handlePointClick = onPointClick ?? onStationClick;
+    const compactLabels = directedLinks && focusQrNetwork && !onCellClick && !handlePointClick;
 
     const cellTypeStyles = useMemo<Record<string, { fill: string; stroke: string }>>(() => isLight
         ? {
@@ -339,20 +342,24 @@ export function WarehouseGrid({
     // Selection changes do not need to rebuild the static map cells.
     const mapCells = useMemo(() => gridWithRoads.map((row, ri) => row.map((cell, ci) => {
         if (qrOnly && (cell.type === "station" || cell.type === "charge")) return null;
-        const style = cellTypeStyles[cell.type] || cellTypeStyles.floor;
+        const style = cellTypeStyles[cell.operationalRole === "CHARGING" ? "charge" : cell.type] || cellTypeStyles.floor;
         const x = ci * CELL;
         const y = ri * CELL;
         const station = cell.type === "qr" && cell.arucoId !== undefined ? stationByMarker.get(cell.arucoId) : undefined;
-        const annotated = !!(cell.displayName?.trim() || station || (cell.operationalRole && cell.operationalRole !== "NAVIGATION"));
+        const transit = directedLinks && cell.type === "qr" && cell.operationalRole === "NAVIGATION" && !cell.isIntersection;
+        if (transit) return <g key={`${ri}-${ci}`}><title>{`QR${cell.arucoId} · lane checkpoint (no goods transfer)`}</title><rect x={x+16} y={y+16} width={8} height={8} rx={2} fill={isLight ? "#0e7490" : "#22d3ee"} /><text x={x+20} y={y+12} textAnchor="middle" fontSize={5} fill={isLight ? "#0e7490" : "#67e8f9"}>{cell.arucoId}</text></g>;
+        const annotated = !compactLabels && !!(cell.displayName?.trim() || station || (cell.operationalRole && cell.operationalRole !== "NAVIGATION"));
         return (
             <g key={`${ri}-${ci}`} pointerEvents="none">
+                {compactLabels && !(cell.displayName && cell.operationalRole !== "CHARGING") && <title>{[cell.arucoId != null ? `QR${cell.arucoId}` : cell.label,cell.displayName || station?.name,cell.operationalRole,station?.isOccupied ? "Occupied or reserved" : null].filter(Boolean).join(" · ")}</title>}
                 <rect x={x} y={y} width={CELL} height={CELL} fill={cell.type === "floor" ? "transparent" : style.fill} stroke={style.stroke} strokeWidth="0.5" />
                 {(cell.type === "station" || cell.type === "qr" || cell.type === "charge") && (
                     <>
                         <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
-                        <text x={x + CELL / 2} y={y + (annotated ? 19 : CELL / 2 + 4)} textAnchor="middle" fontSize={qrOnly ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>
+                        <text x={x + CELL / 2} y={y + (compactLabels && cell.operationalRole === "CHARGING" ? 16 : annotated ? 19 : CELL / 2 + 4)} textAnchor="middle" fontSize={compactLabels ? 14 : qrOnly ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>
                             {cell.type === "qr" && cell.arucoId !== undefined ? `QR${cell.arucoId}` : cell.label}
                         </text>
+                        {compactLabels && cell.operationalRole === "CHARGING" && <text x={x+CELL/2} y={y+31} textAnchor="middle" fontSize={12} fontWeight="bold" fill={style.stroke}>{station?.code??"CHG"}</text>}
                         {cell.type === "qr" && cell.isIntersection && (
                             <g>
                                 <circle cx={x + CELL - 8} cy={y + 8} r={6} fill="#f59e0b" />
@@ -363,13 +370,14 @@ export function WarehouseGrid({
                 )}
             </g>
         );
-    })), [gridWithRoads, cellTypeStyles, qrOnly, stationByMarker]);
+    })), [gridWithRoads, cellTypeStyles, qrOnly, stationByMarker,directedLinks,isLight,compactLabels]);
 
     const stationLabels = stations.map(({ r, c, label }) => {
         const cell = grid[r]?.[c];
         const station = cell?.type === "qr" && cell.arucoId !== undefined ? stationByMarker.get(cell.arucoId) : undefined;
         if (cell?.type !== "qr") return null;
         const fullName = cell.displayName?.trim() || station?.name;
+        if(compactLabels && (!cell.displayName || cell.operationalRole === "CHARGING")) return null;
         const role = cell.isIntersection ? "Intersection" : cell.operationalRole ?? station?.type;
         const roleLabel = role && (stationRoles[role as keyof typeof stationRoles] ?? (role === "NAVIGATION" ? "Navigation" : role));
         if (!fullName && (!roleLabel || roleLabel === "Navigation" || roleLabel === "Intersection")) return null;
@@ -429,7 +437,7 @@ export function WarehouseGrid({
                             stroke={isLight ? "rgba(6,182,212,0.35)" : "rgba(34,211,238,0.25)"}
                             strokeWidth="6"
                             strokeLinecap="round"
-                            markerStart="url(#arrow)"
+                            markerStart={directedLinks ? undefined : "url(#arrow)"}
                             markerEnd="url(#arrow)"
                         />
                     );

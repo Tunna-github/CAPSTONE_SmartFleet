@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 from controller import Supervisor
 
 root = Path(__file__).resolve().parents[2]
-manifest = json.loads((root / "config/scene-manifest.json").read_text(encoding="utf-8"))
+manifest = json.loads((root / os.environ.get("SMARTFLEET_SCENE_MANIFEST","config/scene-manifest.json")).read_text(encoding="utf-8"))
 world_hash = hashlib.sha256((root / manifest["world"]).read_bytes()).hexdigest()
 if world_hash != manifest["worldSha256"]:
     raise RuntimeError("World differs from commissioned simulation manifest")

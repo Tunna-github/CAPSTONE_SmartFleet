@@ -105,11 +105,20 @@ left_motor.setPosition(float("inf"))
 right_motor.setPosition(float("inf"))
 left_motor.setVelocity(0.0)
 right_motor.setVelocity(0.0)
+left_encoder = robot.getDevice("left wheel sensor")
+right_encoder = robot.getDevice("right wheel sensor")
+left_encoder.enable(timestep)
+right_encoder.enable(timestep)
 
 imu = robot.getDevice("inertial unit")
 imu.enable(timestep)
+SF_REAL_SIM_LIDAR = os.environ.get("SMARTFLEET_REAL_SIM_LIDAR", "false").lower() == "true"
+sim_lidar = robot.getDevice("LDS-01") if SF_REAL_SIM_LIDAR else None
+if sim_lidar is not None:
+    sim_lidar.enable(timestep)
+sf_local_obstacle = "NO_SCAN_DATA" if SF_REAL_SIM_LIDAR else "CLEAR"
 
-aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
 aruco_params = cv2.aruco.DetectorParameters()
 aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
 aruco_params.cornerRefinementWinSize = 3
@@ -141,7 +150,10 @@ KP_ALIGN_TILT = 0.03
 # These are IMAGE fractions, not meters. Tune from [APPROACH] logs.
 # With your current camera, a marker near the robot was about 0.17 wide.
 # ============================================================
-SEEK_SPEED = 2.2                 # slower than old 3.5 in blind SEEKING
+CRUISE_SCALE = float(os.environ.get("SMARTFLEET_CRUISE_SCALE", _sf_controller_arg("cruise-scale", "1.0")))
+if not math.isfinite(CRUISE_SCALE) or not .5 <= CRUISE_SCALE <= 1.35:
+    raise ValueError("Simulation cruise scale must be between 0.5 and 1.35")
+SEEK_SPEED = 2.2 * CRUISE_SCALE  # cruise only; near-QR/turn/overshoot tuning stays unchanged
 APPROACH_SPEED = 1.35            # marker visible and approaching
 FINAL_APPROACH_SPEED = 0.70     # very close to marker
 RECOVERY_CRAWL_SPEED = 0.65     # briefly reacquire a far marker
@@ -309,6 +321,7 @@ def visual_approach(data, target_id):
 
     observation = visible_marker(target_id)
     if observation is not None:
+        data.pop('qr_reacquire_at', None)
         corners, width = observation
         offset_x, tilt = get_marker_offset_tilt(corners, width)
         size = marker_size_fraction(corners, width)
@@ -369,27 +382,17 @@ def visual_approach(data, target_id):
     last_detected_id = -1
     approach_lost_frames += 1
 
-    if approach_near:
+    if approach_near or approach_seen:
         # The last view indicated the robot was close. Do not accelerate
         # into a blind, full-speed search across the actual QR location.
         stop_robot()
         if approach_lost_frames == 1:
             print('[APPROACH] Lost NEAR QR{}; holding still for reacquisition'
                   .format(target_id))
-        if approach_lost_frames >= LOST_NEAR_FRAMES:
+        lost_at = data.setdefault('qr_reacquire_at', time.monotonic())
+        if time.monotonic() - lost_at >= 8.0:
             fail_mission('Camera lost nearby QR{} before confirming arrival; '
                          'robot stopped safely'.format(target_id))
-        return
-
-    if approach_seen:
-        if approach_lost_frames == 1:
-            print('[APPROACH] QR{} temporarily lost; crawling slowly'
-                  .format(target_id))
-        if approach_lost_frames >= LOST_FAR_FRAMES:
-            fail_mission('Camera lost QR{} during approach; '
-                         'robot stopped instead of passing checkpoint'.format(target_id))
-            return
-        drive_straight_with_imu(RECOVERY_CRAWL_SPEED)
         return
 
     # The marker has not yet been observed on this straight corridor.
@@ -470,7 +473,7 @@ def visible_any_marker():
     choices = []
     for i, value in enumerate(ids.flatten().tolist()):
         marker_id = int(value)
-        if 0 <= marker_id <= 49:
+        if 0 <= marker_id <= 249:
             area = abs(cv2.contourArea(np.asarray(corners[i][0], dtype=np.float32)))
             choices.append((area, marker_id, [corners[i]]))
     if not choices:
@@ -703,6 +706,9 @@ def poll_verification(data):
 
 
 def publish_failure(data, reason):
+    if data.get("chargingJobId"):
+        charging_fault(data, reason)
+        return
     if connected:
         publish(STATUS_TOPIC, {
             "eventId": str(uuid.uuid4()), "event": "MISSION_FAILED",
@@ -733,6 +739,9 @@ def fail_mission(reason, notify_backend=True):
 
 def start_mission(data):
     global mission, current_state, pending, path_queue, current_target
+    global charging_dock
+    if charging_saved.get("state") in ("ACTIVE", "PAUSED", "FAILED"):
+        raise ValueError("Charging recovery is held; Maintenance must safely resume it")
     if mission is not None:
         if data.get("missionId") == mission.get("missionId"):
             print("[MISSION] Duplicate command ignored")
@@ -745,6 +754,9 @@ def start_mission(data):
     if INTERSECTION_PILOT and sf_active_intersection is not None:
         raise ValueError("Previous intersection reservation still active; investigate/clear physically")
     mission = dict(data)
+    if charging_dock is not None:
+        save_charging(charging_dock, "COMPLETED")
+        charging_dock = None
     mission["phase"] = "STARTING"
     mission["next_index"] = 0
     mission["segment_started_at"] = robot.getTime()
@@ -876,6 +888,112 @@ def finish_home(data):
     current_state = STATE_IDLE
 
 
+from charging_protocol import ChargingJournal, validate_route as validate_charging_route
+from motion_safety import front_lidar_report
+charging_journal = ChargingJournal(os.path.join(SAFETY_DIRECTORY, '.smartfleet-charging-' + ROBOT_CODE + '.json'))
+charging_saved = charging_journal.saved
+charging_dock = None
+charging_fault_report = None
+charging_last_report = 0.0
+
+
+def save_charging(data, state):
+    global charging_saved
+    charging_journal.save(data, state)
+    charging_saved = charging_journal.saved
+
+
+def charging_body(data, index, event='CHARGE_WAYPOINT'):
+    return {'event': event, 'missionId': 0, 'chargingJobId': data['chargingJobId'],
+            'generation': data['generation'], 'arucoId': data['waypoints'][index]['arucoId'],
+            'waypointIndex': index, 'mapRevision': data['mapRevision'],
+            'robotStopped': True, 'headingDeg': heading_fusion.heading(get_yaw_deg())}
+
+
+def send_charging_progress(data, index):
+    send_reliable('CHARGE_WAYPOINT', QR_PROGRESS_TOPIC, charging_body(data,index),QR_PROGRESS_ACK_TOPIC,index=index)
+    data['phase'] = 'WAIT_CHARGE_ACK'
+
+
+def finish_charging_arrival(data):
+    global mission, pending, charging_dock, current_state, ready_acknowledged, ready_event_id, ready_last_sent
+    stop_robot()
+    save_charging(data,'DOCKED')
+    charging_dock = dict(data)
+    mission, pending = None, None
+    current_state = STATE_IDLE
+    ready_acknowledged = False
+    ready_event_id = None
+    ready_last_sent = 0.0
+    print('[CHARGING] Camera-confirmed berth QR{}; stopped. Backend checks safety and >=20% battery.'.format(current_marker))
+
+
+def charging_fault(data, reason):
+    global charging_fault_report, charging_dock
+    stop_robot()
+    save_charging(data,'FAILED')
+    charging_dock = None
+    charging_fault_report = {'event':'CHARGE_FAILED','chargingJobId':data['chargingJobId'],
+        'generation':data['generation'],'reason':str(reason)[:450], 'eventId':str(uuid.uuid4())}
+    publish(QR_PROGRESS_TOPIC,charging_fault_report)
+
+
+def handle_charging_command(data):
+    global mission, pending, charging_dock, charging_fault_report, current_state, sf_nav_request, sf_nav_directive
+    gen = data.get('generation')
+    same = data.get('chargingJobId') == charging_saved.get('chargingJobId') and gen == charging_saved.get('generation')
+    if data.get('command') == 'CHARGE_STOP':
+        if not same and (not charging_journal.accepts_new(data) or mission is not None): return
+        if same and charging_saved.get('state') == 'COMPLETED': return
+        stop_robot()
+        save_charging(data,'PAUSED')
+        mission, pending, charging_dock = None,None,None
+        charging_fault_report = None
+        sf_nav_request, sf_nav_directive = None,None
+        current_state = STATE_IDLE
+        publish(QR_PROGRESS_TOPIC,{'event':'CHARGE_STOPPED','chargingJobId':data['chargingJobId'],
+            'generation':gen,'robotStopped':True,'eventId':str(uuid.uuid4())})
+        return
+    if same:
+        if mission is not None or charging_saved.get('state') in ('DOCKED','PAUSED','FAILED','COMPLETED'): return
+        # A simulator/controller restart is not proof that a reserved road is clear.
+        charging_fault(data,'Controller restarted during charging movement; Maintenance recovery required')
+        return
+    if not charging_journal.accepts_new(data) or mission is not None or safety_hold: return
+    if not localization_valid or localization_map is None or visible_marker(current_marker) is None or not ready_acknowledged:
+        return
+    points = validate_charging_route(data,current_marker,localization_map['mapRevision'])
+    sf_validate_intersection_waypoints(points,allow_stationary=True)
+    if sf_active_intersection is not None: raise ValueError('Intersection reservation requires physical recovery')
+    mission = dict(data)
+    mission.update({'missionId':0,'mapRevision':data['route']['mapRevision'],'waypoints':points,
+                    'deliveryArUcoId':data['route']['homeArUcoId'],'next_index':0})
+    save_charging(data,'ACTIVE')
+    charging_dock,charging_fault_report = None,None
+    sf_nav_request,sf_nav_directive = None,None
+    stop_robot()
+    send_charging_progress(mission,0)
+
+
+def tick_charging():
+    global charging_last_report, SIMULATED_BATTERY_PERCENT
+    if not connected or time.monotonic()-charging_last_report < 2: return
+    charging_last_report=time.monotonic()
+    if charging_fault_report is not None:
+        publish(QR_PROGRESS_TOPIC,charging_fault_report)
+    if charging_dock is None or safety_hold or mission is not None or not localization_valid or not ready_acknowledged or current_marker is None: return
+    if current_marker != charging_dock['waypoints'][-1]['arucoId']:
+        charging_fault(charging_dock,'Robot is localized outside its reserved charging bay; physical inspection required')
+        return
+    if visible_marker(current_marker) is None: return
+    stop_robot()
+    # Explicit Webots-only model: physical charging needs a real dock/BMS handshake.
+    SIMULATED_BATTERY_PERCENT=round(min(100.,SIMULATED_BATTERY_PERCENT+.1),1)
+    body=charging_body(charging_dock,len(charging_dock['waypoints'])-1,'CHARGE_DOCK_STATUS')
+    body['eventId']=str(uuid.uuid4())
+    publish(QR_PROGRESS_TOPIC,body)
+
+
 def handle_incoming():
     global ready_acknowledged, ready_event_id, ready_last_sent, pending
     while True:
@@ -888,6 +1006,12 @@ def handle_incoming():
         if topic == LOCALIZATION_MAP_TOPIC:
             accept_localization_map(data)
         elif topic == COMMAND_TOPIC:
+            if data.get("command") in ("CHARGE_ROUTE", "CHARGE_STOP"):
+                try:
+                    handle_charging_command(data)
+                except (ValueError, RuntimeError, KeyError) as ex:
+                    print("[CHARGING REJECTED]", ex)
+                continue
             if data.get("command") in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL", "RETURN_HOME"):
                 try:
                     handle_safety_command(data)
@@ -1095,11 +1219,14 @@ def sf_begin_segment(data):
         print('[TRAFFIC {}] Register corridor QR{} -> QR{}'.format(
             ROBOT_CODE, current_marker, target['arucoId']))
         sf_nav_send('SCAN', data, {'currentArUcoId': current_marker,
-                                   'nextArUcoId': target['arucoId']})
+                                   'nextArUcoId': target['arucoId'],
+                                   'followingArUcoId': data['waypoints'][i+1]['arucoId'] if i+1 < len(data['waypoints']) else None})
 
 
 def sf_move_permission(data):
     """Fresh Backend directive is mandatory for *every* moving segment."""
+    if SF_REAL_SIM_LIDAR and sf_local_obstacle in ('CRITICAL','NO_SCAN_DATA'):
+        return False
     directive = sf_nav_directive
     if not connected or directive is None:
         return False
@@ -1190,7 +1317,8 @@ def sf_tick_nav_gate(data):
                     'intersectionArUcoId': target['arucoId'], 'currentArUcoId': current_marker}, target['arucoId'])
             else:
                 sf_nav_send('SCAN', data, {'currentArUcoId': current_marker,
-                    'nextArUcoId': target['arucoId']})
+                    'nextArUcoId': target['arucoId'],
+                    'followingArUcoId': data['waypoints'][data['next_index']+1]['arucoId'] if data['next_index']+1 < len(data['waypoints']) else None})
             return
         data.setdefault('sf_route_refresh_at', now + 2.0)
         if time.monotonic() < data.get('sf_hold_until', 0):
@@ -1217,16 +1345,23 @@ def sf_tick_nav_gate(data):
 
 
 def sf_tick_lidar():
-    """Simulated traffic heartbeat, NOT a physical obstacle detector."""
-    global sf_last_lidar_at
-    if not INTERSECTION_PILOT or not SF_FAKE_CLEAR or not connected:
+    """Webots laser safety, with the legacy fake-clear pilot kept opt-in."""
+    global sf_last_lidar_at, sf_local_obstacle
+    report = {'status':'CLEAR','distanceCm':None}
+    if SF_REAL_SIM_LIDAR:
+        report = {'status':'NO_SCAN_DATA','distanceCm':None}
+        if sim_lidar is not None:
+            report=front_lidar_report(sim_lidar.getRangeImage(),sim_lidar.getFov())
+        sf_local_obstacle=report['status']
+        if sf_local_obstacle in ('CRITICAL','NO_SCAN_DATA'): stop_robot()
+    if not INTERSECTION_PILOT or not connected or (not SF_FAKE_CLEAR and not SF_REAL_SIM_LIDAR):
         return
     now = time.monotonic()
     if now - sf_last_lidar_at < SF_LIDAR_INTERVAL:
         return
     sf_last_lidar_at = now
-    publish(SF_LIDAR_TOPIC, {'status': 'CLEAR', 'distanceCm': None,
-                             'simulated': True, 'source': 'WEBOTS_PILOT_ONLY'}, qos=1)
+    publish(SF_LIDAR_TOPIC, {**report,
+                             'simulated': True, 'source': 'WEBOTS_LASER' if SF_REAL_SIM_LIDAR else 'WEBOTS_PILOT_ONLY'}, qos=1)
 
 
 def sf_wheel_scale():
@@ -1274,6 +1409,10 @@ def sf_start_physical_segment(data):
     approach_max_size = 0.0
     approach_last_band = None
     data["segment_started_at"] = robot.getTime()
+    data['encoder_origin'] = (left_encoder.getValue(),right_encoder.getValue())
+    prev_wp = data['waypoints'][i-1]
+    next_wp = data['waypoints'][i]
+    data['segment_distance_m'] = (abs(prev_wp['row']-next_wp['row'])+abs(prev_wp['col']-next_wp['col']))*.5
     if turn_angle == 0.0:
         current_state = STATE_ALIGNING
         print("[DRIVE] QR{} -> QR{} (straight/align)".format(current_marker, target_id))
@@ -1324,7 +1463,10 @@ def reached_marker(data, detected_id):
         else:
             begin_segment(data)
         return
-    send_progress(data, i)
+    if data.get("chargingJobId"):
+        send_charging_progress(data, i)
+    else:
+        send_progress(data, i)
     data["phase"] = "WAIT_WAYPOINT_ACK"
 
 
@@ -1370,6 +1512,13 @@ def tick_mission():
             mission = None
             current_state = STATE_IDLE
             stop_robot()
+            return
+        if kind == "CHARGE_WAYPOINT":
+            data["next_index"] = index + 1
+            if data["next_index"] == len(data["waypoints"]):
+                finish_charging_arrival(data)
+            else:
+                begin_segment(data)
             return
         if kind == "MISSION_STARTED":
             # The start is a CAMERA-confirmed QR, not an arbitrary numeric pose.
@@ -1445,6 +1594,12 @@ def tick_mission():
         return
 
     target_id = data["waypoints"][data["next_index"]]["arucoId"]
+    if data.get('encoder_origin') is not None:
+        left,right=data['encoder_origin']
+        distance=abs((left_encoder.getValue()-left+right_encoder.getValue()-right)*.033/2)
+        if distance > data['segment_distance_m']+.15 and visible_marker(target_id) is None:
+            fail_mission('Expected QR{} missing at odometry travel limit; stopped for inspection/relocalization'.format(target_id))
+            return
     now = robot.getTime()
     if current_state in (STATE_SEEKING, STATE_ALIGNING):
         visual_approach(data, target_id)
@@ -1597,9 +1752,12 @@ def tick_bootstrap():
 
 def tick_telemetry():
     global last_telemetry_at
-    if not connected or robot.getTime() - last_telemetry_at < 2.0:
+    # Presence deadlines are wall-clock deadlines. Slow rendering must not turn
+    # two simulated seconds into a minute between network heartbeats. A frozen
+    # robot.step still cannot publish, so genuine simulator stalls remain faults.
+    if not connected or time.monotonic() - last_telemetry_at < 2.0:
         return
-    last_telemetry_at = robot.getTime()
+    last_telemetry_at = time.monotonic()
     # Webots-only dummy battery; do not fabricate physical location from a
     # camera that currently only reports discrete ArUco checkpoints.
     publish(TELEMETRY_TOPIC, {
@@ -1613,6 +1771,7 @@ def tick_telemetry():
 
 print("[BOOT] SmartFleet Webots CAMERA ArUco full-mission driver", ROBOT_CODE)
 print("[BOOT] Automatic camera pose + IMU localization; no start pose arguments")
+print("[BOOT] Cruise scale {:.2f}; approach, QR arrival and turn speeds unchanged".format(CRUISE_SCALE))
 print("[BOOT] Waiting for a camera-visible QR and Backend READY ACK")
 print("[BOOT] MANUAL 0-8 keyboard mission controls are disabled; Q stops the pilot")
 if INTERSECTION_PILOT:
@@ -1630,6 +1789,7 @@ try:
         tick_telemetry()
         sf_tick_lidar()
         tick_ready()
+        tick_charging()
         key = keyboard.getKey()
         if key != -1 and (key & 0xFF) in (ord("q"), ord("Q")):
             print("[STOP] Emergency keyboard Q")
@@ -1660,6 +1820,8 @@ try:
 except KeyboardInterrupt:
     print("[STOP] KeyboardInterrupt")
 except Exception as error:
+    import traceback
+    traceback.print_exc()
     print("[FATAL]", repr(error))
     if mission is not None:
         fail_mission("Webots controller exception: " + str(error))

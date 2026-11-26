@@ -9,6 +9,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /out ./
 COPY simulation/config/scene-manifest.json /simulation/config/scene-manifest.json
+COPY simulation/config/dual-lane-manifest.json /simulation/config/dual-lane-manifest.json
 RUN mkdir -p /app/App_Data && chown -R $APP_UID /app
 USER $APP_UID
 EXPOSE 8080

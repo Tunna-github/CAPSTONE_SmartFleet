@@ -31,3 +31,5 @@ SmartFleetBE/App_Data/qr-demo-state.json.tmp
 **/playwright-report/
 **/__pycache__/
 Webots_Full_Mission_Controller/.smartfleet-safety-*.json
+Webots_Full_Mission_Controller/.smartfleet-charging-*.json
+Webots_Full_Mission_Controller/.smartfleet-charging-*.json.tmp

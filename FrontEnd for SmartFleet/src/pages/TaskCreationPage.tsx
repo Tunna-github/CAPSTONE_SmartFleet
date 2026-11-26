@@ -41,9 +41,16 @@ export function TaskCreateForm({
     const [pickupSelected,setPickupSelected]=useState(0);
     const [deliverySelected,setDeliverySelected]=useState(0);
     const warehouse = warehouseIdSelected || catalog?.warehouses.find(w=>w.isActive && w.warehouseId===catalog.navigationWarehouseId)?.warehouseId || catalog?.warehouses.find(w=>w.isActive)?.warehouseId || 0;
+    const warehouseStations = catalog?.stations.filter(s=>s.warehouseId===warehouse && ["PICKUP","DELIVERY","TRANSFER"].includes(s.type)) ?? [];
     const availableStations = catalog?.stations.filter(s=>s.warehouseId===warehouse && s.usable) ?? [];
-    const pickupStation = availableStations.find(s=>s.stationId===pickupSelected && s.type==="PICKUP");
-    const deliveryStation = availableStations.find(s=>s.stationId===deliverySelected && s.type==="DELIVERY");
+    const transportPoints = (catalog?.transportPoints ?? warehouseStations.map(s=>({
+        warehouseId:s.warehouseId,arucoId:s.arucoId,stationId:s.stationId,stationCode:s.code,stationName:s.name,stationType:s.type,
+        pickupEligible:s.usable && ["PICKUP","TRANSFER"].includes(s.type),deliveryEligible:s.usable && ["DELIVERY","TRANSFER"].includes(s.type),
+        unavailableReason:s.unavailableReason || (!s.usable ? "Station is not ready." : null),
+    }))).filter(p=>p.warehouseId===warehouse).sort((a,b)=>(a.arucoId??999)-(b.arucoId??999));
+
+    const pickupStation = availableStations.find(s=>s.stationId===pickupSelected && ["PICKUP","TRANSFER"].includes(s.type));
+    const deliveryStation = availableStations.find(s=>s.stationId===deliverySelected && ["DELIVERY","TRANSFER"].includes(s.type));
 
     const inputClass =
         "w-full rounded-lg px-3 py-2.5 text-[13px] " +
@@ -206,7 +213,7 @@ export function TaskCreateForm({
                 }
                 style={{ color: "var(--text-secondary)" }}
             >
-                Choose a warehouse and its commissioned pickup/delivery stations.
+                Choose pickup and delivery QR points on the warehouse map. Reserved intersections are transit-only.
                 Task tracking codes are generated automatically.
                 Required fields are marked *.
             </div>
@@ -232,8 +239,12 @@ export function TaskCreateForm({
                     </legend>
 
                     {catalogError && <p role="alert" className="text-red-500">{catalogError}</p>}
-                    {catalog && (!availableStations.some(s=>s.type==="PICKUP") || !availableStations.some(s=>s.type==="DELIVERY")) &&
-                        <p className="text-sm" role="status">This warehouse needs active mapped pickup and delivery stations. Ask an Admin to configure them in Warehouse &amp; Stations, then reload stations.</p>}
+                    {catalog && (!availableStations.some(s=>["PICKUP","TRANSFER"].includes(s.type)) || !availableStations.some(s=>["DELIVERY","TRANSFER"].includes(s.type))) &&
+                        <div className="sf-notice" role="status"><p>This warehouse is not ready for transport tasks. Station setup is a one-time warehouse preparation step; operators select commissioned stations for each task.</p>
+                            <ul className="mt-2 space-y-1">{warehouseStations.filter(s=>!s.usable).map(s=><li key={s.stationId}><strong>{s.code}</strong>: {s.unavailableReason || (s.arucoId == null ? "Navigation checkpoint is not configured." : "Station is not commissioned or is inactive.")}</li>)}</ul>
+                            {!warehouseStations.some(s=>["PICKUP","TRANSFER"].includes(s.type)) && <p>No pickup station has been registered in this warehouse.</p>}
+                            {!warehouseStations.some(s=>["DELIVERY","TRANSFER"].includes(s.type)) && <p>No delivery station has been registered in this warehouse.</p>}
+                            <p className="mt-2">Reload stations after setup is completed. You do not need to change roles to create a task.</p></div>}
                     <button type="button" className="border rounded px-3 py-1" onClick={()=>void reloadCatalog()}>Reload stations</button>
                     <label className="block text-sm">Warehouse *
                         <select aria-label="Warehouse" name="warehouseId" className={inputClass} style={inputStyle} required value={warehouse} onChange={e=>{setWarehouseIdSelected(Number(e.target.value));setPickupSelected(0);setDeliverySelected(0);}}>
@@ -241,19 +252,19 @@ export function TaskCreateForm({
                         </select>
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <label className="text-sm">Pickup station *
+                        <label className="text-sm">Pickup point (QR) *
                             <select aria-label="Pickup station" name="pickupStationId" className={inputClass} style={inputStyle} required value={pickupSelected||""} onChange={e=>setPickupSelected(Number(e.target.value))}>
-                                <option value="">Select pickup station</option>{availableStations.filter(s=>s.type==="PICKUP").map(s=><option value={s.stationId} key={s.stationId}>{s.code} — {s.name} · QR{s.arucoId}</option>)}
+                                <option value="">Select pickup point</option>{transportPoints.map(p=><option value={p.stationId??`blocked-${p.arucoId}`} key={p.arucoId??p.stationId} disabled={!p.pickupEligible || p.stationId===deliverySelected}>QR{p.arucoId??"?"} · {p.stationName || "Navigation checkpoint"}{p.pickupEligible ? "" : ` — ${p.unavailableReason || "Not enabled for pickup."}`}</option>)}
                             </select>
                         </label>
-                        <label className="text-sm">Delivery station *
+                        <label className="text-sm">Delivery point (QR) *
                             <select aria-label="Delivery station" name="deliveryStationId" className={inputClass} style={inputStyle} required value={deliverySelected||""} onChange={e=>setDeliverySelected(Number(e.target.value))}>
-                                <option value="">Select delivery station</option>{availableStations.filter(s=>s.type==="DELIVERY").map(s=><option value={s.stationId} key={s.stationId}>{s.code} — {s.name} · QR{s.arucoId}</option>)}
+                                <option value="">Select delivery point</option>{transportPoints.map(p=><option value={p.stationId??`blocked-${p.arucoId}`} key={p.arucoId??p.stationId} disabled={!p.deliveryEligible || p.stationId===pickupSelected}>QR{p.arucoId??"?"} · {p.stationName || "Navigation checkpoint"}{p.deliveryEligible ? "" : ` — ${p.unavailableReason || "Not enabled for delivery."}`}</option>)}
                             </select>
                         </label>
                     </div>
                     <div className="rounded-xl border p-3 text-sm" style={{borderColor:"#0d9488"}} role="status">
-                        Navigation resolved by station: {pickupStation?`${pickupStation.code} → QR${pickupStation.arucoId}`:"Choose pickup"} · {deliveryStation?`${deliveryStation.code} → QR${deliveryStation.arucoId}`:"Choose delivery"}.
+                        Navigation resolved by station: {pickupStation?`QR${pickupStation.arucoId}`:"Choose pickup"} → {deliveryStation?`QR${deliveryStation.arucoId}`:"Choose delivery"}.
                         <p className="text-xs mt-1">The backend validates current station mappings before dispatch. Station verification payloads are separate from navigation QR IDs.</p>
                     </div>
                 </fieldset>
@@ -575,7 +586,7 @@ export function TaskCreateForm({
 
                 <button
                     type="submit"
-                    disabled={busy}
+                    disabled={busy || !pickupStation || !deliveryStation || !!catalogError}
                     className={
                         "flex-[2] rounded-xl py-3 text-[13px] " +
                         "font-bold bg-cyan-400 text-slate-950 " +

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useCatalog } from "../api/modules/catalog";
 import MissionVerificationPanel, { type VerificationMission } from "../components/MissionVerificationPanel";
 
 interface Waypoint {
@@ -26,6 +28,11 @@ interface Mission extends VerificationMission {
 
 export default function QrMissionMonitorPage() {
     const { user } = useAuth();
+    const { catalog } = useCatalog();
+    const point = (id: number) => {
+        const station = catalog?.stations.find(s => s.arucoId === id);
+        return station ? { name: station.name } : undefined;
+    };
     const canVerify = user?.roles.includes("Warehouse Operator") ?? false;
     const [missions, setMissions] = useState<Mission[]>([]);
     const [positions, setPositions] = useState<Record<string, number>>({});
@@ -56,8 +63,9 @@ export default function QrMissionMonitorPage() {
         return () => { window.clearInterval(timer); };
     }, [reload]);
     return (
-        <main className="flex-1 overflow-auto p-6" style={{ color: "var(--text-primary)" }}>
+        <main className="sf-data-page flex-1 overflow-auto p-6" style={{ color: "var(--text-primary)" }}>
             <h1 className="text-xl font-bold">Mission progress &amp; delivery verification</h1>
+            <Link className="sf-button sf-button-primary mt-3" to="/simulation">Open live tracking &amp; handover →</Link>
             <p className="text-xs mt-2" style={{ color: "var(--text-faint)" }}>
                 Live route chosen from the Backend QR map, robot waypoint confirmations, and pickup/drop-off progress.
                 Starting QR and heading are localized from camera ArUco pose and IMU.
@@ -82,7 +90,7 @@ export default function QrMissionMonitorPage() {
             </section>
             {missions.length === 0 &&
                 <section className="mt-4 rounded-xl border p-5" style={{ borderColor: "var(--border-medium)" }}>
-                    No persisted route yet. Create a task with pickup/delivery QR, then dispatch an eligible robot.
+                    No persisted route yet. Select the pickup and delivery stations when creating a task, then dispatch an eligible robot.
                 </section>}
             <div className="grid grid-cols-1 gap-4 mt-4">
                 {missions.map(m => (
@@ -112,7 +120,7 @@ export default function QrMissionMonitorPage() {
                         <p className="text-xs opacity-60 mt-3">
                             Green means the Backend acknowledged a camera-confirmed waypoint in Webots.
                         </p>
-                        <MissionVerificationPanel mission={m} canVerify={canVerify} onSaved={reload} />
+                        <MissionVerificationPanel mission={m} canVerify={canVerify} onSaved={reload} pickupPoint={point(m.pickupArUcoId)} deliveryPoint={point(m.deliveryArUcoId)} />
                         {m.statusHistory?.length > 0 && <details className="text-xs mt-3"><summary>Mission status history</summary>
                             {m.statusHistory.map((h, index) => <p key={index} className="mt-1">{new Date(h.changedAt).toLocaleString()} · {h.newStatus} · {h.source}{h.changedBy ? ` #${h.changedBy}` : ""} · {h.reason}</p>)}
                         </details>}

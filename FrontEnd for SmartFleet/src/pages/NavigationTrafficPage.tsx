@@ -23,7 +23,7 @@ function dateLabel(value: string): string {
 
 export default function NavigationTrafficPage() {
   const { role } = useAuth();
-  const { warehouseLayout, links, mapRevision, mapLoading, mapError, reloadMap } = useWarehouseMap();
+  const { warehouseLayout, links, directedLinks, mapRevision, mapLoading, mapError, reloadMap } = useWarehouseMap();
   const [traffic, setTraffic] = useState<IntersectionTraffic[]>([]);
   const [trafficError, setTrafficError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -126,7 +126,7 @@ export default function NavigationTrafficPage() {
         <section className="rounded-xl border overflow-hidden" style={{ background: "var(--surface-2)", borderColor: "var(--border-subtle)" }}>
           <div className="px-4 py-3 font-semibold text-sm">Backend Warehouse Map</div>
           <div style={{ height: 450 }}>
-            <WarehouseGrid robots={[]} animateRobots={false} grid={warehouseLayout} links={links} />
+            <WarehouseGrid robots={[]} animateRobots={false} grid={warehouseLayout} links={links} directedLinks={directedLinks} />
           </div>
           <div className="px-4 py-3 text-xs" style={{ color: "var(--text-faint)" }}>
             Map geometry comes from <code>GET /api/v1/navigation/map</code>. No artificial robot movement is shown.

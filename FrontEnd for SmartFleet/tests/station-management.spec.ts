@@ -180,6 +180,53 @@ test("Task selects operational stations; WAITING and independent QR selectors ar
     await page.getByLabel('Pickup station',{exact:true}).selectOption('1');await page.getByLabel('Delivery station',{exact:true}).selectOption('2');
     await expect(page.locator('select[name="pickupStationId"] option[value="3"]')).toHaveCount(0);
     await expect(page.locator('select[name="pickupArUcoId"]')).toHaveCount(0);
-    await expect(page.getByText(/Navigation resolved by station:/)).toContainText('P1 → QR2');
-    await expect(page.getByText(/Navigation resolved by station:/)).toContainText('D1 → QR7');
+    await expect(page.getByText(/Navigation resolved by station:/)).toContainText('QR2 → QR7');
+    await expect(page.getByText(/Navigation resolved by station:/)).toContainText('QR2 → QR7');
+});
+
+test("Operator sees why legacy stations are unavailable and can create after reload without changing roles", async ({ page }) => {
+    const { stations, writes } = await setup(page, "Warehouse Operator");
+    for (const station of stations.slice(0, 2)) Object.assign(station, { arucoId: null, usable: false, unavailableReason: "Navigation checkpoint is not configured." });
+    await page.goto("/dashboard/tasks");
+    await page.getByRole("button", { name: "Create Transport Task", exact: true }).click();
+    const pickup = page.getByLabel("Pickup station", { exact: true });
+    const delivery = page.getByLabel("Delivery station", { exact: true });
+    await expect(pickup.locator('option[value="1"]')).toBeDisabled();
+    await expect(delivery.locator('option[value="2"]')).toBeDisabled();
+    await expect(pickup.locator('option[value="1"]')).toContainText("Navigation checkpoint is not configured");
+    await expect(page.getByText("You do not need to change roles to create a task.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create Task (Manual)", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeEnabled();
+    Object.assign(stations[0], { arucoId: 2, usable: true, unavailableReason: null });
+    Object.assign(stations[1], { arucoId: 7, usable: true, unavailableReason: null });
+    await page.getByRole("button", { name: "Reload stations", exact: true }).click();
+    await expect(pickup.locator('option[value="1"]')).toBeEnabled();
+    await pickup.selectOption("1"); await delivery.selectOption("2");
+    await expect(page.getByRole("button", { name: "Create Task (Manual)", exact: true })).toBeEnabled();
+    await expect(page.getByText(/Navigation resolved by station:/)).toContainText("QR2 → QR7");
+    expect(writes).toHaveLength(0); // Reading/creating tasks never commissions stations with Operator credentials.
+});
+
+test("All map QR points appear at both ends, the reserved intersection is disabled, and reverse transfers work", async ({ page }) => {
+    await setup(page, "Warehouse Operator");
+    const stations = Array.from({ length: 9 }, (_, qr) => ({ stationId: qr + 10, zoneId: 1, warehouseId: 1,
+        code: `POINT${qr}`, name: `Goods point ${qr}`, type: "TRANSFER", arucoId: qr, isActive: true, usable: qr !== 1 }));
+    await page.route("https://localhost:7166/api/v1/warehouse-catalog", route => route.fulfill({ json: {
+        warehouses: [{ warehouseId: 1, code: "SIM", name: "Simulation", isActive: true }], zones: [], stations,
+        navigationWarehouseId: 1,
+        transportPoints: stations.map(s => ({ warehouseId: 1, arucoId: s.arucoId, stationId: s.arucoId === 1 ? null : s.stationId,
+            stationCode: s.code, pickupEligible: s.usable, deliveryEligible: s.usable,
+            unavailableReason: s.usable ? null : "Reserved intersection: transit only, no goods transfer." })),
+    } }));
+    await page.goto("/dashboard/tasks"); await page.getByRole("button", { name: "Create Transport Task", exact: true }).click();
+    const pickup = page.getByLabel("Pickup station", { exact: true }), delivery = page.getByLabel("Delivery station", { exact: true });
+    await expect(pickup.locator("option")).toHaveCount(10); await expect(delivery.locator("option")).toHaveCount(10);
+    await expect(pickup.locator('option[value="blocked-1"]')).toBeDisabled();
+    await expect(delivery.locator('option[value="blocked-1"]')).toBeDisabled();
+    for (const qr of [0, 2, 3, 4, 5, 6, 7, 8]) await expect(pickup.locator(`option[value="${qr + 10}"]`)).toBeEnabled();
+    await pickup.selectOption("17"); await delivery.selectOption("12");
+    await expect(page.getByText(/Navigation resolved by station:/)).toContainText("QR7 → QR2");
+    await expect(page.getByText(/Navigation resolved by station:/)).toContainText("QR7 → QR2");
+    await expect(delivery.locator('option[value="17"]')).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Create Task (Manual)", exact: true })).toBeEnabled();
 });

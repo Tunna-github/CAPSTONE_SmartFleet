@@ -27,6 +27,8 @@ if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled") && !builder.Enviro
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<StationCatalogService>();
+builder.Services.AddScoped<RobotRegistryService>();
+builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<FleetConnectionRegistry>();
 builder.Services.AddSingleton<FleetRealtimePublisher>();
@@ -192,6 +194,8 @@ builder.Services.AddSingleton<NavigationCoordinator>();
 
 builder.Services.AddScoped<MissionLifecycleService>();
 builder.Services.AddScoped<MissionExecutionService>();
+builder.Services.AddScoped<ChargingService>();
+builder.Services.AddHostedService<ChargingWorker>();
 builder.Services.AddScoped<TaskInterventionService>();
 builder.Services.AddScoped<RobotHealthMonitor>();
 

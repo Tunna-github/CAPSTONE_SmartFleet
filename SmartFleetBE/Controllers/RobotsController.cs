@@ -163,6 +163,8 @@ public sealed class RobotsController : ControllerBase
                         "the mission before changing operational status."
                 });
             }
+            if (await _db.ChargingJobs.AnyAsync(j => j.RobotId == robotId && j.State != "COMPLETED", ct))
+                return Conflict(new { message = "Robot has a reserved charging workflow. Use its Pause/recovery controls; do not override device availability." });
 
             if (robot.OperationalStatus == "CHARGING")
             {

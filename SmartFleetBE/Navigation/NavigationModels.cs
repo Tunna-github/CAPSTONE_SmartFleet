@@ -10,6 +10,9 @@ public sealed class WarehouseMapDocument
     public int Columns { get; set; } = 28;
     public List<List<WarehouseMapCell>> Cells { get; set; } = [];
     public List<List<string>> Links { get; set; } = [];
+    // Old commissioned maps are bidirectional. Lane maps preserve ordered edges.
+    public bool DirectedLinks { get; set; }
+    public string MarkerDictionary { get; set; } = "DICT_4X4_50";
 }
 
 public sealed class WarehouseMapCell
@@ -74,6 +77,8 @@ public sealed class RobotArUcoScanReport
     // Must be present. Use explicit null only when the planned route ends.
     [JsonRequired]
     public int? NextArUcoId { get; set; }
+    // Look beyond a lane merge before entering it; never queue across a bay exit.
+    public int? FollowingArUcoId { get; set; }
 }
 
 public sealed class ApproachingRobotView

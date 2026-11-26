@@ -114,12 +114,14 @@ public sealed class TaskDispatchService : ITaskDispatchService
         var mappingError = _configuration.GetValue<bool>("DemoRoute:Enabled") && _routes != null
             ? await TaskLocationPolicy.SynchronizeRouteAsync(_db, taskId, _routes, cancellationToken) : null;
         var berthed = (await _db.StationBerths.Select(b => b.RobotId).ToListAsync(cancellationToken)).ToHashSet();
+        var chargeReady = _configuration.GetValue<bool>("Charging:Enabled") ?
+            (await _db.ChargingJobs.Where(j => j.State == "READY").Select(j => j.RobotId).ToListAsync(cancellationToken)).ToHashSet() : [];
         var robots = new List<AvailableRobotResponse>();
         foreach (var robot in allRobots)
         {
             var reasons = new List<string>();
             if (mappingError != null) reasons.Add(mappingError);
-            if (berthed.Contains(robot.RobotId)) reasons.Add("Release waiting/charging berth reservation before assignment");
+            if (berthed.Contains(robot.RobotId) && !chargeReady.Contains(robot.RobotId)) reasons.Add("Robot must finish safe return/docking before assignment");
             if (robot.WarehouseId != task.WarehouseId) reasons.Add("Different warehouse");
             if (!robot.IsActive) reasons.Add("Robot inactive");
             var requiredType = DispatchRobotTypePolicy.RequiredType(_configuration);
@@ -327,7 +329,8 @@ public sealed class TaskDispatchService : ITaskDispatchService
         if (_configuration.GetValue<bool>("DemoRoute:Enabled") && _routes != null &&
             await TaskLocationPolicy.SynchronizeRouteAsync(_db, taskId, _routes, cancellationToken) is { } routeError)
             return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict(routeError);
-        if (await _db.StationBerths.AnyAsync(b => b.RobotId == robotId, cancellationToken))
+        if (await _db.StationBerths.AnyAsync(b => b.RobotId == robotId, cancellationToken) &&
+            !(_configuration.GetValue<bool>("Charging:Enabled") && await _db.ChargingJobs.AnyAsync(j => j.RobotId == robotId && j.State == "READY", cancellationToken)))
             return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict("Release robot berth reservation before dispatch.");
         if (_configuration.GetValue<bool>("DemoRoute:Enabled"))
         {
@@ -568,6 +571,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
 
         // STEP 14: COMMIT
 
+        if (_configuration.GetValue<bool>("Charging:Enabled"))
+        {
+            try { await ChargingService.BeginDeparture(_db, robotId, cancellationToken, _routes); }
+            catch (InvalidOperationException ex) { return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict(ex.Message); }
+        }
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 

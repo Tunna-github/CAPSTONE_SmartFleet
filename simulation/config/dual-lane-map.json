@@ -1,0 +1,3720 @@
+{
+  "rows": 18,
+  "columns": 28,
+  "revision": 1,
+  "cells": [
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 9,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR9"
+      },
+      {
+        "arucoId": 10,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR10"
+      },
+      {
+        "arucoId": 11,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR11"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 14,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR14"
+      },
+      {
+        "arucoId": 15,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR15"
+      },
+      {
+        "arucoId": 16,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR16"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 19,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR19"
+      },
+      {
+        "arucoId": 20,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR20"
+      },
+      {
+        "arucoId": 21,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR21"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 3,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR3"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 2,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR2"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 8,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR8"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 13,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR13"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 12,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR12"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 18,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR18"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 17,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR17"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 23,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR23"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 22,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR22"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 24,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR24"
+      },
+      {
+        "arucoId": 25,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR25"
+      },
+      {
+        "arucoId": 26,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR26"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 29,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR29"
+      },
+      {
+        "arucoId": 30,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR30"
+      },
+      {
+        "arucoId": 31,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR31"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 34,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR34"
+      },
+      {
+        "arucoId": 35,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR35"
+      },
+      {
+        "arucoId": 36,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR36"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 4,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR4"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 1,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": true,
+        "type": "qr",
+        "label": "QR1"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 7,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR7"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 28,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR28"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 27,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR27"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 33,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR33"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 32,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR32"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 38,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR38"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 37,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR37"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 39,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR39"
+      },
+      {
+        "arucoId": 40,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR40"
+      },
+      {
+        "arucoId": 41,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR41"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 44,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR44"
+      },
+      {
+        "arucoId": 45,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR45"
+      },
+      {
+        "arucoId": 46,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR46"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 49,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR49"
+      },
+      {
+        "arucoId": 50,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR50"
+      },
+      {
+        "arucoId": 51,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR51"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 5,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR5"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 0,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR0"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 6,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "TRANSFER",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR6"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 66,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR66"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 43,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR43"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 42,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR42"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 48,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR48"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 47,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR47"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 53,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR53"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 52,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR52"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 54,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR54"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 55,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR55"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 56,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR56"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 57,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR57"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 58,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR58"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 59,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR59"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 67,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "CHARGING",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR67"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 68,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "CHARGING",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR68"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 69,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "CHARGING",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR69"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 70,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "CHARGING",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR70"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ],
+    [
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 65,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR65"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 64,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR64"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 63,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR63"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 62,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR62"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 61,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR61"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "arucoId": 60,
+        "markerYawDeg": -90.0,
+        "markerSizeM": 0.04,
+        "operationalRole": "NAVIGATION",
+        "isIntersection": false,
+        "type": "qr",
+        "label": "QR60"
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      },
+      {
+        "type": "floor",
+        "label": null,
+        "arucoId": null,
+        "isIntersection": false
+      }
+    ]
+  ],
+  "directedLinks": true,
+  "markerDictionary": "DICT_4X4_250",
+  "links": [
+    [
+      "QR9",
+      "QR10"
+    ],
+    [
+      "QR10",
+      "QR11"
+    ],
+    [
+      "QR11",
+      "QR12"
+    ],
+    [
+      "QR12",
+      "QR13"
+    ],
+    [
+      "QR13",
+      "QR9"
+    ],
+    [
+      "QR10",
+      "QR3"
+    ],
+    [
+      "QR3",
+      "QR10"
+    ],
+    [
+      "QR14",
+      "QR15"
+    ],
+    [
+      "QR15",
+      "QR16"
+    ],
+    [
+      "QR16",
+      "QR17"
+    ],
+    [
+      "QR17",
+      "QR18"
+    ],
+    [
+      "QR18",
+      "QR14"
+    ],
+    [
+      "QR15",
+      "QR2"
+    ],
+    [
+      "QR2",
+      "QR15"
+    ],
+    [
+      "QR19",
+      "QR20"
+    ],
+    [
+      "QR20",
+      "QR21"
+    ],
+    [
+      "QR21",
+      "QR22"
+    ],
+    [
+      "QR22",
+      "QR23"
+    ],
+    [
+      "QR23",
+      "QR19"
+    ],
+    [
+      "QR20",
+      "QR8"
+    ],
+    [
+      "QR8",
+      "QR20"
+    ],
+    [
+      "QR24",
+      "QR25"
+    ],
+    [
+      "QR25",
+      "QR26"
+    ],
+    [
+      "QR26",
+      "QR27"
+    ],
+    [
+      "QR27",
+      "QR28"
+    ],
+    [
+      "QR28",
+      "QR24"
+    ],
+    [
+      "QR25",
+      "QR4"
+    ],
+    [
+      "QR4",
+      "QR25"
+    ],
+    [
+      "QR29",
+      "QR30"
+    ],
+    [
+      "QR30",
+      "QR31"
+    ],
+    [
+      "QR31",
+      "QR32"
+    ],
+    [
+      "QR32",
+      "QR33"
+    ],
+    [
+      "QR33",
+      "QR29"
+    ],
+    [
+      "QR30",
+      "QR1"
+    ],
+    [
+      "QR1",
+      "QR30"
+    ],
+    [
+      "QR34",
+      "QR35"
+    ],
+    [
+      "QR35",
+      "QR36"
+    ],
+    [
+      "QR36",
+      "QR37"
+    ],
+    [
+      "QR37",
+      "QR38"
+    ],
+    [
+      "QR38",
+      "QR34"
+    ],
+    [
+      "QR35",
+      "QR7"
+    ],
+    [
+      "QR7",
+      "QR35"
+    ],
+    [
+      "QR39",
+      "QR40"
+    ],
+    [
+      "QR40",
+      "QR41"
+    ],
+    [
+      "QR41",
+      "QR42"
+    ],
+    [
+      "QR42",
+      "QR43"
+    ],
+    [
+      "QR43",
+      "QR39"
+    ],
+    [
+      "QR40",
+      "QR5"
+    ],
+    [
+      "QR5",
+      "QR40"
+    ],
+    [
+      "QR44",
+      "QR45"
+    ],
+    [
+      "QR45",
+      "QR46"
+    ],
+    [
+      "QR46",
+      "QR47"
+    ],
+    [
+      "QR47",
+      "QR48"
+    ],
+    [
+      "QR48",
+      "QR44"
+    ],
+    [
+      "QR45",
+      "QR0"
+    ],
+    [
+      "QR0",
+      "QR45"
+    ],
+    [
+      "QR49",
+      "QR50"
+    ],
+    [
+      "QR50",
+      "QR51"
+    ],
+    [
+      "QR51",
+      "QR52"
+    ],
+    [
+      "QR52",
+      "QR53"
+    ],
+    [
+      "QR53",
+      "QR49"
+    ],
+    [
+      "QR50",
+      "QR6"
+    ],
+    [
+      "QR6",
+      "QR50"
+    ],
+    [
+      "QR11",
+      "QR14"
+    ],
+    [
+      "QR18",
+      "QR12"
+    ],
+    [
+      "QR12",
+      "QR26"
+    ],
+    [
+      "QR24",
+      "QR13"
+    ],
+    [
+      "QR16",
+      "QR19"
+    ],
+    [
+      "QR23",
+      "QR17"
+    ],
+    [
+      "QR17",
+      "QR31"
+    ],
+    [
+      "QR29",
+      "QR18"
+    ],
+    [
+      "QR22",
+      "QR36"
+    ],
+    [
+      "QR34",
+      "QR23"
+    ],
+    [
+      "QR26",
+      "QR29"
+    ],
+    [
+      "QR33",
+      "QR27"
+    ],
+    [
+      "QR27",
+      "QR41"
+    ],
+    [
+      "QR39",
+      "QR28"
+    ],
+    [
+      "QR31",
+      "QR34"
+    ],
+    [
+      "QR38",
+      "QR32"
+    ],
+    [
+      "QR32",
+      "QR46"
+    ],
+    [
+      "QR44",
+      "QR33"
+    ],
+    [
+      "QR37",
+      "QR51"
+    ],
+    [
+      "QR49",
+      "QR38"
+    ],
+    [
+      "QR41",
+      "QR44"
+    ],
+    [
+      "QR48",
+      "QR42"
+    ],
+    [
+      "QR46",
+      "QR49"
+    ],
+    [
+      "QR53",
+      "QR47"
+    ],
+    [
+      "QR54",
+      "QR55"
+    ],
+    [
+      "QR55",
+      "QR56"
+    ],
+    [
+      "QR56",
+      "QR57"
+    ],
+    [
+      "QR57",
+      "QR58"
+    ],
+    [
+      "QR58",
+      "QR59"
+    ],
+    [
+      "QR60",
+      "QR61"
+    ],
+    [
+      "QR61",
+      "QR62"
+    ],
+    [
+      "QR62",
+      "QR63"
+    ],
+    [
+      "QR63",
+      "QR64"
+    ],
+    [
+      "QR64",
+      "QR65"
+    ],
+    [
+      "QR43",
+      "QR54"
+    ],
+    [
+      "QR59",
+      "QR60"
+    ],
+    [
+      "QR65",
+      "QR66"
+    ],
+    [
+      "QR66",
+      "QR43"
+    ],
+    [
+      "QR55",
+      "QR67"
+    ],
+    [
+      "QR67",
+      "QR64"
+    ],
+    [
+      "QR56",
+      "QR68"
+    ],
+    [
+      "QR68",
+      "QR63"
+    ],
+    [
+      "QR57",
+      "QR69"
+    ],
+    [
+      "QR69",
+      "QR62"
+    ],
+    [
+      "QR58",
+      "QR70"
+    ],
+    [
+      "QR70",
+      "QR61"
+    ]
+  ]
+}

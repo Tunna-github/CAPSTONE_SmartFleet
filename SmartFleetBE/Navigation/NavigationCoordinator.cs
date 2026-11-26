@@ -21,6 +21,7 @@ public sealed class NavigationCoordinator
         public int? IntersectionId { get; set; }
         public int? CurrentArUcoId { get; set; }
         public int? NextArUcoId { get; set; }
+        public int? FollowingArUcoId { get; set; }
         public DateTime LastApproachAtUtc { get; set; } = DateTime.MinValue;
         // Expiring a route report must never turn into an automatic GO.
         public bool RequiresFreshRouteReport { get; set; }
@@ -337,6 +338,13 @@ public sealed class NavigationCoordinator
             }
 
             var robot = GetOrCreateRobot(robotId, robotCode);
+            if (_stored.Map!.DirectedLinks && report.NextArUcoId is int directedNext)
+            {
+                if (report.FollowingArUcoId is int following && !AreDirectQrNeighbors(directedNext, following))
+                    return NavigationOperation.Fail("Invalid ordered lane exit.");
+                if (next?.OperationalRole == "NAVIGATION" && report.FollowingArUcoId == null)
+                    return NavigationOperation.Fail("Through-lane routes require a following checkpoint; do not stop on a merge.");
+            }
             var targetIntersectionId = next is { IsIntersection: true }
                 ? report.NextArUcoId : null;
             var outgoing = new Dictionary<string, NavigationDirective>(
@@ -362,6 +370,7 @@ public sealed class NavigationCoordinator
 
             robot.CurrentArUcoId = currentId;
             robot.NextArUcoId = report.NextArUcoId;
+            robot.FollowingArUcoId = report.FollowingArUcoId;
             robot.RequiresFreshRouteReport = false;
             if (targetIntersectionId is int intersectionId)
             {
@@ -555,6 +564,10 @@ public sealed class NavigationCoordinator
 
         if (robot.NextArUcoId is int next && GetBlockedQrIds(robot.RobotCode).Contains(next))
             return StopDirective(robot, "QR_OCCUPIED_BY_OTHER_ROBOT");
+        if (_stored.Map!.DirectedLinks && robot.FollowingArUcoId is int exit &&
+            FindQrCell(_stored.Map, exit)?.OperationalRole is "PICKUP" or "DELIVERY" or "TRANSFER" or "WAITING" or "CHARGING" &&
+            GetBlockedQrIds(robot.RobotCode).Contains(exit))
+            return StopDirective(robot, "KEEP_BAY_ENTRY_CLEAR");
 
         if (robot.IntersectionId is int id)
         {
@@ -716,7 +729,7 @@ public sealed class NavigationCoordinator
             link.Count == 2 &&
             ((string.Equals(link[0], a, StringComparison.OrdinalIgnoreCase) &&
               string.Equals(link[1], b, StringComparison.OrdinalIgnoreCase)) ||
-             (string.Equals(link[0], b, StringComparison.OrdinalIgnoreCase) &&
+             (!_stored.Map!.DirectedLinks && string.Equals(link[0], b, StringComparison.OrdinalIgnoreCase) &&
               string.Equals(link[1], a, StringComparison.OrdinalIgnoreCase))));
     }
 
@@ -811,6 +824,7 @@ public sealed class NavigationCoordinator
             cell.Label = cell.Label?.Trim();
             cell.DisplayName = string.IsNullOrWhiteSpace(cell.DisplayName) ? null : cell.DisplayName.Trim();
             if (cell.Type == "qr") cell.ArucoId ??= IdFromLabel(cell.Label);
+            if (map.DirectedLinks && cell.Type == "qr") cell.OperationalRole ??= "NAVIGATION";
         }
         map.Links = map.Links.Select(link => link.Select(value => value.Trim()).ToList()).ToList();
     }
@@ -825,6 +839,9 @@ public sealed class NavigationCoordinator
             return "Expected exactly 18 rows of 28 cells.";
         if (candidate.Links == null || candidate.Links.Count > 1500)
             return "Invalid link array.";
+        if (candidate.MarkerDictionary is not ("DICT_4X4_50" or "DICT_4X4_250"))
+            return "Unsupported ArUco dictionary.";
+        var maximumMarkerId = candidate.MarkerDictionary == "DICT_4X4_250" ? 249 : 49;
 
         var labels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var ids = new HashSet<int>();
@@ -851,13 +868,13 @@ public sealed class NavigationCoordinator
             {
                 if (cell.DisplayName is { Length: > 100 } || cell.DisplayName?.Any(char.IsControl) == true)
                     return "Checkpoint display names must be at most 100 characters on one line.";
-                if (cell.OperationalRole is not (null or "NAVIGATION" or "PICKUP" or "DELIVERY" or "WAITING" or "CHARGING"))
+                if (cell.OperationalRole is not (null or "NAVIGATION" or "PICKUP" or "DELIVERY" or "TRANSFER" or "WAITING" or "CHARGING"))
                     return "Invalid checkpoint role. Configure intersections using the intersection flag.";
                 if (cell.IsIntersection && cell.OperationalRole is not (null or "NAVIGATION"))
                     return "Intersections cannot have an operational station role.";
                 var id = cell.ArucoId ?? IdFromLabel(cell.Label);
-                if (!id.HasValue || id.Value is < 0 or > 49 || !ids.Add(id.Value))
-                    return "Each QR requires a unique ArUco ID 0..49 (DICT_4X4_50).";
+                if (!id.HasValue || id.Value < 0 || id.Value > maximumMarkerId || !ids.Add(id.Value))
+                    return $"Each QR requires a unique ArUco ID 0..{maximumMarkerId} ({candidate.MarkerDictionary}).";
                 if (cell.MarkerYawDeg is { } yaw && (!double.IsFinite(yaw) || yaw is < -180 or > 180))
                     return "Marker yaw must be between -180 and 180 degrees.";
                 if (cell.MarkerSizeM is { } size && (!double.IsFinite(size) || size is < 0.005 or > 2))
@@ -878,9 +895,33 @@ public sealed class NavigationCoordinator
             if (!labels.Contains(a) || !labels.Contains(b) ||
                 string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
                 return "Each link must connect two distinct existing map points.";
-            var key = string.Compare(a, b, StringComparison.OrdinalIgnoreCase) < 0
+            var key = candidate.DirectedLinks || string.Compare(a, b, StringComparison.OrdinalIgnoreCase) < 0
                 ? a + "::" + b : b + "::" + a;
             if (!uniqueLinks.Add(key)) return "Duplicate map link.";
+        }
+        if (candidate.DirectedLinks)
+        {
+            var points = candidate.Cells.SelectMany((row,r) => row.Select((cell,c) => new {cell,r,c}))
+                .Where(p => p.cell.Type == "qr").ToDictionary(p => p.cell.Label!, StringComparer.OrdinalIgnoreCase);
+            if(candidate.Links.Any(e=>!points.ContainsKey(e[0]) || !points.ContainsKey(e[1])))
+                return "Directed lanes must connect commissioned QR checkpoints.";
+            foreach (var edge in candidate.Links)
+            {
+                if (!points.TryGetValue(edge[0],out var a) || !points.TryGetValue(edge[1],out var b))
+                    return "Directed lanes must connect commissioned QR checkpoints.";
+                if (a.r != b.r && a.c != b.c) return "A lane must be straight and axis aligned. Add a turning checkpoint.";
+                if (points.Values.Any(p => p != a && p != b && ((a.r == b.r && p.r == a.r && p.c > Math.Min(a.c,b.c) && p.c < Math.Max(a.c,b.c)) ||
+                    (a.c == b.c && p.c == a.c && p.r > Math.Min(a.r,b.r) && p.r < Math.Max(a.r,b.r)))))
+                    return "A lane cannot skip an intermediate checkpoint. Split the ordered link.";
+                if (!a.cell.IsIntersection && !b.cell.IsIntersection && (a.cell.OperationalRole is null or "NAVIGATION") && (b.cell.OperationalRole is null or "NAVIGATION") &&
+                    candidate.Links.Any(e => e[0].Equals(edge[1],StringComparison.OrdinalIgnoreCase) && e[1].Equals(edge[0],StringComparison.OrdinalIgnoreCase)))
+                    return "Opposing through lanes require physically separate checkpoints. Shared spurs are only allowed at operational bays.";
+                foreach(var other in candidate.Links) {
+                    var c=points[other[0]];var d=points[other[1]];
+                    if(a.r==b.r && c.c==d.c && a.r>Math.Min(c.r,d.r) && a.r<Math.Max(c.r,d.r) && c.c>Math.Min(a.c,b.c) && c.c<Math.Max(a.c,b.c))
+                        return "Crossing lanes require a shared checkpoint and explicit traffic coordination.";
+                }
+            }
         }
         return null;
     }

@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "../client";
 export interface CatalogWarehouse { warehouseId:number; code:string; name:string; address?:string; isActive:boolean; revision:number }
 export interface CatalogZone { zoneId:number; warehouseId:number; code:string; name:string; type:string; speedLimit:number; isActive:boolean; revision:number }
-export interface CatalogStation { stationId:number; zoneId:number; warehouseId:number; code:string; name:string; type:string; coordX:number; coordY:number; coordZ:number; yawAngle:number; qrCodePayload:string|null; arucoId:number|null; isActive:boolean; capacity:number; revision:number; usable:boolean; isOccupied:boolean; occupantRobotCodes:string[]; reservedRobotId:number|null }
-export interface Catalog { warehouses:CatalogWarehouse[]; zones:CatalogZone[]; stations:CatalogStation[]; robots:{robotId:number;robotCode:string;warehouseId:number}[]; navigationWarehouseId:number; mapRevision:number; capacityPolicy:string }
+export interface CatalogStation { stationId:number; zoneId:number; warehouseId:number; code:string; name:string; type:string; coordX:number; coordY:number; coordZ:number; yawAngle:number; qrCodePayload:string|null; arucoId:number|null; isActive:boolean; capacity:number; revision:number; usable:boolean; unavailableReason?:string|null; isOccupied:boolean; occupantRobotCodes:string[]; reservedRobotId:number|null }
+export interface CatalogTransportPoint { warehouseId:number; arucoId:number; label:string|null; stationId:number|null; stationCode:string|null; stationName:string|null; stationType:string|null; pickupEligible:boolean; deliveryEligible:boolean; unavailableReason:string|null }
+export interface Catalog { transportPoints?:CatalogTransportPoint[]; warehouses:CatalogWarehouse[]; zones:CatalogZone[]; stations:CatalogStation[]; robots:{robotId:number;robotCode:string;warehouseId:number}[]; navigationWarehouseId:number; mapRevision:number; capacityPolicy:string }
 export const stationRoles = {
     PICKUP: "Pickup Station",
     DELIVERY: "Delivery Station",
+    TRANSFER: "Pickup & delivery point",
     WAITING: "Waiting Area",
     CHARGING: "Charging Area",
 };

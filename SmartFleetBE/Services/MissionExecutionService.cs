@@ -100,6 +100,8 @@ public sealed class MissionExecutionService(SmartFleetDbContext db, QrDemoRouteS
             e.Mission.MissionStatus, e.Mission.Assignment.AssignmentStatus,
             PickupVerified = verifications.Any(v => v.VerificationStage == "PICKUP" && v.IsVerified),
             DeliveryVerified = verifications.Any(v => v.VerificationStage == "DELIVERY" && v.IsVerified),
+            // The UI must use the same immutable expectations as VerifyAsync, not today's catalog.
+            PickupVerificationCode = e.ExpectedPickupQr, DeliveryVerificationCode = e.ExpectedDeliveryQr,
             PackageRequired = !string.IsNullOrEmpty(e.PackageCode), MaxQrAttempts,
             PickupQrAttempts = attempts.Count(a => a.Stage == "PICKUP" && a.Type == "QRCODE" && !a.Accepted),
             DeliveryQrAttempts = attempts.Count(a => a.Stage == "DELIVERY" && a.Type == "QRCODE" && !a.Accepted),
@@ -261,6 +263,8 @@ public sealed class MissionExecutionService(SmartFleetDbContext db, QrDemoRouteS
             if (report.WaypointIndex == e.NextWaypointIndex)
             {
                 e.NextWaypointIndex++;
+                if (config.GetValue<bool>("Charging:Enabled") && report.WaypointIndex > 0)
+                    await ChargingService.ConfirmDeparture(db, a.RobotId, report.ArucoId, ct);
                 var waypoint = await db.MissionWaypoints.SingleAsync(w => w.MissionId == e.MissionId && w.SequenceNumber == report.WaypointIndex + 1, ct);
                 waypoint.IsReached = true; waypoint.ReachedAt = now;
                 e.Mission.LastProgressAt = now;

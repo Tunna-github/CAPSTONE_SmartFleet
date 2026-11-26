@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getInterventions, intervene, type InterventionRow } from "../api/modules/interventions";
+import ChargingPanel from "./ChargingPanel";
 
 export default function RobotSafetyPanel({ isCollapsed = false }: { isCollapsed?: boolean }) {
   const { role } = useAuth();
@@ -84,6 +85,7 @@ export default function RobotSafetyPanel({ isCollapsed = false }: { isCollapsed?
               onClick={() => void act(row, "recover-requeue")}>Recover &amp; Requeue (wait 30s)</button>}
         </div>
       </article>)}
+      <ChargingPanel visible={open}/>
     </section>}
   </div>;
 }

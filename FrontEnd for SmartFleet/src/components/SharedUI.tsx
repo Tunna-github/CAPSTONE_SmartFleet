@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { Icon, IC } from "./Icons";
 import { Priority, TaskStatus } from "../data/mockData";
+import { useTheme } from "../context/ThemeContext";
 
 export function MetricCard({ label, value, sub, trend, trendUp, accentColor, glowColor, iconEl }: {
     label: string; value: string; sub: string; trend?: string; trendUp?: boolean;
@@ -59,11 +60,13 @@ export function MetricCard({ label, value, sub, trend, trendUp, accentColor, glo
 }
 
 export function PriorityBadge({ priority }: { priority: Priority }) {
+    const { theme } = useTheme();
     const s: Record<Priority, [string, string]> = {
         HIGH: ["rgba(239,68,68,0.12)", "#f87171"],
         MEDIUM: ["rgba(245,158,11,0.12)", "#fbbf24"],
         LOW: ["rgba(100,116,139,0.12)", "#94a3b8"],
     };
+    if (theme === "light") s[priority][1] = { HIGH: "#b91c1c", MEDIUM: "#a16207", LOW: "#475569" }[priority];
     return (
         <span className="font-mono text-[10px] font-semibold px-2 py-0.5 rounded"
             style={{ background: s[priority][0], color: s[priority][1], border: `1px solid ${s[priority][1]}30` }}>
@@ -73,6 +76,7 @@ export function PriorityBadge({ priority }: { priority: Priority }) {
 }
 
 export function StatusBadge({ status }: { status: TaskStatus }) {
+    const { theme } = useTheme();
     const s: Record<TaskStatus, [string, string]> = {
         PENDING: ["rgba(100,116,139,0.12)", "#94a3b8"],
         QUEUED: ["rgba(59,130,246,0.12)", "#60a5fa"],
@@ -85,6 +89,11 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
         REDISPATCHING: ["rgba(245,158,11,0.12)", "#f59e0b"],
         UNKNOWN: ["rgba(100,116,139,0.12)", "#94a3b8"],
     };
+    if (theme === "light") s[status][1] = {
+        PENDING: "#475569", QUEUED: "#1d4ed8", ASSIGNED: "#7e22ce", EXECUTING: "#0e7490",
+        COMPLETED: "#047857", CANCELLED: "#b91c1c", FAILED: "#b91c1c", CRITICAL: "#b91c1c",
+        REDISPATCHING: "#92400e", UNKNOWN: "#475569",
+    }[status];
     return (
         <span className="font-mono text-[10px] font-semibold px-2 py-0.5 rounded flex items-center gap-1.5 w-fit"
             style={{ background: s[status][0], color: s[status][1], border: `1px solid ${s[status][1]}30` }}>
@@ -97,12 +106,12 @@ export function StatusBadge({ status }: { status: TaskStatus }) {
 export function PageHeader({ title, sub, children }: { title: string; sub: string; children?: React.ReactNode }) {
     return (
         <div
-            className="shrink-0 flex items-center justify-between px-6 py-3 transition-colors"
+            className="shrink-0 flex flex-wrap gap-4 items-center justify-between px-6 py-5 transition-colors"
             style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}
         >
             <div>
-                <h1 className="text-[15px] font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>{title}</h1>
-                <p className="text-[11px] font-mono mt-0.5" style={{ color: "var(--text-faint)" }}>{sub}</p>
+                <h1 className="text-[22px] font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>{title}</h1>
+                <p className="text-[12px] mt-1 leading-relaxed" style={{ color: "var(--text-muted)" }}>{sub}</p>
             </div>
             <div className="flex items-center gap-3">{children}</div>
         </div>
@@ -118,9 +127,8 @@ export function PrimaryBtn({ onClick, children }: { onClick: () => void; childre
             onMouseLeave={() => setHov(false)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-colors"
             style={{
-                background: hov ? "#38bdf8" : "#22d3ee",
-                color: "#07091a",
-                boxShadow: "0 4px 16px rgba(34,211,238,0.25)",
+                background: hov ? "#115e59" : "#0f766e",
+                color: "#ffffff",
             }}
         >
             {children}

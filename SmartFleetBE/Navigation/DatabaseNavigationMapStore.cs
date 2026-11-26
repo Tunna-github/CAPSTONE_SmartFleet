@@ -55,6 +55,8 @@ public sealed class DatabaseNavigationMapStore(
             ? db.Database.BeginTransaction(System.Data.IsolationLevel.Serializable) : null;
         if (db.TaskAssignments.Any(a => a.AssignmentStatus == "ACTIVE" && a.Task.WarehouseId == warehouseId))
             throw new MapInUseException();
+        if (db.ChargingJobs.Any(j => j.State != "COMPLETED" && j.Robot.WarehouseId == warehouseId))
+            throw new MapInUseException();
         var mappings = db.StationCheckpoints.Where(m => m.WarehouseId == warehouseId).ToList();
         foreach (var mapping in mappings)
         {

@@ -18,6 +18,8 @@ public sealed class SimulationController(IConfiguration config,SimulationScene s
     public sealed record BridgeRegistration(string RunId,string WorldSha256);
     private bool Enabled=>config.GetValue<bool>("Simulation:Enabled");
     private bool StreamReady=>Enabled && scene.Matches(navigation.GetMap()) && poses.Snapshot(navigation.GetMap().Revision).Count>0;
+    [HttpGet("map-template"),Authorize(Roles=AppRoles.Admin)]
+    public IActionResult MapTemplate() => !Enabled || scene.Anchors.Count < 3 ? NotFound() : Ok(scene.MapTemplate(navigation.GetMap()));
     [HttpGet]
     public IActionResult Status()=>Ok(new {enabled=Enabled,scene.SceneId,mapRevision=navigation.GetMap().Revision,
         mapCompatible=Enabled && scene.Matches(navigation.GetMap()),streamReady=StreamReady,

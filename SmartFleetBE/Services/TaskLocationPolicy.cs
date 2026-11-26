@@ -12,7 +12,7 @@ public static class TaskLocationPolicy
             .Where(s => s.StationId == pickupId || s.StationId == deliveryId).ToListAsync(ct);
         var pickup = rows.SingleOrDefault(s => s.StationId == pickupId);
         var delivery = rows.SingleOrDefault(s => s.StationId == deliveryId);
-        bool Valid(Model.Station? s, string type) => s != null && s.IsActive && s.StationType == type && s.Zone.IsActive &&
+        bool Valid(Model.Station? s, string type) => s != null && s.IsActive && (s.StationType == type || s.StationType == "TRANSFER") && s.Zone.IsActive &&
             s.Zone.Warehouse.IsActive && s.Zone.WarehouseId == warehouseId && s.Checkpoint?.WarehouseId == warehouseId;
         if (pickupId == deliveryId || !Valid(pickup, "PICKUP") || !Valid(delivery, "DELIVERY") || !routes.SupportsWarehouse(warehouseId))
             throw new ArgumentException("Choose different active PICKUP/DELIVERY stations with explicit mappings in the navigation warehouse.");
@@ -39,7 +39,7 @@ public static class TaskLocationPolicy
         db.TransportTasks.AnyAsync(t => t.TaskId == taskId && t.Warehouse.IsActive &&
             t.PickupStationId != t.DeliveryStationId &&
             t.PickupStation.IsActive && t.PickupStation.Zone.IsActive &&
-            t.PickupStation.Zone.WarehouseId == t.WarehouseId && t.PickupStation.StationType == "PICKUP" &&
+            t.PickupStation.Zone.WarehouseId == t.WarehouseId && (t.PickupStation.StationType == "PICKUP" || t.PickupStation.StationType == "TRANSFER") &&
             t.DeliveryStation.IsActive && t.DeliveryStation.Zone.IsActive &&
-            t.DeliveryStation.Zone.WarehouseId == t.WarehouseId && t.DeliveryStation.StationType == "DELIVERY", ct);
+            t.DeliveryStation.Zone.WarehouseId == t.WarehouseId && (t.DeliveryStation.StationType == "DELIVERY" || t.DeliveryStation.StationType == "TRANSFER"), ct);
 }

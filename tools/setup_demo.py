@@ -2,11 +2,13 @@
 import argparse
 from pathlib import Path
 import secrets
+import os
 
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument("--port", type=int, default=8080)
 parser.add_argument("--lan", action="store_true", help="Listen on all host interfaces so LAN browsers can connect")
+parser.add_argument("--charging-layout", action="store_true", help="Select the commissioned separated-lane/four-bay layout for subsequent Docker Compose commands")
 args = parser.parse_args()
 destination = root / ".env"
 if destination.exists():
@@ -21,4 +23,10 @@ else:
     values.update(WEB_PORT=str(args.port), BIND_ADDRESS="0.0.0.0" if args.lan else "127.0.0.1")
     destination.write_text("\n".join(f"{key}={value}" for key, value in values.items()) + "\n", encoding="utf-8")
     print("Created private credentials:", destination)
+if args.charging_layout:
+    lines=destination.read_text(encoding="utf-8").splitlines()
+    lines=[line for line in lines if not line.startswith("COMPOSE_FILE=")]
+    lines.append("COMPOSE_FILE="+os.pathsep.join(["compose.yaml","compose.charging.yaml"]))
+    destination.write_text("\n".join(lines)+"\n",encoding="utf-8")
+    print("Selected separated lanes and four charging bays. Existing active work must be recovered before physical scene commissioning.")
 print("Login usernames: admin, operator, maintenance. Passwords are in the private .env file.")

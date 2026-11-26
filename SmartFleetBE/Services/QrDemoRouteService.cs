@@ -40,6 +40,9 @@ public sealed class QrDemoRouteService
         public double? ReprojectionErrorPx { get; set; }
         public int StableFrames { get; set; }
         public bool RobotStopped { get; set; }
+        public Guid? ChargingJobId { get; set; }
+        public int Generation { get; set; }
+        public string? Reason { get; set; }
     }
 
     public sealed class MissionView
@@ -164,7 +167,7 @@ public sealed class QrDemoRouteService
     public object GetLocalizationMap()
     {
         var map = _navigation.GetMap();
-        return new { protocolVersion = 1, mapRevision = map.Revision, frame = "MAP_N_W_UP",
+        return new { protocolVersion = 1, mapRevision = map.Revision, markerDictionary = map.MarkerDictionary, frame = "MAP_N_W_UP",
             markers = map.Cells.SelectMany((row, r) => row.Select((cell, c) => new { cell, r, c }))
                 .Where(p => p.cell.Type == "qr" && p.cell.ArucoId.HasValue)
                 .Select(p => new { arucoId = p.cell.ArucoId, row = p.r, col = p.c,
@@ -182,6 +185,8 @@ public sealed class QrDemoRouteService
         if (_configuration.GetValue<bool>("Simulation:Enabled") &&
             (_scene == null || !_scene.Matches(map)))
         { reason = "Simulation world and saved QR map do not match. Recommission before dispatch."; return false; }
+        if (_configuration.GetValue<bool>("Charging:Enabled") && !GetMapReadiness().ReadyForRouting)
+        { reason = "Return-to-charge requires a connected map with valid return lanes. Check Warehouse Maps readiness."; return false; }
         if (!HasFreshLocalization(code)) return false;
         var nodes = ReadNodes(map);
         lock (_gate)
@@ -268,23 +273,12 @@ public sealed class QrDemoRouteService
         {
             arucoId = n.Id, label = n.Label, row = n.Row, col = n.Col
         }).ToArray();
-        var directedEdges = edges.SelectMany(edge => new[]
-        {
-            new {
-                fromArUcoId = edge.From.Id,
-                toArUcoId = edge.To.Id,
-                travelDirection = DirectionBetween(edge.From, edge.To),
-                gridDistance = Math.Abs(edge.From.Row - edge.To.Row) +
-                               Math.Abs(edge.From.Col - edge.To.Col)
-            },
-            new {
-                fromArUcoId = edge.To.Id,
-                toArUcoId = edge.From.Id,
-                travelDirection = DirectionBetween(edge.To, edge.From),
-                gridDistance = Math.Abs(edge.From.Row - edge.To.Row) +
-                               Math.Abs(edge.From.Col - edge.To.Col)
-            }
-        }).OrderBy(e => e.fromArUcoId).ThenBy(e => e.toArUcoId).ToArray();
+        var directedEdges = edges.SelectMany(edge => map.DirectedLinks ? new[] {edge} :
+            new[] {edge,(From:edge.To,To:edge.From)}).Select(edge => new {
+                fromArUcoId=edge.From.Id,toArUcoId=edge.To.Id,
+                travelDirection=DirectionBetween(edge.From,edge.To),
+                gridDistance=Math.Abs(edge.From.Row-edge.To.Row)+Math.Abs(edge.From.Col-edge.To.Col)
+            }).OrderBy(e => e.fromArUcoId).ThenBy(e => e.toArUcoId).ToArray();
         return new
         {
             mapRevision = map.Revision,
@@ -322,11 +316,17 @@ public sealed class QrDemoRouteService
             while (queue.TryDequeue(out var id))
                 foreach (var (a, b) in edges)
                 {
-                    var neighbor = a.Id == id ? b.Id : b.Id == id ? a.Id : -1;
+                    var neighbor = a.Id == id ? b.Id : !map.DirectedLinks && b.Id == id ? a.Id : -1;
                     if (neighbor >= 0 && visited.Add(neighbor)) queue.Enqueue(neighbor);
                 }
             if (visited.Count != nodes.Count)
                 issues.Add("QR markers are disconnected. Link the QR corridors so routes can reach every marker.");
+            if(map.DirectedLinks) {
+                var reverse=new HashSet<int>{nodes.Keys.First()};var back=new Queue<int>(reverse);
+                while(back.TryDequeue(out var id)) foreach(var (a,b) in edges)
+                    if(b.Id==id && reverse.Add(a.Id)) back.Enqueue(a.Id);
+                if(reverse.Count!=nodes.Count) issues.Add("One-way lanes need a return path from every checkpoint; check exits and charging access.");
+            }
         }
         return new(map.Revision, nodes.Count, edges.Count, issues.Count == 0, issues);
     }
@@ -578,7 +578,10 @@ public sealed class QrDemoRouteService
         int goal,
         string? initialHeading = null, string? robotCode = null)
     {
-        var blocked = _navigation.GetBlockedQrIds(robotCode);
+        var blocked = _navigation.GetBlockedQrIds(robotCode).ToHashSet();
+        foreach (var n in nodes.Values)
+            if (n.Id != start && n.Id != goal && map.Cells[n.Row][n.Col].OperationalRole == "CHARGING")
+                blocked.Add(n.Id); // A charging bay is a destination, never a through-road shortcut.
         if (blocked.Contains(start) || blocked.Contains(goal))
             throw new InvalidOperationException("Start or destination QR is occupied by another robot.");
         if (start == goal) return [start];
@@ -587,7 +590,7 @@ public sealed class QrDemoRouteService
         foreach (var (from, to) in TraversableQrLinks(map, nodes))
         {
             graph[from.Id].Add(to.Id);
-            graph[to.Id].Add(from.Id);
+            if (!map.DirectedLinks) graph[to.Id].Add(from.Id);
         }
 
         // The map editor has one source of topology and intersection flags.

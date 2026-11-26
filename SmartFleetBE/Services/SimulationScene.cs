@@ -8,15 +8,29 @@ namespace SmartFleetBE.Services;
 
 public sealed class SimulationScene
 {
-    public sealed record Anchor(int ArucoId,int Row,int Col,double MarkerYawDeg,double MarkerSizeM);
+    public sealed record Anchor(int ArucoId,int Row,int Col,double MarkerYawDeg,double MarkerSizeM,string? OperationalRole=null);
     public string SceneId { get; set; } = "";
     public int WarehouseId { get; set; }
     public string WorldSha256 { get; set; } = "";
     public List<Anchor> Anchors { get; set; } = [];
     public List<int[]> Corridors { get; set; } = [];
+    public bool DirectedLinks { get; set; }
+    public string MarkerDictionary { get; set; } = "DICT_4X4_50";
     public List<int> Intersections { get; set; } = [];
     public Dictionary<string,string> Assets { get; set; } = [];
     public bool AllowsAsset(string asset) => Assets.ContainsKey(asset);
+    public WarehouseMapDocument MapTemplate(WarehouseMapDocument current)
+    {
+        var result = new WarehouseMapDocument {Revision=current.Revision,DirectedLinks=DirectedLinks,MarkerDictionary=MarkerDictionary,
+            Cells=Enumerable.Range(0,18).Select(_=>Enumerable.Range(0,28).Select(_=>new WarehouseMapCell {Type="floor"}).ToList()).ToList(),
+            Links=Corridors.Select(e=>new List<string> {$"QR{e[0]}",$"QR{e[1]}"}).ToList()};
+        foreach(var a in Anchors) {
+            var old=current.Cells.SelectMany(row=>row).FirstOrDefault(c=>c.ArucoId==a.ArucoId);
+            result.Cells[a.Row][a.Col]=new() {Type="qr",Label=$"QR{a.ArucoId}",ArucoId=a.ArucoId,MarkerYawDeg=a.MarkerYawDeg,MarkerSizeM=a.MarkerSizeM,
+                IsIntersection=Intersections.Contains(a.ArucoId),OperationalRole=a.OperationalRole??old?.OperationalRole,DisplayName=old?.DisplayName};
+        }
+        return result;
+    }
     public static SimulationScene Load(IConfiguration config, IWebHostEnvironment env)
     {
         if (!config.GetValue<bool>("Simulation:Enabled")) return new();
@@ -30,8 +44,8 @@ public sealed class SimulationScene
         var geometryMatches = Anchors.Count>=3 && cells.Count==Anchors.Count && Anchors.All(a=>cells.Any(p=>
             p.cell.ArucoId==a.ArucoId && p.r==a.Row && p.c==a.Col && p.cell.MarkerYawDeg.HasValue &&
             Math.Abs(p.cell.MarkerYawDeg.Value-a.MarkerYawDeg)<.01 && p.cell.MarkerSizeM.HasValue &&
-            Math.Abs(p.cell.MarkerSizeM.Value-a.MarkerSizeM)<.00001));
-        if (!geometryMatches || Corridors.Count == 0 || Corridors.Any(edge => edge.Length != 2))
+            Math.Abs(p.cell.MarkerSizeM.Value-a.MarkerSizeM)<.00001 && (a.OperationalRole == null || p.cell.OperationalRole == a.OperationalRole)));
+        if (!geometryMatches || map.DirectedLinks != DirectedLinks || map.MarkerDictionary != MarkerDictionary || Corridors.Count == 0 || Corridors.Any(edge => edge.Length != 2))
             return false;
         if (!Intersections.ToHashSet().SetEquals(cells.Where(p => p.cell.IsIntersection).Select(p => p.cell.ArucoId!.Value)))
             return false;
@@ -42,9 +56,9 @@ public sealed class SimulationScene
         foreach (var edge in map.Links)
         {
             if (idsByLabel.TryGetValue(edge[0], out var from) && idsByLabel.TryGetValue(edge[1], out var to))
-                actual.Add(OrderedCorridor(from, to));
+                actual.Add(DirectedLinks ? (from, to) : OrderedCorridor(from, to));
         }
-        return actual.SetEquals(Corridors.Select(edge => OrderedCorridor(edge[0], edge[1])));
+        return actual.SetEquals(Corridors.Select(edge => DirectedLinks ? (edge[0], edge[1]) : OrderedCorridor(edge[0], edge[1])));
     }
 
     private static (int, int) OrderedCorridor(int from, int to) =>

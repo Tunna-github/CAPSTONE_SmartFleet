@@ -169,8 +169,10 @@ public sealed class AutoDispatchService(
                 // ======================================
 
                 var requiredType = DispatchRobotTypePolicy.RequiredType(configuration);
+                var chargingEnabled = configuration.GetValue<bool>("Charging:Enabled");
                 var candidates = await db.Robots
-                    .Where(r => !db.StationBerths.Any(b => b.RobotId == r.RobotId) &&
+                    .Where(r => (!db.StationBerths.Any(b => b.RobotId == r.RobotId) ||
+                        (chargingEnabled && db.ChargingJobs.Any(j => j.RobotId == r.RobotId && j.State == "READY"))) &&
                         // Same warehouse
                         r.WarehouseId == task.WarehouseId &&
 
@@ -423,6 +425,7 @@ public sealed class AutoDispatchService(
                 // STEP 9: SAVE AND COMMIT
                 // ======================================
 
+                if (chargingEnabled) await ChargingService.BeginDeparture(db, robot.RobotId, cancellationToken, routes);
                 await db.SaveChangesAsync(
                     cancellationToken);
 

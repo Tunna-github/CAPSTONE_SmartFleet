@@ -64,7 +64,7 @@ public sealed class TransportTaskRepository : ITransportTaskRepository
             .AsNoTracking()
             .AnyAsync(
                 s => s.StationId == stationId
-                     && (stationType == null || s.StationType == stationType)
+                     && (stationType == null || s.StationType == stationType || s.StationType == "TRANSFER" && (stationType == "PICKUP" || stationType == "DELIVERY"))
                      && s.IsActive
                      && s.Zone.IsActive
                      && s.Zone.WarehouseId == warehouseId,

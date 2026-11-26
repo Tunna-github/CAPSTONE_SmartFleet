@@ -6,6 +6,7 @@ namespace SmartFleetBE;
 
 public partial class Robot
 {
+    public int RegistryRevision { get; set; } = 1;
     public int RobotId { get; set; }
 
     public int WarehouseId { get; set; }

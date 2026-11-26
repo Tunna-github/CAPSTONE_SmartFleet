@@ -38,7 +38,16 @@ def call(path, token=None, body=None, method=None, expected=(200,)):
 tokens = {name: call("/api/v1/auth/login", body={"usernameOrEmail": name, "password": env[key]})["accessToken"]
     for name, key in [("admin", "DEMO_ADMIN_PASSWORD"), ("operator", "DEMO_OPERATOR_PASSWORD"), ("maintenance", "DEMO_MAINTENANCE_PASSWORD")]}
 admin, operator, maintenance = (tokens[n] for n in ("admin", "operator", "maintenance"))
+assert call('/api/v1/simulation',admin)['sceneId']=='smartfleet-demo-r2025a-v1', 'This fixture repurposes legacy stations. Use check_charging_simulation.py for the commissioned dual-lane scene.'
 assert not any(m["assignmentStatus"] == "ACTIVE" for m in call("/api/v1/missions", operator)), "Use an isolated test installation with no active assignments"
+# Explicit Admin-only fixture preparation in this isolated test: release the
+# transfer point used by berth/collision tests, without repurposing a live robot.
+fixture_catalog = call('/api/v1/warehouse-catalog',admin)
+for marker in ([6] if args.api_only else [8]):
+    existing = next((s for s in fixture_catalog['stations'] if s['arucoId']==marker),None)
+    if existing and existing['type']=='TRANSFER':
+        body = {k:existing[k] for k in ['zoneId','code','name','type','coordX','coordY','coordZ','yawAngle','qrCodePayload','capacity','revision']}
+        call(f"/api/v1/warehouse-catalog/stations/{existing['stationId']}",admin,{**body,'isActive':False,'arucoId':None},'PUT')
 if args.api_only:
     catalog = call('/api/v1/warehouse-catalog', admin)
     p = next(s for s in catalog['stations'] if s['code']=='P1')
@@ -133,7 +142,7 @@ while time.monotonic() < deadline:
     stage = "PICKUP" if mission["missionStatus"] == "AT_PICKUP" else "DELIVERY" if mission["missionStatus"] == "AT_DELIVERY" else None
     if stage and stage not in confirmed and mission["stationPresenceFresh"]:
         result = call(f'/api/v1/missions/{mission["missionId"]}/verifications', operator, {"requestId": str(uuid.uuid4()), "stage": stage,
-            "type": "QRCODE", "scannedQr": pickup["qrCodePayload"] if stage == "PICKUP" else delivery["qrCodePayload"], "physicalTransferConfirmed": True})
+            "type": "QRCODE", "scannedQr": mission["pickupVerificationCode"] if stage == "PICKUP" else mission["deliveryVerificationCode"], "physicalTransferConfirmed": True})
         assert result["accepted"]; confirmed.add(stage)
     if mission["missionStatus"] == "COMPLETED": break
     time.sleep(1)

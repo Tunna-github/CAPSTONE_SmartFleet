@@ -6,8 +6,19 @@ public partial class SmartFleetDbContext
 {
     public DbSet<StationCheckpoint> StationCheckpoints => Set<StationCheckpoint>();
     public DbSet<StationBerth> StationBerths => Set<StationBerth>();
+    public DbSet<ChargingJob> ChargingJobs => Set<ChargingJob>();
     private static void ConfigureCatalog(ModelBuilder model)
     {
+        model.Entity<ChargingJob>(e => {
+            e.ToTable("ChargingJobs"); e.HasKey(x => x.Id);
+            e.Property(x => x.Revision).IsConcurrencyToken();
+            e.HasIndex(x => x.SourceMissionId).IsUnique();
+            e.HasIndex(x => x.RobotId).IsUnique().HasFilter("\"State\" <> 'COMPLETED'");
+            e.HasOne(x => x.Robot).WithMany().HasForeignKey(x => x.RobotId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Mission>().WithMany().HasForeignKey(x => x.SourceMissionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Station>().WithMany().HasForeignKey(x => x.StationId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<Robot>().Property(r => r.RegistryRevision).IsConcurrencyToken();
         model.Entity<Warehouse>().Property(w => w.Revision).IsConcurrencyToken();
         model.Entity<Zone>().Property(z => z.Revision).IsConcurrencyToken();
         model.Entity<Station>().Property(s => s.Revision).IsConcurrencyToken();
