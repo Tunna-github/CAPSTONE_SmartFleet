@@ -14,6 +14,7 @@ async function setup(page: Page, failSave = false) {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     if (path.endsWith("/users/me")) return route.fulfill({ json: user });
+    if (path === "/api/v1/simulation") return route.fulfill({ json: { enabled: false } });
     if (path.endsWith("/navigation/map")) {
       if (request.method() === "PUT") {
         writes++;

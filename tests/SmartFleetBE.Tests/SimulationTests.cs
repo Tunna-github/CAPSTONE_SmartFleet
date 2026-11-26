@@ -67,12 +67,27 @@ public sealed class SimulationTests
     }
 
     [Fact]
-    public void SavedMapMustMatchCommissionedMarkerGeometry()
+    public void SavedMapMustMatchCommissionedGeometryAndTrafficLayout()
     {
-        var scene=new SimulationScene {Anchors=Enumerable.Range(0,3).Select(i=>new SimulationScene.Anchor(i,0,i,90,.04)).ToList()};
+        var scene=new SimulationScene {
+            Anchors=Enumerable.Range(0,3).Select(i=>new SimulationScene.Anchor(i,0,i,90,.04)).ToList(),
+            Corridors=[[0,1],[1,2]], Intersections=[1],
+        };
         var grid=new WarehouseMapDocument {Cells=[Enumerable.Range(0,3).Select(i=>new WarehouseMapCell {
-            Type="qr",ArucoId=i,MarkerYawDeg=90,MarkerSizeM=.04}).ToList()]};
-        Assert.True(scene.Matches(grid));grid.Cells[0][1].MarkerYawDeg=0;Assert.False(scene.Matches(grid));
+            Type="qr",Label=$"QR{i}",ArucoId=i,MarkerYawDeg=90,MarkerSizeM=.04,IsIntersection=i==1}).ToList()],
+            Links=[["QR1","QR0"],["QR1","QR2"],["S1","S2"]]};
+        Assert.True(scene.Matches(grid));
+        grid.Cells[0][2].DisplayName="Waiting Area A";
+        grid.Cells[0][2].OperationalRole="WAITING";
+        Assert.True(scene.Matches(grid));
+        grid.Links.Add(["QR0","QR2"]);
+        Assert.False(scene.Matches(grid));
+        grid.Links.RemoveAt(3);
+        grid.Cells[0][1].IsIntersection=false;
+        Assert.False(scene.Matches(grid));
+        grid.Cells[0][1].IsIntersection=true;
+        grid.Cells[0][1].MarkerYawDeg=0;
+        Assert.False(scene.Matches(grid));
     }
 
     [Fact]

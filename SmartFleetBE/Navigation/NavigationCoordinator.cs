@@ -809,6 +809,7 @@ public sealed class NavigationCoordinator
         {
             cell.Type = cell.Type.Trim().ToLowerInvariant();
             cell.Label = cell.Label?.Trim();
+            cell.DisplayName = string.IsNullOrWhiteSpace(cell.DisplayName) ? null : cell.DisplayName.Trim();
             if (cell.Type == "qr") cell.ArucoId ??= IdFromLabel(cell.Label);
         }
         map.Links = map.Links.Select(link => link.Select(value => value.Trim()).ToList()).ToList();
@@ -833,6 +834,8 @@ public sealed class NavigationCoordinator
             var type = cell.Type.Trim().ToLowerInvariant();
             if (type is not ("wall" or "floor" or "station" or "qr" or "charge"))
                 return "Unknown map cell type.";
+            if (type != "qr" && (cell.DisplayName != null || cell.OperationalRole != null))
+                return "Only QR checkpoints can have a display name or role.";
             if (type is "wall" or "floor")
             {
                 if (cell.ArucoId != null || cell.IsIntersection || !string.IsNullOrEmpty(cell.Label) ||
@@ -846,6 +849,12 @@ public sealed class NavigationCoordinator
                 return "Station/QR/charge labels must be unique, nonempty and alphanumeric.";
             if (type == "qr")
             {
+                if (cell.DisplayName is { Length: > 100 } || cell.DisplayName?.Any(char.IsControl) == true)
+                    return "Checkpoint display names must be at most 100 characters on one line.";
+                if (cell.OperationalRole is not (null or "NAVIGATION" or "PICKUP" or "DELIVERY" or "WAITING" or "CHARGING"))
+                    return "Invalid checkpoint role. Configure intersections using the intersection flag.";
+                if (cell.IsIntersection && cell.OperationalRole is not (null or "NAVIGATION"))
+                    return "Intersections cannot have an operational station role.";
                 var id = cell.ArucoId ?? IdFromLabel(cell.Label);
                 if (!id.HasValue || id.Value is < 0 or > 49 || !ids.Add(id.Value))
                     return "Each QR requires a unique ArUco ID 0..49 (DICT_4X4_50).";

@@ -8,25 +8,45 @@ async function setup(page:Page,role="Administrator",reject=false) {
     const catalog={warehouses:[{warehouseId:1,code:"W1",name:"Warehouse One",isActive:true,revision:1}],zones:[{zoneId:1,warehouseId:1,code:"Z1",name:"Floor",type:"TRANSIT",speedLimit:.18,isActive:true,revision:1}],stations,
         robots:[{robotId:1,robotCode:"R01",warehouseId:1},{robotId:2,robotCode:"R02",warehouseId:1}],navigationWarehouseId:1,mapRevision:7,capacityPolicy:"One robot per marker; explicit reservation and physical clearance."};
     const cells:any[][]=Array.from({length:18},()=>Array.from({length:28},()=>({type:"floor"})));
-    for(const [id,row,col] of [[2,1,4],[7,3,6],[8,1,6],[1,3,4]])cells[row][col]={type:"qr",label:`Marker-${id}`,arucoId:id,markerYawDeg:0,markerSizeM:.04,isIntersection:id===1};
+    for(const [id,row,col] of [[0,5,4],[2,1,4],[7,3,6],[8,1,6],[1,3,4]])cells[row][col]={type:"qr",label:`Marker-${id}`,arucoId:id,markerYawDeg:0,markerSizeM:.04,isIntersection:id===1};
+    cells[6][9]={type:"station",label:"S1"};
+    cells[6][13]={type:"station",label:"S2"};
+    cells[9][13]={type:"charge",label:"CHG1"};
+    let links=[["Marker-0","Marker-1"],["Marker-1","Marker-2"],["Marker-2","Marker-8"],["Marker-8","Marker-7"],["S1","S2"],["S2","CHG1"]];
+    let compatible=true;
     await page.addInitScript(user=>{localStorage.setItem("smartfleet_access_token","test-only");localStorage.setItem("smartfleet_user",JSON.stringify(user));},user);
     await page.route("https://localhost:7166/**",async route=>{
         const req=route.request(),url=new URL(req.url());
         if(url.pathname.endsWith('/users/me'))return route.fulfill({json:user});
+        if(url.pathname==='/api/v1/simulation')return route.fulfill({json:{enabled:true,mapCompatible:compatible}});
         if(url.pathname==='/api/v1/warehouse-catalog')return route.fulfill({json:catalog});
         if(url.pathname.startsWith('/api/v1/warehouse-catalog/')){
             writes.push({url:url.pathname,body:req.postDataJSON()});
             if(reject)return route.fulfill({status:409,json:{message:"Warehouse has active assignments. Recover before catalog changes."}});
+            if(req.method()==="PUT") {
+                const station=stations.find(s=>s.stationId===Number(url.pathname.split("/").at(-1)));
+                if(station) Object.assign(station,req.postDataJSON(),{revision:station.revision+1});
+            } else if(req.method()==="POST" && url.pathname.endsWith("/stations")) {
+                stations.push({stationId:4,warehouseId:1,usable:true,isOccupied:false,occupantRobotCodes:[],reservedRobotId:null,
+                    ...req.postDataJSON(),revision:1});
+            }
             return route.fulfill({json:{id:1}});
         }
         if(url.pathname==='/api/v1/navigation/map'){
-            if(req.method()!=='GET')writes.push({url:url.pathname,body:req.postDataJSON()});
-            return route.fulfill({json:{revision:7,rows:18,columns:28,cells,links:[]}});
+            if(req.method()!=='GET') {
+                const submitted=req.postDataJSON();
+                writes.push({url:url.pathname,body:submitted});
+                compatible=submitted.links.length===links.length && submitted.cells.flat().filter((point: {type:string})=>point.type==="qr").length===5;
+                cells.splice(0,cells.length,...submitted.cells);
+                links=submitted.links;
+                catalog.mapRevision++;
+            }
+            return route.fulfill({json:{revision:catalog.mapRevision,rows:18,columns:28,cells,links}});
         }
         if(url.pathname==='/api/v1/demo-routing/map/validation')return route.fulfill({json:{readyForRouting:true,qrNodeCount:4,corridorCount:3,issues:[]}});
         return route.fulfill({json:url.pathname.endsWith('/positions')?{}:[]});
     });
-    return {writes};
+    return {writes, stations};
 }
 
 test("Admin edits station mapping without writing map geometry",async({page},info)=>{
@@ -61,9 +81,97 @@ for(const role of ['Warehouse Operator','Maintenance Technician'])test(`${role} 
 test("Map labels show physical ArUco ID and associated database station",async({page},info)=>{
     await setup(page);await page.goto('/admin/maps');
     await expect(page.locator('svg text').filter({hasText:/^QR2$/})).toHaveCount(1);
-    await expect(page.locator('svg text').filter({hasText:/^P1$/})).toHaveCount(1);
+    await expect(page.locator('svg text').filter({hasText:/^Pickup One$/})).toHaveCount(1);
+    await expect(page.locator('svg text').filter({hasText:/^Pickup Station$/})).toHaveCount(1);
     await expect(page.locator('svg title').filter({hasText:'Pickup One'})).toHaveCount(1);
     await page.screenshot({path:info.outputPath('station-map-labels.png'),fullPage:true});
+});
+
+test("Simulation maps an existing station to a QR and reloads its label without saving geometry",async({page})=>{
+    const {writes,stations}=await setup(page);
+    Object.assign(stations[0],{arucoId:null,usable:false});
+    await page.goto('/admin/maps');
+    const map=page.getByLabel('Warehouse map',{exact:true});
+    await expect(map.locator('polyline')).toHaveCount(4);
+    await expect(map.getByText(/^(S1|S2|CHG1)$/)).toHaveCount(0);
+    await expect(page.getByRole('button',{name:'Edit Points'})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Save to Database'})).toBeEnabled();
+    await map.getByRole('button',{name:'Select QR1',exact:true}).click();
+    await expect(page.getByText('Intersection checkpoints are reserved for traffic coordination.')).toBeVisible();
+    await map.getByRole('button',{name:'Select QR0',exact:true}).click();
+    await expect(page.getByRole('combobox',{name:'Associated station'})).toHaveValue('');
+    await expect(page.getByRole('combobox',{name:'Associated station'}).locator('option[value="2"]')).toHaveCount(0);
+    await page.getByRole('combobox',{name:'Associated station'}).selectOption('1');
+    await page.getByLabel('Station name',{exact:true}).fill('Packing Bench');
+    await page.getByRole('combobox',{name:'Station type',exact:true}).selectOption('WAITING');
+    await page.getByRole('button',{name:'Save station',exact:true}).click();
+    await expect(page.getByText('Station saved at QR0.')).toBeVisible();
+    expect(writes).toEqual([{url:'/api/v1/warehouse-catalog/stations/1',body:{
+        zoneId:1,code:'P1',name:'Packing Bench',type:'WAITING',coordX:1,coordY:2,coordZ:0,yawAngle:0,
+        qrCodePayload:'P1',arucoId:0,isActive:true,capacity:1,revision:3,
+    }}]);
+    await page.reload();
+    await expect(map.getByLabel('Packing Bench — Waiting Area')).toBeVisible();
+    await expect(map.locator('polyline')).toHaveCount(4);
+    await map.getByRole('button',{name:'Select QR2',exact:true}).click();
+    await page.getByRole('combobox',{name:'Associated station'}).selectOption('new');
+    await page.getByLabel('Station code',{exact:true}).fill('W2');
+    await page.getByLabel('Station name',{exact:true}).fill('Spare waiting');
+    await page.getByRole('combobox',{name:'Station type',exact:true}).selectOption('WAITING');
+    await page.getByLabel('X (meters)',{exact:true}).fill('1.25');
+    await page.getByLabel('Y (meters)',{exact:true}).fill('2.5');
+    await page.getByRole('button',{name:'Save station',exact:true}).click();
+    await expect(page.getByText('Station saved at QR2.')).toBeVisible();
+    expect(writes[1]).toMatchObject({url:'/api/v1/warehouse-catalog/stations',body:{arucoId:2,code:'W2',type:'WAITING'}});
+});
+
+test("Simulation saves independent labels, edits QR topology, and shows the commissioning warning",async({page},info)=>{
+    const {writes,stations}=await setup(page);
+    stations.pop(); // QR8 is an unassociated checkpoint in this scenario.
+    await page.goto('/admin/maps');
+    const map=page.getByLabel('Warehouse map',{exact:true});
+    await map.getByRole('button',{name:'Select QR8',exact:true}).click();
+    await page.getByLabel('Display name',{exact:true}).fill('Waiting Area A');
+    await page.getByRole('combobox',{name:'Operational role',exact:true}).selectOption('WAITING');
+    await expect(page.getByLabel('ArUco ID',{exact:true})).toHaveValue('8');
+    await page.getByRole('button',{name:'Save to Database',exact:true}).click();
+    await expect(page.getByText('Saved map to database!',{exact:true})).toBeVisible();
+    expect(writes[0].body.cells[1][6]).toMatchObject({label:'Marker-8',displayName:'Waiting Area A',arucoId:8,operationalRole:'WAITING'});
+    expect(writes[0].body.links).toContainEqual(['Marker-2','Marker-8']);
+    expect(writes[0].body.links).toContainEqual(['S1','S2']);
+    await page.getByRole('button',{name:'Reload Backend Map'}).click();
+    await expect(map.getByText('Waiting Area A',{exact:true})).toBeVisible();
+    await expect(map.getByText(/^(S1|S2|CHG1)$/)).toHaveCount(0);
+    await map.getByRole('button',{name:'Select QR8',exact:true}).click();
+    await expect(page.getByRole('combobox',{name:'Associated station'})).toHaveValue('');
+    await page.screenshot({path:info.outputPath('qr8-editor.png'),fullPage:true});
+    await page.getByRole('button',{name:'Edit Links'}).click();
+    await map.getByRole('button',{name:'Select QR2',exact:true}).click();
+    await map.getByRole('button',{name:'Select QR8',exact:true}).click();
+    await expect(map.locator('polyline')).toHaveCount(3);
+    await page.getByRole('button',{name:'Save to Database',exact:true}).click();
+    await expect(page.getByRole('alert').filter({hasText:'Simulation dispatch is blocked'})).toBeVisible();
+    await map.getByRole('button',{name:'Select QR8',exact:true}).click();
+    await map.getByRole('button',{name:'Select QR2',exact:true}).click();
+    await expect(map.locator('polyline')).toHaveCount(4);
+    await page.getByRole('button',{name:'Edit Points'}).click();
+    await page.getByRole('button',{name:'Add QR checkpoint'}).click();
+    await page.getByLabel('New ArUco ID').fill('12');
+    await map.locator('[data-map-cell="5,5"]').click();
+    await expect(page.getByRole('heading',{name:'QR12 checkpoint'})).toBeVisible();
+    await page.getByLabel('Display name',{exact:true}).fill('Navigation test');
+    await page.getByLabel('ArUco ID',{exact:true}).fill('13');
+    await page.getByRole('combobox',{name:'Operational role',exact:true}).selectOption('INTERSECTION');
+    await page.getByRole('button',{name:'Save to Database',exact:true}).click();
+    await expect(page.getByText('Saved map to database!',{exact:true})).toBeVisible();
+    expect(writes.at(-1)?.body.cells[5][5]).toMatchObject({label:'QR12',displayName:'Navigation test',arucoId:13,isIntersection:true});
+    await page.getByRole('button',{name:'Remove checkpoint'}).click();
+    await expect(map.getByRole('button',{name:'Select QR13',exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Save to Database',exact:true}).click();
+    await expect(page.getByText('Saved map to database!',{exact:true})).toBeVisible();
+    expect(writes.at(-1)?.body.cells[5][5]).toMatchObject({type:'floor',arucoId:null});
+    await page.getByRole('button',{name:'Reload Backend Map'}).click();
+    await expect(map.getByRole('button',{name:'Select QR13',exact:true})).toHaveCount(0);
 });
 
 test("Task selects operational stations; WAITING and independent QR selectors are absent",async({page})=>{

@@ -178,11 +178,11 @@ public sealed class QrDemoRouteService
         if (warehouseId.HasValue && !SupportsWarehouse(warehouseId.Value))
         { reason = "Task/robot warehouse does not match the configured navigation map warehouse."; return false; }
         reason = "Robot needs a fresh camera/IMU localization on the current map.";
-        if (_configuration.GetValue<bool>("Simulation:Enabled") &&
-            (_scene == null || !_scene.Matches(_navigation.GetMap())))
-        { reason = "Simulation world and saved map geometry do not match. Recommission before dispatch."; return false; }
-        if (!HasFreshLocalization(code)) return false;
         var map = _navigation.GetMap();
+        if (_configuration.GetValue<bool>("Simulation:Enabled") &&
+            (_scene == null || !_scene.Matches(map)))
+        { reason = "Simulation world and saved QR map do not match. Recommission before dispatch."; return false; }
+        if (!HasFreshLocalization(code)) return false;
         var nodes = ReadNodes(map);
         lock (_gate)
         {

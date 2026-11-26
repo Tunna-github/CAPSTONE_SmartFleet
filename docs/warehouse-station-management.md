@@ -6,6 +6,49 @@ Report 3 UC03 and BR07/08/47–52, and the Report 4 warehouse/zone/station model
 The additional safety and commissioning policies below make the requested
 StationId-to-ArUco behavior explicit; they are not claims of physical certification.
 
+## Label the commissioned Webots map
+
+As Admin, open **Warehouse Maps**, choose **Edit Points** and select a QR
+checkpoint. Enter its display name and operational role, then choose **Save to
+Database**. A station record is optional. Under **Associated station**, select
+an existing unmapped station or create one in place. **Save station** saves the
+station record and its mapping. Station type controls its eligibility for
+business operations. Use **Advanced warehouse administration** for warehouse,
+zone and berth administration.
+
+**Edit Links** toggles corridors between QR checkpoints. If a saved QR map
+differs from the commissioned Webots markers, corridors or intersections, the
+editor shows a warning and simulation dispatch stays blocked until the map
+matches a commissioned scene. For an intentional physical change, commission
+the world and update the matching anchors, corridors and intersections in the
+scene manifest. For an unintended edit, restore the approved map.
+
+### Optional cleanup of the saved legacy drawing
+
+The inspected simulation map (MapID 1, revision 5) contains these legacy cells
+at zero-based grid coordinates `(row, column)`.
+
+| Points | Coordinates in point order |
+| --- | --- |
+| S1, S2, S3 | (6, 9), (6, 13), (6, 17) |
+| S4, S5, S6 | (9, 9), (9, 13), (9, 17) |
+| S7, S8, S9 | (12, 9), (12, 13), (12, 17) |
+| CHG1 | (15, 13) |
+
+The 13 candidate links are S1–S2, S2–S3, S4–S5, S5–S6, S7–S8, S8–S9,
+S1–S4, S4–S7, S2–S5, S5–S8, S3–S6, S6–S9 and S8–CHG1. The simulation editor
+filters this drawing from view, so storage cleanup is optional.
+
+For a future storage cleanup, export the current map and its revision. Confirm
+these exact cells still have their legacy types and labels and that every link
+touching them stays within the listed set. Confirm each cell's replacement type
+against the commissioned floor. Build a candidate map that changes only those
+cells and links, and compare every QR cell, QR link and intersection flag before
+and after. Validate the candidate against the current Webots scene in an isolated
+copy, then use the revision-checked map save during an idle maintenance window.
+The existing station records, mappings, reservations and mission history are
+outside the map document.
+
 ## Set up and operate
 
 1. Start the updated Compose stack with `docker compose up -d --build`.

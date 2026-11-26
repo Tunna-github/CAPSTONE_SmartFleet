@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RobotPos } from "../data/mockData";
-import { useCatalog } from "../api/modules/catalog";
+import { stationRoles, useCatalog, type Catalog } from "../api/modules/catalog";
+import type { CheckpointRole } from "../api/modules/navigation";
 import { useTheme } from "../context/ThemeContext";
 
 const CELL = 40;
@@ -10,7 +11,7 @@ const GW = CELL * GCOLS;
 const GH = CELL * GROWS;
 
 export type WarehouseCellType = "floor" | "wall" | "station" | "qr" | "charge";
-export interface WarehouseCell { type: WarehouseCellType; label?: string; color?: string; arucoId?: number; isIntersection?: boolean; markerYawDeg?: number; markerSizeM?: number; }
+export interface WarehouseCell { type: WarehouseCellType; label?: string; displayName?: string; operationalRole?: CheckpointRole; color?: string; arucoId?: number; isIntersection?: boolean; markerYawDeg?: number; markerSizeM?: number; }
 export type WarehouseLayout = WarehouseCell[][];
 
 export function createDefaultWarehouseLayout(): WarehouseLayout {
@@ -98,11 +99,15 @@ export function WarehouseGrid({
     missionRoutes = [],
     onRobotClick,
     focusQrNetwork = false,
+    qrOnly = focusQrNetwork,
+    catalog: suppliedCatalog,
 }: {
     robots: RobotPos[];
     missionRoutes?: { robotId: string; color: string; points: { x: number; y: number }[] }[];
     onRobotClick?: (robotCode: string) => void;
     focusQrNetwork?: boolean;
+    qrOnly?: boolean;
+    catalog?: Catalog | null;
     grid?: WarehouseLayout;
     links?: Array<[string, string]>;
     scale?: number;
@@ -114,7 +119,11 @@ export function WarehouseGrid({
     animateRobots?: boolean;
 }) {
     const { theme } = useTheme();
-    const {catalog}=useCatalog();
+    const { catalog: loadedCatalog } = useCatalog(suppliedCatalog === undefined);
+    const catalog = suppliedCatalog === undefined ? loadedCatalog : suppliedCatalog;
+    const stationByMarker = useMemo(() => new Map(catalog?.stations
+        .filter(station => station.warehouseId === catalog.navigationWarehouseId && station.arucoId !== null)
+        .map(station => [station.arucoId, station])), [catalog]);
     const isLight = theme === "light";
     const handlePointClick = onPointClick ?? onStationClick;
 
@@ -139,12 +148,12 @@ export function WarehouseGrid({
         for (let r = 0; r < GROWS; r++) {
             for (let c = 0; c < GCOLS; c++) {
                 const cell = grid[r]?.[c];
-                if ((focusQrNetwork ? cell?.type === "qr" : (cell?.type === "station" || cell?.type === "qr" || cell?.type === "charge")) && cell.label) pts.push({ r, c, label: cell.label });
+                if ((qrOnly ? cell?.type === "qr" : (cell?.type === "station" || cell?.type === "qr" || cell?.type === "charge")) && cell.label) pts.push({ r, c, label: cell.label });
             }
         }
         pts.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
         return pts;
-    }, [grid, focusQrNetwork]);
+    }, [grid, qrOnly]);
 
     const defaultLinks = useMemo(() => {
         const edges: Array<[string, string]> = [];
@@ -302,8 +311,7 @@ export function WarehouseGrid({
         };
     }, [animateRobots]);
 
-    // Keep the live QR network large without changing map coordinates used by
-    // navigation or robot telemetry. The map editor retains the complete grid.
+    // Fit the QR network without changing coordinates used by navigation or telemetry.
     const viewport = useMemo(() => {
         if (!focusQrNetwork || stations.length === 0) return { x: 0, y: 0, width: GW, height: GH };
         let left = Math.min(...stations.map(p => p.c));
@@ -330,18 +338,21 @@ export function WarehouseGrid({
 
     // Selection changes do not need to rebuild the static map cells.
     const mapCells = useMemo(() => gridWithRoads.map((row, ri) => row.map((cell, ci) => {
-        if (focusQrNetwork && (cell.type === "station" || cell.type === "charge")) return null;
+        if (qrOnly && (cell.type === "station" || cell.type === "charge")) return null;
         const style = cellTypeStyles[cell.type] || cellTypeStyles.floor;
         const x = ci * CELL;
         const y = ri * CELL;
+        const station = cell.type === "qr" && cell.arucoId !== undefined ? stationByMarker.get(cell.arucoId) : undefined;
+        const annotated = !!(cell.displayName?.trim() || station || (cell.operationalRole && cell.operationalRole !== "NAVIGATION"));
         return (
             <g key={`${ri}-${ci}`} pointerEvents="none">
                 <rect x={x} y={y} width={CELL} height={CELL} fill={cell.type === "floor" ? "transparent" : style.fill} stroke={style.stroke} strokeWidth="0.5" />
                 {(cell.type === "station" || cell.type === "qr" || cell.type === "charge") && (
                     <>
                         <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
-                        <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize={focusQrNetwork ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.type==="qr"?`QR${cell.arucoId}`:cell.label}</text>
-                        {cell.type==="qr" && catalog?.stations.filter(s=>s.warehouseId===catalog.navigationWarehouseId && s.arucoId===cell.arucoId).map(s=><g key={s.stationId}><title>{`${s.code} — ${s.name} · ${s.type} · Station #${s.stationId} · ${s.isActive?"Active":"Inactive"}`}</title><text x={x+CELL/2} y={y+CELL-3} textAnchor="middle" fontSize="7" fill={style.stroke}>{s.code}{s.isActive?"":" (off)"}</text></g>)}
+                        <text x={x + CELL / 2} y={y + (annotated ? 19 : CELL / 2 + 4)} textAnchor="middle" fontSize={qrOnly ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>
+                            {cell.type === "qr" && cell.arucoId !== undefined ? `QR${cell.arucoId}` : cell.label}
+                        </text>
                         {cell.type === "qr" && cell.isIntersection && (
                             <g>
                                 <circle cx={x + CELL - 8} cy={y + 8} r={6} fill="#f59e0b" />
@@ -352,10 +363,36 @@ export function WarehouseGrid({
                 )}
             </g>
         );
-    })), [gridWithRoads, cellTypeStyles, focusQrNetwork, catalog]);
+    })), [gridWithRoads, cellTypeStyles, qrOnly, stationByMarker]);
+
+    const stationLabels = stations.map(({ r, c, label }) => {
+        const cell = grid[r]?.[c];
+        const station = cell?.type === "qr" && cell.arucoId !== undefined ? stationByMarker.get(cell.arucoId) : undefined;
+        if (cell?.type !== "qr") return null;
+        const fullName = cell.displayName?.trim() || station?.name;
+        const role = cell.isIntersection ? "Intersection" : cell.operationalRole ?? station?.type;
+        const roleLabel = role && (stationRoles[role as keyof typeof stationRoles] ?? (role === "NAVIGATION" ? "Navigation" : role));
+        if (!fullName && (!roleLabel || roleLabel === "Navigation" || roleLabel === "Intersection")) return null;
+        const description = station && !station.isActive ? `${roleLabel ?? ""} (inactive)` : roleLabel;
+        const primary = fullName || description || "";
+        const name = primary.length > 19 ? `${primary.slice(0, 18)}…` : primary;
+        const detail = fullName && description;
+        const color = isLight ? "#4c1d95" : "#f3e8ff";
+        const x = c * CELL + CELL / 2;
+        const y = r * CELL;
+        const badgeWidth = CELL * 2 - 4;
+        return <g key={label} pointerEvents="none" aria-label={[fullName, description].filter(Boolean).join(" — ")}>
+            <title>{[station?.code, fullName, description].filter(Boolean).join(" · ")}</title>
+            <rect x={x - badgeWidth / 2} y={y + 23} width={badgeWidth} height={detail ? 23 : 15} rx="3" fill={cellTypeStyles.qr.fill} stroke={cellTypeStyles.qr.stroke} strokeWidth="0.6" />
+            <text x={x} y={y + 33} textAnchor="middle" fontSize="9" fontWeight="bold" fill={color}
+                textLength={name.length > 13 ? badgeWidth - 8 : undefined} lengthAdjust="spacingAndGlyphs">{name}</text>
+            {detail && <text x={x} y={y + 43} textAnchor="middle" fontSize="8" fill={color}
+                textLength={detail.length > 16 ? badgeWidth - 8 : undefined} lengthAdjust="spacingAndGlyphs">{detail}</text>}
+        </g>;
+    });
 
     return (
-        <svg aria-label={focusQrNetwork ? "Live QR robot map" : "Warehouse map"} width="100%" height="100%" viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`} style={{ background: isLight ? "#ffffff" : "#060d1f", display: "block", transition: "background 0.2s ease" }} preserveAspectRatio="xMidYMid meet">
+        <svg aria-label={focusQrNetwork && !onCellClick && !onPointClick ? "Live QR robot map" : "Warehouse map"} width="100%" height="100%" viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`} style={{ background: isLight ? "#ffffff" : "#060d1f", display: "block", transition: "background 0.2s ease" }} preserveAspectRatio="xMidYMid meet">
             <defs>
                 <pattern id="dots" x="0" y="0" width={CELL} height={CELL} patternUnits="userSpaceOnUse">
                     <circle cx="0" cy="0" r="0.8" fill={isLight ? "#e2e8f0" : "#0d1634"} />
@@ -400,9 +437,12 @@ export function WarehouseGrid({
 
                 {mapCells}
                 {(onCellClick || handlePointClick || selectedCell || selectedPoint) && gridWithRoads.map((row, ri) => row.map((cell, ci) => {
+                    if (qrOnly && (cell.type === "station" || cell.type === "charge")) return null;
                     const x = ci * CELL; const y = ri * CELL;
-                    const isInteractive = !!onCellClick || !!handlePointClick;
                     const isPoint = cell.type === "station" || cell.type === "qr" || cell.type === "charge";
+                    const isInteractive = !!onCellClick || (!!handlePointClick && isPoint);
+                    const pointName = qrOnly && cell.type === "qr" && cell.arucoId !== undefined
+                        ? `QR${cell.arucoId}` : `${cell.type} ${cell.label ?? ""}`;
                     const isSelected = (selectedCell?.row === ri && selectedCell.col === ci)
                         || (!!selectedPoint && cell.label === selectedPoint);
                     const selectCell = () => {
@@ -427,8 +467,9 @@ export function WarehouseGrid({
                                     fill="transparent"
                                     role={isPoint ? "button" : undefined}
                                     tabIndex={isPoint ? 0 : undefined}
-                                    aria-label={isPoint ? `Select ${cell.type} ${cell.label ?? ""}` : undefined}
+                                    aria-label={isPoint ? `Select ${pointName}` : undefined}
                                     aria-pressed={isPoint ? isSelected : undefined}
+                                    data-map-cell={`${ri},${ci}`}
                                     onClick={selectCell}
                                     onKeyDown={(event) => {
                                         if (event.key === "Enter" || event.key === " ") {
@@ -443,6 +484,7 @@ export function WarehouseGrid({
                         </g>
                     );
                 }))}
+                {stationLabels}
 
             {missionRoutes.filter(route => route.points.length > 1).map(route => <polyline key={`mission-${route.robotId}`}
                 points={route.points.map(p => `${p.x * CELL + CELL / 2},${p.y * CELL + CELL / 2}`).join(" ")}

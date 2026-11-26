@@ -17,6 +17,11 @@ def validate(root):
     for url in re.findall(r'"(https?://[^" ]+)"', world):
         assert "/R2025a/" in url, "Unpinned Webots dependency"
     saved_map = json.loads((root / "config/map.json").read_text(encoding="utf-8"))
+    qr_cells = {cell["label"]: cell for row in saved_map["cells"] for cell in row if cell["type"] == "qr"}
+    corridors = {tuple(sorted((qr_cells[a]["arucoId"], qr_cells[b]["arucoId"])))
+                 for a, b in saved_map["links"] if a in qr_cells and b in qr_cells}
+    assert corridors and corridors == {tuple(sorted(edge)) for edge in manifest["corridors"]}, "Commissioned corridor mismatch"
+    assert {cell["arucoId"] for cell in qr_cells.values() if cell["isIntersection"]} == set(manifest["intersections"]), "Commissioned intersection mismatch"
     for anchor in manifest["anchors"]:
         cell = saved_map["cells"][anchor["row"]][anchor["col"]]
         assert cell["arucoId"] == anchor["arucoId"]

@@ -61,7 +61,9 @@ export function Sidebar({
                 ];
 
     navItems.push({ id: "simulation", label: "Simulation / Live Map", path: "/simulation", icon: IC.maps });
-    navItems.push({ id: "warehouse-stations", label: "Warehouse & Stations", path: "/warehouse-stations", icon: IC.maps });
+    if (role !== "admin") {
+        navItems.push({ id: "warehouse-stations", label: "Station Operations", path: "/warehouse-stations", icon: IC.maps });
+    }
     const roleLabel =
         role === "admin"
             ? "Administrator"

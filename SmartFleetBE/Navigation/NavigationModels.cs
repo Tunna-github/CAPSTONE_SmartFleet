@@ -16,6 +16,8 @@ public sealed class WarehouseMapCell
 {
     public string Type { get; set; } = "wall";
     public string? Label { get; set; }
+    public string? DisplayName { get; set; }
+    public string? OperationalRole { get; set; }
     public int? ArucoId { get; set; }
     public bool IsIntersection { get; set; }
     // Marker +X angle in MAP_N_W_UP: 0=N, +90=W, -90=E. Installation data.

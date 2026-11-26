@@ -28,6 +28,7 @@ interface WarehouseMapState {
   links: Array<[string, string]>;
   setLinks: Dispatch<SetStateAction<Array<[string, string]>>>;
   mapRevision: number | null;
+  mapDirty: boolean;
   mapLoading: boolean;
   mapSaving: boolean;
   mapError: string | null;
@@ -63,6 +64,8 @@ function mapFromBackend(document: NavigationMapDocument): WarehouseLayout {
   return document.cells.map(row => row.map(cell => ({
     type: cell.type,
     label: cell.label ?? undefined,
+    displayName: cell.displayName ?? undefined,
+    operationalRole: cell.operationalRole ?? undefined,
     arucoId: cell.arucoId ?? undefined,
     isIntersection: cell.isIntersection,
     markerYawDeg: cell.markerYawDeg ?? undefined,
@@ -96,6 +99,8 @@ function mapToBackend(
     return {
       type,
       label: point ? (cell.label?.trim() || null) : null,
+      displayName: type === "qr" ? cell.displayName?.trim() || null : null,
+      operationalRole: type === "qr" ? cell.operationalRole ?? null : null,
       arucoId,
       isIntersection: type === "qr" && !!cell.isIntersection,
       markerYawDeg: type === "qr" ? cell.markerYawDeg ?? null : null,
@@ -112,14 +117,17 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
   const [warehouseLayout, setWarehouseLayout] = useState(createDefaultWarehouseLayout);
   const [links, setLinks] = useState(() => computeDefaultLinks(warehouseLayout));
   const [mapRevision, setMapRevision] = useState<number | null>(null);
+  const [savedMap, setSavedMap] = useState<{ layout: WarehouseLayout; links: Array<[string, string]> } | null>(null);
   const [mapLoading, setMapLoading] = useState(false);
   const [mapSaving, setMapSaving] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
   const applySnapshot = useCallback((snapshot: NavigationMapDocument) => {
     const layout = mapFromBackend(snapshot);
+    const snapshotLinks = snapshot.links.map(link => [link[0], link[1]] as [string, string]);
     setWarehouseLayout(layout);
-    setLinks(snapshot.links.map(link => [link[0], link[1]] as [string, string]));
+    setLinks(snapshotLinks);
+    setSavedMap({ layout, links: snapshotLinks });
     setMapRevision(snapshot.revision);
     setMapError(null);
   }, []);
@@ -164,6 +172,7 @@ export default function WarehouseMapProvider({ children }: { children: ReactNode
   return (
     <WarehouseMapContext.Provider value={{
       warehouseLayout, setWarehouseLayout, links, setLinks,
+      mapDirty: savedMap !== null && (warehouseLayout !== savedMap.layout || links !== savedMap.links),
       mapRevision, mapLoading, mapSaving, mapError, reloadMap, saveMap,
     }}>
       {children}

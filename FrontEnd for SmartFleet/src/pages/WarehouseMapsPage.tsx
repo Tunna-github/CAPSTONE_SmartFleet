@@ -1,660 +1,253 @@
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { apiClient } from "../api/client";
+import { stationRoles, useCatalog } from "../api/modules/catalog";
+import { getMapReadiness, type CheckpointRole, type MapReadiness } from "../api/modules/navigation";
+import CheckpointStationEditor from "../components/CheckpointStationEditor";
+import { PageHeader } from "../components/SharedUI";
+import { WarehouseGrid, type WarehouseCell } from "../components/WarehouseGrid";
+import { useWarehouseMap } from "../context/WarehouseMapContext";
 
-import { useWarehouseMap, computeDefaultLinks } from "../context/WarehouseMapContext"
-import { getMapReadiness, type MapReadiness } from "../api/modules/navigation"
-import { useCatalog } from "../api/modules/catalog"
-import { Icon, IC } from "../components/Icons"
-import { PageHeader, PrimaryBtn } from "../components/SharedUI"
-import {
-  WarehouseGrid,
-  createDefaultWarehouseLayout,
-} from "../components/WarehouseGrid"
+const control = "rounded-lg border border-[var(--border-medium)] bg-[var(--surface-3)] px-3 py-2 text-sm disabled:opacity-50";
+const field = "grid gap-1 text-xs";
+const isSameLabel = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 export default function WarehouseMapsPage() {
-  const {catalog} = useCatalog()
+  const { catalog, error: catalogError, reload: reloadCatalog } = useCatalog();
   const {
     warehouseLayout, setWarehouseLayout, links, setLinks,
-    mapRevision, mapLoading, mapSaving, mapError, reloadMap, saveMap,
-  } = useWarehouseMap()
-  const [readiness, setReadiness] = useState<MapReadiness | null>(null)
-  const [readinessError, setReadinessError] = useState("")
+    mapRevision, mapDirty, mapLoading, mapSaving, mapError, reloadMap, saveMap,
+  } = useWarehouseMap();
+  const [mode, setMode] = useState<"points" | "links">("points");
+  const [adding, setAdding] = useState(false);
+  const [surface, setSurface] = useState<"floor" | "wall" | "">("");
+  const [addId, setAddId] = useState("");
+  const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
+  const [pendingLink, setPendingLink] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ message: string; error?: boolean } | null>(null);
+  const [scale, setScale] = useState(1);
+  const [readiness, setReadiness] = useState<MapReadiness | null>(null);
+  const [simulation, setSimulation] = useState<{ enabled: boolean; mapCompatible: boolean } | null>(null);
+  const [statusError, setStatusError] = useState("");
+
   useEffect(() => {
-    if (mapRevision === null) return
-    let cancelled = false
-    setReadiness(null)
+    if (mapRevision === null || mapLoading || mapSaving) return;
+    let cancelled = false;
+    setSimulation(null);
+    setReadiness(null);
+    setStatusError("");
     void getMapReadiness().then(value => {
-      if (!cancelled) { setReadiness(value); setReadinessError("") }
-    }).catch(error => {
-      if (!cancelled) setReadinessError(error?.message ?? "Cannot validate the saved QR map.")
-    })
-    return () => { cancelled = true }
-  }, [mapRevision])
-  const [toast, setToast] = useState<{
-    msg: string
-    type: "success" | "error" | "info"
-  } | null>(null)
-  const [warehouseScale, setWarehouseScale] = useState(1)
-  const [pendingStation, setPendingStation] = useState<string | null>(null)
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null)
-  const [mapMode, setMapMode] = useState<"links" | "points">("links")
-  const [brush, setBrush] =
-    useState<"wall" | "floor" | "station" | "qr" | "charge">("qr")
-  const [brushLabel, setBrushLabel] = useState("")
-  const [qrIdInput, setQrIdInput] = useState("")
-  const [qrIntersection, setQrIntersection] = useState(false)
+      if (!cancelled) setReadiness(value);
+    }).catch(() => {
+      if (!cancelled) setStatusError("Could not check route readiness.");
+    });
+    void apiClient.get<{ enabled: boolean; mapCompatible: boolean }>("/api/v1/simulation").then(({ data }) => {
+      if (!cancelled) setSimulation(data);
+    }).catch(() => {
+      if (!cancelled) setStatusError("Could not check Webots compatibility. Reload Backend Map to retry.");
+    });
+    return () => { cancelled = true; };
+  }, [mapRevision, mapLoading, mapSaving]);
 
-  const stationLabels = useMemo(() => {
-    const out: string[] = []
-    for (let r = 0; r < warehouseLayout.length; r++) {
-      for (let c = 0; c < warehouseLayout[r]!.length; c++) {
-        const cell = warehouseLayout[r]![c]!
-        if (
-          (cell.type === "station" ||
-            cell.type === "qr" ||
-            cell.type === "charge") &&
-          cell.label
-        )
-          out.push(cell.label)
-      }
-    }
-    out.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    return out
-  }, [warehouseLayout])
+  const cell = selected ? warehouseLayout[selected.row]?.[selected.col] : undefined;
+  const checkpoint = cell?.type === "qr" ? cell : undefined;
+  const qrCells = warehouseLayout.flat().filter(point => point.type === "qr");
+  const qrKeys = new Set(qrCells.map(point => point.label?.toLowerCase()));
+  const qrLinks = links.filter(([a, b]) => qrKeys.has(a.toLowerCase()) && qrKeys.has(b.toLowerCase()));
+  const mappedStation = catalog?.stations.find(station =>
+    station.warehouseId === catalog.navigationWarehouseId && station.arucoId === checkpoint?.arucoId);
+  const busy = mapLoading || mapSaving;
+  const canManageStation = !mapDirty && !busy && catalog?.mapRevision === mapRevision;
 
-  const normalizeLink = useCallback(
-    (a: string, b: string): [string, string] => {
-      return a.localeCompare(b, undefined, { numeric: true }) <= 0
-        ? [a, b]
-        : [b, a]
-    },
-    [],
-  )
-
-  const toggleLink = useCallback(
-    (a: string, b: string) => {
-      const [x, y] = normalizeLink(a, b)
-      const key = `${x}::${y}`
-      setLinks((prev) => {
-        const exists = prev.some(([p, q]) => `${p}::${q}` === key)
-        if (exists) return prev.filter(([p, q]) => `${p}::${q}` !== key)
-        return [...prev, [x, y]]
-      })
-    },
-    [normalizeLink],
-  )
-
-  const handleStationClick = useCallback(
-    (label: string) => {
-      if (!pendingStation) {
-        setPendingStation(label)
-        return
-      }
-      if (pendingStation === label) {
-        setPendingStation(null)
-        return
-      }
-      toggleLink(pendingStation, label)
-      setPendingStation(null)
-    },
-    [pendingStation, toggleLink],
-  )
-
-  const zoomOut = useCallback(
-    () =>
-      setWarehouseScale((s) => Math.max(0.5, Math.round((s - 0.1) * 10) / 10)),
-    [],
-  )
-  const zoomIn = useCallback(
-    () =>
-      setWarehouseScale((s) => Math.min(2.5, Math.round((s + 0.1) * 10) / 10)),
-    [],
-  )
-  const zoomReset = useCallback(() => setWarehouseScale(1), [])
-
-  const nextCode = useCallback(
-    (prefix: string) => {
-      const nums = stationLabels
-        .map((s) => {
-          if (!s.toUpperCase().startsWith(prefix)) return null
-          const n = Number.parseInt(s.slice(prefix.length), 10)
-          return Number.isFinite(n) ? n : null
-        })
-        .filter((x): x is number => x != null)
-      const next = (nums.length ? Math.max(...nums) : 0) + 1
-      return prefix === "QR"
-        ? `${prefix}${String(next).padStart(2, "0")}`
-        : `${prefix}${next}`
-    },
-    [stationLabels],
-  )
-
-  const paintCell = useCallback(
-    (row: number, col: number) => {
-      const placingPoint =
-        brush === "station" || brush === "qr" || brush === "charge"
-      const isSelected = selectedCell?.row === row && selectedCell.col === col
-      if (isSelected && placingPoint) {
-        setSelectedCell(null)
-        setToast(null)
-        return
-      }
-      setSelectedCell(isSelected ? null : { row, col })
-      const occupiedCell = warehouseLayout[row]?.[col]
-      if (
-        placingPoint &&
-        occupiedCell &&
-        (occupiedCell.type === "station" ||
-          occupiedCell.type === "qr" ||
-          occupiedCell.type === "charge")
-      ) {
-        // Allow clicking an existing QR to edit its metadata without painting over it.
-        if (occupiedCell.type === "qr" && brush === "qr") {
-          setToast(null)
-          return
-        }
-        const itemName =
-          occupiedCell.type === "station"
-            ? "station"
-            : occupiedCell.type === "qr"
-              ? "QR"
-              : "charging station"
-        setToast({
-          msg: `This cell already contains ${itemName} ${occupiedCell.label ?? ""}. Items cannot overlap. Choose another cell or remove the existing item using WALL/FLOOR first.`,
-          type: "error",
-        })
-        return
-      }
-
-      // Backend requires a unique physical ArUco ID for every QR marker.
-      if (brush === "qr") {
-        const newLabel = brushLabel.trim() || nextCode("QR")
-        const inferred = /^QR0*([0-9]+)$/i.exec(newLabel)
-        const raw = qrIdInput.trim() || inferred?.[1]
-        const newId = raw === undefined ? NaN : Number(raw)
-        if (!Number.isInteger(newId) || newId < 0 || newId > 49) {
-          setToast({ msg: "Choose a physical ArUco ID from 0 to 49 for this QR marker.", type: "error" })
-          return
-        }
-        const alreadyUsed = warehouseLayout.some(rowCells => rowCells.some(c => {
-          if (c.type !== "qr") return false
-          const inferredExisting = /^QR0*([0-9]+)$/i.exec(c.label ?? "")
-          return (c.arucoId ?? (inferredExisting ? Number(inferredExisting[1]) : undefined)) === newId
-        }))
-        if (alreadyUsed) {
-          setToast({ msg: `ArUco ID ${newId} is already placed on the map. Choose a unique ID.`, type: "error" })
-          return
-        }
-      }
-
-      setWarehouseLayout((prev) => {
-        const next = prev.map((r) => r.map((c) => ({ ...c })))
-        const cell = next[row]?.[col]
-        if (!cell) return prev
-
-        const oldLabel = cell.label
-        const oldIsPoint =
-          cell.type === "station" ||
-          cell.type === "qr" ||
-          cell.type === "charge"
-        const newIsPoint =
-          brush === "station" || brush === "qr" || brush === "charge"
-        const labelInput = brushLabel.trim()
-
-        if (brush === "wall" || brush === "floor") {
-          next[row][col] = { type: brush }
-          if (oldIsPoint && oldLabel) {
-            setLinks((prevLinks) =>
-              prevLinks.filter(([a, b]) => a !== oldLabel && b !== oldLabel),
-            )
-            if (pendingStation === oldLabel) setPendingStation(null)
-          }
-          return next
-        }
-
-        let newLabel = labelInput
-        if (!newLabel) {
-          if (brush === "qr") newLabel = nextCode("QR")
-          else if (brush === "charge") newLabel = nextCode("CHG")
-          else newLabel = nextCode("S")
-        }
-
-        const qrMatch = /^QR0*([0-9]+)$/i.exec(newLabel)
-        const arucoId = qrIdInput.trim() ? Number(qrIdInput) : qrMatch ? Number(qrMatch[1]) : undefined
-        next[row][col] = brush === "qr"
-          ? { type: "qr", label: newLabel, arucoId, isIntersection: qrIntersection }
-          : { type: brush, label: newLabel }
-        if (oldIsPoint && oldLabel && oldLabel !== newLabel) {
-          setLinks((prevLinks) =>
-            prevLinks.map(([a, b]) => [
-              a === oldLabel ? newLabel : a,
-              b === oldLabel ? newLabel : b,
-            ]),
-          )
-          if (pendingStation === oldLabel) setPendingStation(newLabel)
-        }
-        if (!oldIsPoint && newIsPoint) {
-          setLinks((prevLinks) => prevLinks)
-        }
-        return next
-      })
-    },
-    [brush, brushLabel, nextCode, pendingStation, warehouseLayout, selectedCell, qrIdInput, qrIntersection],
-  )
-
-  const selectedQrCell = selectedCell
-    ? warehouseLayout[selectedCell.row]?.[selectedCell.col]
-    : undefined
-
-  const updateSelectedQr = (changes: { arucoId?: number; isIntersection?: boolean; markerYawDeg?: number; markerSizeM?: number }) => {
-    const target = selectedCell
-    if (!target) return
-    setWarehouseLayout(prev => prev.map((row, ri) => row.map((cell, ci) =>
-      ri === target.row && ci === target.col && cell.type === "qr"
-        ? { ...cell, ...changes }
-        : cell
-    )))
+  function updateCell(row: number, col: number, update: (previous: WarehouseCell) => WarehouseCell) {
+    setWarehouseLayout(previous => previous.map((cells, r) =>
+      r === row ? cells.map((point, c) => c === col ? update(point) : point) : cells));
   }
 
-  return (
-    <div
-      className="flex flex-col h-full min-h-0 overflow-hidden"
-      style={{ background: "var(--background)" }}
-    >
-      <PageHeader
-        title="Warehouse Maps"
-        sub="Edit routes, stations, charging points and QR markers"
-      >
-        <button type="button" className="rounded-lg border px-3 py-2 text-xs font-semibold"
-          style={{ background: "var(--surface-3)", borderColor: "var(--border-medium)" }}
-          disabled={mapLoading || mapSaving}
-          title="Discard unsaved edits and fetch the Backend map"
-          onClick={() => void reloadMap()
-            .then(() => setToast({ msg: "Reloaded map from Backend.", type: "success" }))
-            .catch(err => setToast({ msg: `Reload failed: ${err?.message ?? "API error"}`, type: "error" }))}>
-          {mapLoading ? "Loading..." : "Reload Backend Map"}
-        </button>
-        <button type="button" className="rounded-lg border px-3 py-2 text-xs font-semibold"
-          style={{ background: "#0d9488", borderColor: "#0d9488", color: "white" }}
-          disabled={mapRevision === null || mapLoading || mapSaving}
-          onClick={() => void saveMap()
-            .then(() => setToast({ msg: "Saved map to database!", type: "success" }))
-            .catch(err => setToast({ msg: `Save failed: ${err?.message ?? "API error"}`, type: "error" }))}>
-          {mapSaving ? "Saving..." : "Save to Database"}
-        </button>
-        <PrimaryBtn
-          onClick={() => {
-            const next = createDefaultWarehouseLayout()
-            setWarehouseLayout(next)
-            setLinks(computeDefaultLinks(next))
-            setPendingStation(null)
-            setSelectedCell(null)
-            setWarehouseScale(1)
-          }}
-        >
-          <Icon d={IC.refresh} size={15} /> Reset Map
-        </PrimaryBtn>
-      </PageHeader>
-      <div className="px-6 py-2 text-xs" style={{ color: "var(--text-faint)" }}>
-        Saved map revision: {mapRevision ?? "not loaded"} · Edits are local until you click Save to Database.
-        {mapError && <div role="alert" style={{ color: "#f87171" }}>Navigation API: {mapError}</div>}
-      </div>
-      {readiness && <div role="status" className="mx-6 mb-3 rounded-lg border px-3 py-2 text-xs"
-        style={{ borderColor: readiness.readyForRouting ? "#0d9488" : "#d97706" }}>
-        Saved QR map: {readiness.qrNodeCount} markers · {readiness.corridorCount} corridors.
-        {readiness.readyForRouting
-          ? " Connected for route planning. Confirm that markers and roads match Webots before dispatch."
-          : ` Not ready for QR tasks: ${readiness.issues.join(" ")}`}
-      </div>}
-      {readinessError && <p role="alert" className="mx-6 mb-3 text-xs text-amber-600">{readinessError}</p>}
-      <div
-        className="flex-1 min-h-0 overflow-y-auto p-6"
-        role="region"
-        aria-label="Warehouse map editor"
-        tabIndex={0}
-      >
-        <div
-          className="rounded-2xl border overflow-hidden"
-          style={{
-            borderColor: "var(--border-subtle)",
-            background: "var(--surface-2)",
-          }}
-        >
-          <div className="flex flex-col">
-            <div
-              className="shrink-0 flex flex-wrap items-center gap-3 px-4 py-3"
-              style={{
-                borderBottom: "1px solid var(--border-subtle)",
-                background: "var(--surface-1)",
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMapMode("links")
-                    setBrushLabel("")
-                    setSelectedCell(null)
-                  }}
-                  className="px-3 py-2 rounded-lg border text-[12px] font-semibold"
-                  style={{
-                    background:
-                      mapMode === "links"
-                        ? "rgba(34,211,238,0.14)"
-                        : "var(--surface-3)",
-                    borderColor:
-                      mapMode === "links"
-                        ? "rgba(34,211,238,0.30)"
-                        : "var(--border-medium)",
-                    color:
-                      mapMode === "links" ? "#22d3ee" : "var(--text-primary)",
-                  }}
-                >
-                  Edit Links
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMapMode("points")
-                    setPendingStation(null)
-                  }}
-                  className="px-3 py-2 rounded-lg border text-[12px] font-semibold"
-                  style={{
-                    background:
-                      mapMode === "points"
-                        ? "rgba(34,211,238,0.14)"
-                        : "var(--surface-3)",
-                    borderColor:
-                      mapMode === "points"
-                        ? "rgba(34,211,238,0.30)"
-                        : "var(--border-medium)",
-                    color:
-                      mapMode === "points" ? "#22d3ee" : "var(--text-primary)",
-                  }}
-                >
-                  Edit Points
-                </button>
-              </div>
+  function editCheckpoint(changes: Partial<WarehouseCell>) {
+    if (!selected || !checkpoint || busy) return;
+    updateCell(selected.row, selected.col, previous => ({ ...previous, ...changes }));
+  }
 
-              {mapMode === "links" && (
-                <span
-                  className="text-[11px] font-mono"
-                  style={{ color: "var(--text-faint)" }}
-                >
-                  Click 2 points to toggle a bidirectional link. Selected:{" "}
-                  {pendingStation ?? "—"}
-                </span>
-              )}
+  function handleCellClick(row: number, col: number) {
+    if (busy) return;
+    const current = warehouseLayout[row]?.[col];
+    if (!current || current.type === "station" || current.type === "charge") return;
+    if (current.type === "qr") {
+      setSelected({ row, col });
+      return;
+    }
+    if (surface && current.type !== surface && mapRevision !== null) {
+      updateCell(row, col, () => ({ type: surface }));
+      return;
+    }
+    if (!adding || mapRevision === null) return;
+    const used = new Set(qrCells.map(point => point.arucoId));
+    const id = addId.trim() === "" ? Array.from({ length: 50 }, (_, i) => i).find(i => !used.has(i)) : Number(addId);
+    if (id === undefined || !Number.isInteger(id) || id < 0 || id > 49 || used.has(id)) {
+      setNotice({ message: "Choose an unused ArUco ID from 0 to 49.", error: true });
+      return;
+    }
+    const stem = `QR${String(id).padStart(2, "0")}`;
+    const labels = new Set(warehouseLayout.flat().map(point => point.label?.toLowerCase()));
+    let label = stem;
+    for (let suffix = 2; labels.has(label.toLowerCase()); suffix++) label = `${stem}-${suffix}`;
+    updateCell(row, col, () => ({ type: "qr", label, arucoId: id }));
+    setSelected({ row, col });
+    setAdding(false);
+    setAddId("");
+    setNotice(null);
+  }
 
-              {mapMode === "points" && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={brush}
-                    onChange={(e) => setBrush(e.target.value as typeof brush)}
-                    className="px-2.5 py-2 rounded-lg text-[12px] outline-none"
-                    style={{
-                      background: "var(--surface-3)",
-                      border: "1px solid var(--border-medium)",
-                      color: "var(--text-primary)",
-                    }}
-                    aria-label="Brush type"
-                  >
-                    {([
-                      "station",
-                      "qr",
-                      "charge",
-                      "floor",
-                      "wall",
-                    ] as const).map((t) => (
-                      <option key={t} value={t}>
-                        {t.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    value={brushLabel}
-                    onChange={(e) => setBrushLabel(e.target.value)}
-                    placeholder={
-                      brush === "qr"
-                        ? "QR01 (optional)"
-                        : brush === "charge"
-                          ? "CHG1 (optional)"
-                          : "S1 (optional)"
-                    }
-                    className="px-3 py-2 rounded-lg text-[12px] outline-none w-[170px]"
-                    style={{
-                      background: "var(--surface-3)",
-                      border: "1px solid var(--border-medium)",
-                      color: "var(--text-primary)",
-                    }}
-                    aria-label="Point label"
-                  />
-                  {brush === "qr" && (
-                    <>
-                      <input type="number" min={0} max={49} value={qrIdInput}
-                        onChange={e => setQrIdInput(e.target.value)}
-                        placeholder="ArUco ID 0-49"
-                        aria-label="ArUco ID" title="Physical ArUco ID; if blank, QR01 means ID 1"
-                        className="w-32 px-3 py-2 rounded-lg text-[12px]"
-                        style={{ background: "var(--surface-3)", border: "1px solid var(--border-medium)" }}/>
-                      <label className="text-[11px] flex items-center gap-1">
-                        <input type="checkbox" checked={qrIntersection} onChange={e => setQrIntersection(e.target.checked)} />
-                        Intersection
-                      </label>
-                    </>
-                  )}
-                  <span
-                    className="text-[11px] font-mono"
-                    style={{ color: "var(--text-dimmest)" }}
-                  >
-                    Click a cell to paint
-                  </span>
-                </div>
-              )}
+  function removeCheckpoint() {
+    if (!selected || !checkpoint?.label || busy) return;
+    const label = checkpoint.label;
+    updateCell(selected.row, selected.col, () => ({ type: "floor" }));
+    setLinks(previous => previous.filter(([from, to]) => !isSameLabel(from, label) && !isSameLabel(to, label)));
+    setSelected(null);
+  }
 
-              {mapMode === "points" && selectedQrCell?.type === "qr" && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2"
-                  style={{ borderColor: "var(--border-medium)", background: "var(--surface-3)" }}>
-                  <span className="text-xs font-semibold">Edit {selectedQrCell.label}</span>
-                  <label className="text-xs flex items-center gap-1">Marker yaw (°)
-                    <input aria-label="Marker yaw in degrees" type="number" min={-180} max={180} step="0.1"
-                      className="w-20 rounded border px-1 py-1" value={selectedQrCell.markerYawDeg ?? ""}
-                      onChange={e => updateSelectedQr({ markerYawDeg: e.target.value === "" ? undefined : Number(e.target.value) })}/>
-                  </label>
-                  <label className="text-xs flex items-center gap-1">Marker size (m)
-                    <input aria-label="Marker size in meters" type="number" min={0.005} max={2} step="0.001"
-                      className="w-20 rounded border px-1 py-1" value={selectedQrCell.markerSizeM ?? ""}
-                      onChange={e => updateSelectedQr({ markerSizeM: e.target.value === "" ? undefined : Number(e.target.value) })}/>
-                  </label>
-                  <span className="text-xs">Marker +X: 0° North, +90° West, −90° East. Set once at installation.</span>
-                  {catalog?.stations.filter(s=>s.warehouseId===catalog.navigationWarehouseId && s.arucoId===selectedQrCell.arucoId).map(s=><span key={s.stationId} className="text-xs">Station #{s.stationId}: {s.code} — {s.name} · {s.type} · {s.isActive?"Active":"Inactive"}. Manage mapping in Warehouse &amp; Stations.</span>)}
-                  <label className="text-xs flex items-center gap-1">ID
-                    <input type="number" min={0} max={49} className="w-16 rounded border px-1 py-1"
-                      style={{ borderColor: "var(--border-medium)", background: "var(--surface-2)" }}
-                      value={selectedQrCell.arucoId ?? ""}
-                      onChange={e => updateSelectedQr({ arucoId: e.target.value === "" ? undefined : Number(e.target.value) })}/>
-                  </label>
-                  <label className="text-xs flex items-center gap-1">
-                    <input type="checkbox" checked={!!selectedQrCell.isIntersection}
-                      onChange={e => updateSelectedQr({ isIntersection: e.target.checked })}/>
-                    Intersection
-                  </label>
-                </div>
-              )}
-              <div className="ml-auto flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={zoomOut}
-                  className="px-3 py-2 rounded-lg border text-[12px]"
-                  style={{
-                    background: "var(--surface-3)",
-                    borderColor: "var(--border-medium)",
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  −
-                </button>
-                <button
-                  type="button"
-                  onClick={zoomReset}
-                  className="px-3 py-2 rounded-lg border text-[12px]"
-                  style={{
-                    background: "var(--surface-3)",
-                    borderColor: "var(--border-medium)",
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  {Math.round(warehouseScale * 100)}%
-                </button>
-                <button
-                  type="button"
-                  onClick={zoomIn}
-                  className="px-3 py-2 rounded-lg border text-[12px]"
-                  style={{
-                    background: "var(--surface-3)",
-                    borderColor: "var(--border-medium)",
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            <div
-              className="overflow-auto"
-              role="region"
-              aria-label="Scrollable warehouse map"
-              tabIndex={0}
-              style={{ background: "var(--surface-3)", height: 520 }}
-            >
-              <div
-                style={{
-                  width: `${warehouseScale * 100}%`,
-                  minWidth: 800 * warehouseScale,
-                  height: 720 * warehouseScale,
-                }}
-              >
-                <WarehouseGrid
-                  robots={[]}
-                  animateRobots={false}
-                  grid={warehouseLayout}
-                  links={links}
-                  scale={1}
-                  selectedCell={mapMode === "points" ? selectedCell : null}
-                  selectedPoint={pendingStation}
-                  onCellClick={mapMode === "points" ? paintCell : undefined}
-                  onStationClick={
-                    mapMode === "links" ? handleStationClick : undefined
-                  }
-                />
-              </div>
-            </div>
-            <div
-              className="shrink-0 px-4 py-3"
-              style={{
-                borderTop: "1px solid var(--border-subtle)",
-                background: "var(--surface-1)",
-              }}
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLinks([])
-                    setPendingStation(null)
-                  }}
-                  className="px-3 py-2 rounded-lg border text-[12px] font-semibold"
-                  style={{
-                    background: "rgba(239,68,68,0.10)",
-                    borderColor: "rgba(239,68,68,0.25)",
-                    color: "#f87171",
-                  }}
-                >
-                  Clear Links
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLinks(computeDefaultLinks(warehouseLayout))
-                    setPendingStation(null)
-                  }}
-                  className="px-3 py-2 rounded-lg border text-[12px] font-semibold"
-                  style={{
-                    background: "var(--surface-3)",
-                    borderColor: "var(--border-medium)",
-                    color: "var(--text-primary)",
-                  }}
-                >
-                  Reset Links
-                </button>
-                <span
-                  className="ml-auto text-[11px] font-mono"
-                  style={{ color: "var(--text-dimmest)" }}
-                >
-                  Links: {links.length} · Points: {stationLabels.length}
-                </span>
-                <span role="status" className="text-[11px] font-mono" style={{ color: "#22d3ee" }}>
-                  Selected: {mapMode === "links"
-                    ? pendingStation ?? "None"
-                    : selectedCell
-                      ? warehouseLayout[selectedCell.row]?.[selectedCell.col]?.label ?? `Cell (${selectedCell.col}, ${selectedCell.row})`
-                      : "None"}
-                </span>
-              </div>
-              {links.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {links.map(([a, b]) => {
-                    const key = `${a}::${b}`
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => toggleLink(a, b)}
-                        className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold border transition-colors"
-                        style={{
-                          background: "rgba(6,182,212,0.10)",
-                          borderColor: "rgba(6,182,212,0.25)",
-                          color: "#22d3ee",
-                        }}
-                        aria-label={`Remove link ${a} to ${b}`}
-                      >
-                        {a} ↔ {b}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+  function toggleLink(a: string, b: string) {
+    if (busy) return;
+    const matches = ([from, to]: [string, string]) =>
+      (isSameLabel(from, a) && isSameLabel(to, b)) || (isSameLabel(from, b) && isSameLabel(to, a));
+    setLinks(previous => previous.some(matches) ? previous.filter(link => !matches(link)) : [...previous, [a, b]]);
+  }
+
+  function selectLinkEndpoint(label: string) {
+    if (busy) return;
+    if (!pendingLink) {
+      setPendingLink(label);
+      return;
+    }
+    if (!isSameLabel(pendingLink, label)) toggleLink(pendingLink, label);
+    setPendingLink(null);
+  }
+
+  async function syncMap(save: boolean) {
+    setNotice(null);
+    try {
+      await (save ? saveMap() : reloadMap());
+      await reloadCatalog();
+      if (!save) {
+        setSelected(null);
+        setPendingLink(null);
+        setAdding(false);
+        setSurface("");
+      }
+      setNotice({ message: save ? "Saved map to database!" : "Reloaded map from Backend." });
+    } catch (error) {
+      setNotice({ message: `${save ? "Save" : "Reload"} failed: ${(error as { message?: string }).message ?? "API error"}`, error: true });
+    }
+  }
+
+  function changeMode(next: typeof mode) {
+    setMode(next);
+    setAdding(false);
+    setSurface("");
+    setPendingLink(null);
+  }
+
+  const checkpointRole = checkpoint?.isIntersection ? "INTERSECTION" :
+    checkpoint?.operationalRole ?? mappedStation?.type ?? "NAVIGATION";
+
+  return <main className="flex h-full min-h-0 flex-col overflow-hidden text-[var(--text-primary)]">
+    <PageHeader title="Warehouse Maps" sub="Edit QR checkpoints, corridor links and station assignments">
+      <Link className={control} to="/warehouse-stations">Advanced warehouse administration</Link>
+      <button className={control} type="button" disabled={busy} onClick={() => void syncMap(false)}>Reload Backend Map</button>
+      <button className={`${control} !bg-teal-700 !text-white`} type="button" disabled={busy || mapRevision === null}
+        onClick={() => void syncMap(true)}>{mapSaving ? "Saving…" : "Save to Database"}</button>
+    </PageHeader>
+    <div className="flex-1 space-y-3 overflow-auto px-6 py-4">
+      <p className="text-xs text-[var(--text-faint)]">Saved map revision: {mapRevision ?? "not loaded"}{mapDirty && " · Unsaved map edits"}</p>
+      {simulation?.enabled && !simulation.mapCompatible && <p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm">
+        Simulation dispatch is blocked. The saved QR map differs from the commissioned Webots world. Restore the commissioned design or recommission the world before dispatching.
+      </p>}
+      {simulation?.enabled && mapDirty && <p className="text-xs">Webots dispatch uses the saved map. Compatibility is checked after saving.</p>}
+      {readiness && <p role="status" className="text-xs">Saved QR map: {readiness.qrNodeCount} markers · {readiness.corridorCount} corridors.
+        {readiness.readyForRouting ? " Connected for route planning." : ` Not ready for QR tasks: ${readiness.issues.join(" ")}`}</p>}
+      {mapError && <p role="alert" className="text-sm">Navigation API: {mapError}</p>}
+      {catalogError && <p role="alert" className="text-sm">Station catalog: {catalogError} <button className="underline" onClick={() => void reloadCatalog()}>Reload catalog</button></p>}
+      {statusError && <p role="alert" className="text-sm">{statusError}</p>}
+      {notice && <p role={notice.error ? "alert" : "status"} className="text-sm">{notice.message}</p>}
+
+      <section aria-label="Warehouse map editor" className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-subtle)] p-3">
+          <button className={control} type="button" aria-pressed={mode === "points"} onClick={() => changeMode("points")}>Edit Points</button>
+          <button className={control} type="button" aria-pressed={mode === "links"} onClick={() => changeMode("links")}>Edit Links</button>
+          {mode === "points" && <button className={control} type="button" disabled={busy || mapRevision === null} aria-pressed={adding}
+            onClick={() => { setAdding(!adding); setSurface(""); setNotice(null); }}>{adding ? "Cancel adding" : "Add QR checkpoint"}</button>}
+          {mode === "points" && <select className={control} aria-label="Cell tool" value={surface} disabled={busy || mapRevision === null}
+            onChange={event => { setSurface(event.target.value as typeof surface); setAdding(false); }}>
+            <option value="">Select checkpoint</option>
+            <option value="floor">Paint floor</option>
+            <option value="wall">Paint wall</option>
+          </select>}
+          {adding && <><input className={`${control} w-32`} type="number" min={0} max={49} value={addId}
+            aria-label="New ArUco ID" placeholder="ID (optional)" onChange={event => setAddId(event.target.value)} />
+            <span className="text-xs">Click an empty cell to place the checkpoint.</span></>}
+          {mode === "links" && <span className="text-xs">Select two checkpoints to add or remove their corridor. {pendingLink && `Selected ${pendingLink}.`}</span>}
+          <div className="ml-auto flex gap-2">
+            <button className={control} type="button" aria-label="Zoom out" onClick={() => setScale(value => Math.max(.5, value - .1))}>−</button>
+            <button className={control} type="button" aria-label="Reset zoom" onClick={() => setScale(1)}>{Math.round(scale * 100)}%</button>
+            <button className={control} type="button" aria-label="Zoom in" onClick={() => setScale(value => Math.min(2.5, value + .1))}>+</button>
           </div>
         </div>
-      </div>
-      {toast && (
-        <ToastEl
-          msg={toast.msg}
-          type={toast.type}
-          onDone={() => setToast(null)}
-        />
-      )}
+        {mode === "points" && checkpoint && <div className="space-y-3 border-b border-[var(--border-subtle)] p-4">
+          <h2 className="text-sm font-semibold">QR{checkpoint.arucoId ?? "?"} checkpoint</h2>
+          <fieldset disabled={busy} className="flex flex-wrap items-end gap-3">
+            <label className={field}>ArUco ID
+              <input type="number" min={0} max={49} className={`${control} w-24`} value={checkpoint.arucoId ?? ""}
+                onChange={event => editCheckpoint({ arucoId: event.target.value === "" ? undefined : Number(event.target.value) })} />
+            </label>
+            <label className={field}>Display name
+              <input className={control} maxLength={100} placeholder={mappedStation?.name || "Optional"} value={checkpoint.displayName ?? ""}
+                onChange={event => editCheckpoint({ displayName: event.target.value })} />
+            </label>
+            <label className={field}>Operational role
+              <select className={control} value={checkpointRole} onChange={event => {
+                const role = event.target.value;
+                editCheckpoint({ isIntersection: role === "INTERSECTION", operationalRole: role === "INTERSECTION" ? undefined : role as CheckpointRole });
+              }}>
+                <option value="NAVIGATION">Navigation</option>
+                {Object.entries(stationRoles).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="INTERSECTION">Intersection</option>
+              </select>
+            </label>
+            <button className={control} type="button" onClick={removeCheckpoint}>Remove checkpoint</button>
+          </fieldset>
+          <details className="text-xs">
+            <summary className="cursor-pointer">Marker installation · {checkpoint.label}</summary>
+            <fieldset disabled={busy} className="mt-2 flex flex-wrap gap-2">
+              <label className={field}>Marker yaw (°)
+                <input className={control} type="number" min={-180} max={180} step="any" value={checkpoint.markerYawDeg ?? ""}
+                  onChange={event => editCheckpoint({ markerYawDeg: event.target.value === "" ? undefined : Number(event.target.value) })} />
+              </label>
+              <label className={field}>Marker size (m)
+                <input className={control} type="number" min={.005} max={2} step="any" value={checkpoint.markerSizeM ?? ""}
+                  onChange={event => editCheckpoint({ markerSizeM: event.target.value === "" ? undefined : Number(event.target.value) })} />
+              </label>
+            </fieldset>
+          </details>
+          {catalog && canManageStation && !catalogError && <CheckpointStationEditor key={checkpoint.label} cell={checkpoint} catalog={catalog} reload={reloadCatalog} />}
+          {mapDirty && <p className="text-xs">Save map edits before changing the station association.</p>}
+          {!mapDirty && !canManageStation && catalog && <p className="text-xs">Reload Backend Map to sync station associations.</p>}
+        </div>}
+        <div className="overflow-auto" role="region" aria-label="Scrollable warehouse map" tabIndex={0} style={{ height: 520 }}>
+          <div style={{ width: `${scale * 100}%`, minWidth: 800 * scale,
+            height: (simulation?.enabled && !adding && !surface ? 520 : 720) * scale }}>
+            <WarehouseGrid robots={[]} animateRobots={false} grid={warehouseLayout} links={qrLinks}
+              qrOnly focusQrNetwork={simulation?.enabled && !adding && !surface} catalog={catalog}
+              selectedCell={mode === "points" ? selected : null} selectedPoint={pendingLink}
+              onCellClick={mode === "points" ? handleCellClick : undefined}
+              onPointClick={mode === "links" ? selectLinkEndpoint : undefined} />
+          </div>
+        </div>
+        {mode === "links" && <div className="flex flex-wrap gap-2 border-t border-[var(--border-subtle)] p-3">
+          {qrLinks.map(([a, b]) => <button key={`${a}::${b}`} type="button" className={control} disabled={busy}
+            aria-label={`Remove link ${a} to ${b}`} onClick={() => toggleLink(a, b)}>{a} ↔ {b}</button>)}
+        </div>}
+      </section>
     </div>
-  )
-}
-function ToastEl({ msg, type, onDone }: any) {
-  useEffect(() => {
-    const t = setTimeout(() => {
-      onDone()
-    }, 3000)
-    return () => clearTimeout(t)
-  }, [onDone])
-  return (
-    <div
-      role={type === "error" ? "alert" : "status"}
-      className="fixed bottom-6 right-6 z-[200] px-4 py-3 rounded-xl border border-gray-700 shadow-2xl"
-      style={{
-        background: "var(--surface-2)",
-        color: type === "error" ? "#f87171" : "var(--text-primary)",
-        maxWidth: "min(420px, calc(100vw - 48px))",
-      }}
-    >
-      {msg}
-    </div>
-  )
+  </main>;
 }

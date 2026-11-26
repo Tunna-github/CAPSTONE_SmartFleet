@@ -2,10 +2,13 @@ import { apiClient } from "../client";
 
 // Matches SmartFleetBE.Navigation.NavigationModels, NOT a mock dataset.
 export type NavigationCellType = "wall" | "floor" | "station" | "qr" | "charge";
+export type CheckpointRole = "NAVIGATION" | "PICKUP" | "DELIVERY" | "WAITING" | "CHARGING";
 
 export interface NavigationMapCell {
   type: NavigationCellType;
   label: string | null;
+  displayName?: string | null;
+  operationalRole?: CheckpointRole | null;
   arucoId: number | null;
   isIntersection: boolean;
   markerYawDeg?: number | null;

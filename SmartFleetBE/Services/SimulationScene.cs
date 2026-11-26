@@ -13,6 +13,8 @@ public sealed class SimulationScene
     public int WarehouseId { get; set; }
     public string WorldSha256 { get; set; } = "";
     public List<Anchor> Anchors { get; set; } = [];
+    public List<int[]> Corridors { get; set; } = [];
+    public List<int> Intersections { get; set; } = [];
     public Dictionary<string,string> Assets { get; set; } = [];
     public bool AllowsAsset(string asset) => Assets.ContainsKey(asset);
     public static SimulationScene Load(IConfiguration config, IWebHostEnvironment env)
@@ -25,11 +27,28 @@ public sealed class SimulationScene
     public bool Matches(WarehouseMapDocument map)
     {
         var cells=map.Cells.SelectMany((row,r)=>row.Select((cell,c)=>new {cell,r,c})).Where(p=>p.cell.Type=="qr").ToList();
-        return Anchors.Count>=3 && cells.Count==Anchors.Count && Anchors.All(a=>cells.Any(p=>
+        var geometryMatches = Anchors.Count>=3 && cells.Count==Anchors.Count && Anchors.All(a=>cells.Any(p=>
             p.cell.ArucoId==a.ArucoId && p.r==a.Row && p.c==a.Col && p.cell.MarkerYawDeg.HasValue &&
             Math.Abs(p.cell.MarkerYawDeg.Value-a.MarkerYawDeg)<.01 && p.cell.MarkerSizeM.HasValue &&
             Math.Abs(p.cell.MarkerSizeM.Value-a.MarkerSizeM)<.00001));
+        if (!geometryMatches || Corridors.Count == 0 || Corridors.Any(edge => edge.Length != 2))
+            return false;
+        if (!Intersections.ToHashSet().SetEquals(cells.Where(p => p.cell.IsIntersection).Select(p => p.cell.ArucoId!.Value)))
+            return false;
+
+        var idsByLabel = cells.Where(p => p.cell.Label != null)
+            .ToDictionary(p => p.cell.Label!, p => p.cell.ArucoId!.Value, StringComparer.OrdinalIgnoreCase);
+        var actual = new HashSet<(int, int)>();
+        foreach (var edge in map.Links)
+        {
+            if (idsByLabel.TryGetValue(edge[0], out var from) && idsByLabel.TryGetValue(edge[1], out var to))
+                actual.Add(OrderedCorridor(from, to));
+        }
+        return actual.SetEquals(Corridors.Select(edge => OrderedCorridor(edge[0], edge[1])));
     }
+
+    private static (int, int) OrderedCorridor(int from, int to) =>
+        (Math.Min(from, to), Math.Max(from, to));
     public static bool ValidBridgeKey(IConfiguration config,string supplied)
     {
         var expected=config["Simulation:BridgeKey"]??"";
