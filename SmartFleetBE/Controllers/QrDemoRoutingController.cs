@@ -49,7 +49,11 @@ public sealed class QrDemoRoutingController(
             return Conflict(new { message = "For this pilot, choose MANUAL dispatch and configure QR markers while the task is QUEUED." });
         try
         {
-            routes.ConfigureTask(taskId, request.PickupArUcoId, request.DeliveryArUcoId);
+            var stored = await db.TransportTasks.AsNoTracking().SingleAsync(t => t.TaskId == taskId, ct);
+            var mapped = await TaskLocationPolicy.ResolveRouteAsync(db, stored.WarehouseId, stored.PickupStationId, stored.DeliveryStationId, routes, ct);
+            if (mapped.PickupArUcoId != request.PickupArUcoId || mapped.DeliveryArUcoId != request.DeliveryArUcoId)
+                return BadRequest(new { message = "Task QR must match its stations. Admin manages station mappings in Warehouse & Stations." });
+            routes.ConfigureTask(taskId, mapped.PickupArUcoId, mapped.DeliveryArUcoId);
             return Ok(new { taskId, request.PickupArUcoId, request.DeliveryArUcoId, configured = true });
         }
         catch (ArgumentException ex)
@@ -59,11 +63,16 @@ public sealed class QrDemoRoutingController(
     }
 
     [HttpGet("tasks/{taskId:long}/qr")]
-    public IActionResult GetTaskQr(long taskId)
+    public async Task<IActionResult> GetTaskQr(long taskId, CancellationToken ct)
     {
-        var value = routes.GetTaskSelection(taskId);
-        return value == null ? NotFound(new { message = "No QR configuration for task." })
-            : Ok(new { taskId, value.PickupArUcoId, value.DeliveryArUcoId });
+        var task = await db.TransportTasks.AsNoTracking().SingleOrDefaultAsync(t => t.TaskId == taskId, ct);
+        if (task == null) return NotFound(new { message = "Task not found." });
+        if (await db.TaskAssignments.AnyAsync(a => a.TaskId == taskId, ct))
+            return Conflict(new { message = "A dispatched task uses its mission's persisted frozen route. Read /api/v1/missions." });
+        try {
+            var value = await TaskLocationPolicy.ResolveRouteAsync(db, task.WarehouseId, task.PickupStationId, task.DeliveryStationId, routes, ct);
+            return Ok(new { taskId, value.PickupArUcoId, value.DeliveryArUcoId });
+        } catch (ArgumentException e) { return Conflict(new { message = e.Message }); }
     }
 
     // Canonical, directional QR graph derived from saved Warehouse Map links.

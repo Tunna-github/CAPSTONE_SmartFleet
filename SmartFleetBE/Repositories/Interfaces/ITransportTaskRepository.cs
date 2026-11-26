@@ -1,10 +1,13 @@
 using SmartFleetBE.Model;
+using SmartFleetBE.Services;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace SmartFleetBE.Repositories.Interfaces;
 
 public interface ITransportTaskRepository
 {
+    Task<TaskLocationPolicy.StationRoute> ResolveStationRouteAsync(int warehouseId, int pickupId, int deliveryId,
+        SmartFleetBE.Services.QrDemoRouteService routes, CancellationToken ct);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
     Task<IReadOnlyCollection<TransportTask>> GetAllAsync(
         CancellationToken cancellationToken = default);

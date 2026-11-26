@@ -5,6 +5,7 @@ namespace SmartFleetBE.Model;
 
 public partial class Warehouse
 {
+    public int Revision { get; set; } = 1;
     public int WarehouseId { get; set; }
 
     public string WarehouseCode { get; set; } = null!;

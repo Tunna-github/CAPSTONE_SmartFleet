@@ -23,6 +23,7 @@ import WarehouseMapsPage from "./pages/WarehouseMapsPage"
 import QrMissionMonitorPage from "./pages/QrMissionMonitorPage"
 import NavigationTrafficPage from "./pages/NavigationTrafficPage"
 import SimulationPage from "./pages/SimulationPage"
+import WarehouseStationsPage from "./pages/WarehouseStationsPage"
 import { RobotsPage } from "./pages/RobotsPage"
 
 import { UserProfilePage } from "./pages/UserProfilePage"
@@ -180,6 +181,7 @@ export default function App() {
               <Route element={<ProtectedLayout />}>
                 <Route path="/profile" element={<UserProfilePage />} />
                 <Route path="/simulation" element={<SimulationPage />} />
+                <Route path="/warehouse-stations" element={<WarehouseStationsPage />} />
 
                 <Route element={<RequireRole allow={["operator"]} />}>
                   <Route path="/dashboard" element={<OperatorDashboard />} />

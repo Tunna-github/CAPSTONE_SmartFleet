@@ -55,6 +55,13 @@ public sealed class DatabaseNavigationMapStore(
             ? db.Database.BeginTransaction(System.Data.IsolationLevel.Serializable) : null;
         if (db.TaskAssignments.Any(a => a.AssignmentStatus == "ACTIVE" && a.Task.WarehouseId == warehouseId))
             throw new MapInUseException();
+        var mappings = db.StationCheckpoints.Where(m => m.WarehouseId == warehouseId).ToList();
+        foreach (var mapping in mappings)
+        {
+            var markers = map.Cells.SelectMany(r => r).Where(c => c.Type == "qr" && c.ArucoId == mapping.ArucoId).ToList();
+            if (markers.Count != 1 || markers[0].IsIntersection || markers[0].MarkerYawDeg == null || markers[0].MarkerSizeM == null)
+                throw new StationMapConflictException($"Station {mapping.StationId} maps to QR{mapping.ArucoId}. Remap/deactivate and unmap the station before removing its checkpoint or marking it as an intersection.");
+        }
         var row = db.MapConfigurations.SingleOrDefault(m => m.WarehouseId == warehouseId && m.IsActive)
             ?? throw new DbUpdateConcurrencyException("The active warehouse map changed. Reload the map.");
         var metadata = ReadMetadata(row.MapMetadataJson);
@@ -93,3 +100,5 @@ public sealed class DatabaseNavigationMapStore(
         row.MapMetadataJson = metadata.ToJsonString(JsonOptions);
     }
 }
+
+public sealed class StationMapConflictException(string message) : InvalidOperationException(message);

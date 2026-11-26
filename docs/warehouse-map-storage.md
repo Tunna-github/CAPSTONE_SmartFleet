@@ -15,8 +15,9 @@ The existing active `public."MapConfigurations"` row for the warehouse stores:
   intersection flags and links.
 - `MapMetadataJson.navigationMapUpdatedAtUtc`: the server save time.
 
-Existing SLAM/image metadata and `MapVersion` are preserved. No schema migration is
-required. If no active map exists, one MANUAL map record is created. On the first
+Existing SLAM/image metadata and `MapVersion` are preserved. Navigation-map JSON
+storage itself needs no new columns; FE-02 station mappings require the separate
+`20261126_station_management.sql` patch. If no active map exists, one MANUAL map record is created. On the first
 startup only, the old `App_Data/navigation-state.json` map is imported when the
 database does not yet contain `navigationMap`. Later startups load the database
 map even if the local map mirror is missing or older.
@@ -49,6 +50,13 @@ not define QR nodes. `GET /api/v1/demo-routing/map/graph` shows the directional
 graph used by the planner. Validation checks the graph, not the physical world:
 the marker positions, road directions and robot heading calibration must also
 match Webots before testing motion.
+
+Mapped operational stations cannot lose their commissioned marker or become a
+reserved intersection through a map save, including mappings retained on inactive
+stations. Remove/reassign the mapping safely through **Warehouse & Stations** first.
+Editor labels show the physical QR ID and associated station code/name/type;
+changing a logical station name never writes map geometry or the Webots world.
+See [FE-02 station commissioning](warehouse-station-management.md).
 
 ## Validation performed
 

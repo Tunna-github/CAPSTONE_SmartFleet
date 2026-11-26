@@ -130,6 +130,7 @@ public sealed class TransportTaskService : ITransportTaskService
 
         // STEP 4: VALIDATE WAREHOUSE AND STATIONS
 
+        await using var creation = await _repository.BeginTransactionAsync(cancellationToken);
         var validationError = await ValidateLocationAsync(
             request.WarehouseId,
             request.PickupStationId,
@@ -143,14 +144,16 @@ public sealed class TransportTaskService : ITransportTaskService
         }
 
         var qrPilot = _configuration.GetValue<bool>("DemoRoute:Enabled");
+        TaskLocationPolicy.StationRoute? stationRoute = null;
         if (qrPilot)
         {
-            if (_routes == null || !_routes.SupportsWarehouse(request.WarehouseId) ||
-                request.PickupArUcoId == null || request.DeliveryArUcoId == null)
-                return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(
-                    "Select pickup and delivery QR markers for this navigation warehouse.");
-            try { _routes.ValidateTaskSelection(request.PickupArUcoId.Value, request.DeliveryArUcoId.Value); }
-            catch (ArgumentException ex) { return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(ex.Message); }
+            if (_routes == null) return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed("Navigation unavailable.");
+            try {
+                stationRoute = await _repository.ResolveStationRouteAsync(request.WarehouseId, request.PickupStationId, request.DeliveryStationId, _routes, cancellationToken);
+                if (request.PickupArUcoId.HasValue && request.PickupArUcoId != stationRoute.PickupArUcoId ||
+                    request.DeliveryArUcoId.HasValue && request.DeliveryArUcoId != stationRoute.DeliveryArUcoId)
+                    throw new ArgumentException("Submitted navigation QR conflicts with the selected station mapping. Reload the station catalog.");
+            } catch (ArgumentException ex) { return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(ex.Message); }
         }
 
         // STEP 5: CREATE TASK
@@ -189,8 +192,6 @@ public sealed class TransportTaskService : ITransportTaskService
             ScheduledTime = request.ScheduledTime
         };
 
-        await using (var creation = await _repository.BeginTransactionAsync(cancellationToken))
-        {
         await _repository.AddAsync(
             task, cancellationToken);
 
@@ -226,7 +227,7 @@ public sealed class TransportTaskService : ITransportTaskService
         // can be assigned between two frontend requests.
         if (qrPilot)
         {
-            try { _routes!.ConfigureTask(task.TaskId, request.PickupArUcoId!.Value, request.DeliveryArUcoId!.Value); }
+            try { _routes!.ConfigureTask(task.TaskId, stationRoute!.PickupArUcoId, stationRoute.DeliveryArUcoId); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(
@@ -234,7 +235,6 @@ public sealed class TransportTaskService : ITransportTaskService
             }
         }
         await creation.CommitAsync(cancellationToken);
-        }
 
         _logger.LogInformation(
             "Task {TaskId} created: Mode={Mode}, " +
@@ -325,6 +325,7 @@ public sealed class TransportTaskService : ITransportTaskService
             UpdateTransportTaskRequest request,
             CancellationToken cancellationToken = default)
     {
+        await using var edit = await _repository.BeginTransactionAsync(cancellationToken);
         var task = await _repository.GetByIdForUpdateAsync(
             taskId, cancellationToken);
 
@@ -360,6 +361,12 @@ public sealed class TransportTaskService : ITransportTaskService
                 .ValidationFailed(validationError);
         }
 
+        TaskLocationPolicy.StationRoute? updatedRoute = null;
+        if (_configuration.GetValue<bool>("DemoRoute:Enabled")) {
+            if (_routes == null) return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed("Navigation unavailable.");
+            try { updatedRoute = await _repository.ResolveStationRouteAsync(request.WarehouseId, request.PickupStationId, request.DeliveryStationId, _routes, cancellationToken); }
+            catch (ArgumentException ex) { return TransportTaskServiceResult<TransportTaskResponse>.ValidationFailed(ex.Message); }
+        }
         task.WarehouseId = request.WarehouseId;
         task.PickupStationId = request.PickupStationId;
         task.DeliveryStationId = request.DeliveryStationId;
@@ -381,6 +388,8 @@ public sealed class TransportTaskService : ITransportTaskService
                 .Conflict("Task changed during editing. Reload before trying again.");
         }
 
+        if (updatedRoute != null) _routes!.ConfigureTask(taskId, updatedRoute.PickupArUcoId, updatedRoute.DeliveryArUcoId);
+        await edit.CommitAsync(cancellationToken);
         var updated = await _repository.GetByIdAsync(
             taskId, cancellationToken);
 

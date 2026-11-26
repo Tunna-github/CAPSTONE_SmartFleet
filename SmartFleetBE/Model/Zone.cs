@@ -5,6 +5,7 @@ namespace SmartFleetBE.Model;
 
 public partial class Zone
 {
+    public int Revision { get; set; } = 1;
     public int ZoneId { get; set; }
 
     public int WarehouseId { get; set; }

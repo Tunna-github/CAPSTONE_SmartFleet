@@ -12,6 +12,10 @@ async function setup(page: Page, mode: "list" | "empty" | "disappears" | "confli
   await page.route("https://localhost:7166/**", async route => {
     const request = route.request();
     const url = new URL(request.url());
+    if (url.pathname === "/api/v1/warehouse-catalog") return route.fulfill({json:{
+      warehouses:[{warehouseId:1,code:"W1",name:"Warehouse",isActive:true,revision:1}],zones:[],robots:[],navigationWarehouseId:1,
+      stations:[{stationId:1,warehouseId:1,zoneId:1,code:"P1",name:"Pickup",type:"PICKUP",arucoId:2,isActive:true,usable:true},
+        {stationId:2,warehouseId:1,zoneId:1,code:"D1",name:"Delivery",type:"DELIVERY",arucoId:7,isActive:true,usable:true}]}});
     if (url.pathname.endsWith("/users/me")) return route.fulfill({ json: user });
     if (url.pathname === '/api/v1/demo-routing/health') return route.fulfill({json:{enabled:qrPilot}});
     if (qrPilot && url.pathname === '/api/v1/navigation/map') {
@@ -112,8 +116,9 @@ for (const theme of ["dark", "light"]) {
     await page.screenshot({path:testInfo.outputPath(`assign-${theme}.png`)});
     await page.getByRole('button',{name:'Cancel',exact:true}).click();
     await page.getByRole('button',{name:'Create Transport Task',exact:true}).click();
-    await expect(page.getByLabel('Warehouse ID *',{exact:true})).toBeVisible();
-    await expect(page.locator('select[name="pickupArUcoId"]')).toBeVisible();
+    await expect(page.getByLabel('Warehouse',{exact:true})).toBeVisible();
+    await expect(page.locator('select[name="pickupStationId"]')).toBeVisible();
+    await expect(page.locator('select[name="pickupArUcoId"]')).toHaveCount(0);
     await checkContrast('dialog[open] label, dialog[open] legend');
     await page.screenshot({path:testInfo.outputPath(`create-${theme}.png`)});
   });

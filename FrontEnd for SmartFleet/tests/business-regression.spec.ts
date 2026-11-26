@@ -11,6 +11,10 @@ async function setup(page: Page, role = "Warehouse Operator") {
   }, user);
   await page.route("https://localhost:7166/**", async route => {
     const req = route.request(), url = new URL(req.url());
+    if (url.pathname === "/api/v1/warehouse-catalog") return route.fulfill({json:{
+      warehouses:[{warehouseId:1,code:"W1",name:"Warehouse",isActive:true,revision:1}],zones:[],robots:[],navigationWarehouseId:1,
+      stations:[{stationId:1,warehouseId:1,zoneId:1,code:"P1",name:"Pickup",type:"PICKUP",arucoId:2,isActive:true,usable:true},
+        {stationId:2,warehouseId:1,zoneId:1,code:"D1",name:"Delivery",type:"DELIVERY",arucoId:7,isActive:true,usable:true}]}});
     if (url.pathname.endsWith("/users/me")) return route.fulfill({ json: user });
     if (url.pathname === "/api/v1/demo-routing/health") return route.fulfill({ json: { enabled: false } });
     if (url.pathname === "/api/v1/transport-tasks") {
@@ -70,7 +74,7 @@ test("admin dashboard shows registered robot rather than seed assets", async ({ 
   await page.screenshot({ path: testInfo.outputPath("admin-dashboard.png"), fullPage: true });
 });
 
-test("AUTO creation sends QR configuration in the same request with correct HIGH priority", async ({ page }) => {
+test("AUTO creation sends station IDs and correct HIGH priority without independent QR choices", async ({ page }) => {
   const { creates } = await setup(page);
   const separateQrPosts: string[] = [];
   await page.route("https://localhost:7166/api/v1/demo-routing/health", r => r.fulfill({ json: { enabled: true } }));
@@ -82,16 +86,16 @@ test("AUTO creation sends QR configuration in the same request with correct HIGH
   page.on("request", request => { if (/\/tasks\/\d+\/qr$/.test(request.url()) && request.method() === "POST") separateQrPosts.push(request.url()); });
   await page.goto("/dashboard/tasks");
   await page.getByRole("button", { name: "Create Transport Task", exact: true }).click();
-  await page.getByLabel("Warehouse ID *", { exact: true }).fill("1");
-  await page.getByLabel("Pickup Station ID *", { exact: true }).fill("1");
-  await page.getByLabel("Delivery Station ID *", { exact: true }).fill("2");
+  await page.getByLabel("Warehouse", { exact: true }).selectOption("1");
+  await page.getByLabel("Pickup station", { exact: true }).selectOption("1");
+  await page.getByLabel("Delivery station", { exact: true }).selectOption("2");
   await page.getByLabel("Weight(kg) *", { exact: true }).fill("1");
-  await page.getByLabel(/^Pickup ArUco QR/).selectOption("0");
-  await page.getByLabel(/^Delivery ArUco QR/).selectOption("1");
   await page.getByRole("radio", { name: /HIGH/ }).check();
   await page.getByRole("radio", { name: /^Automatic/ }).check();
   await page.getByRole("button", { name: "Create & Auto Assign", exact: true }).click();
   await expect.poll(() => creates.length).toBe(1);
-  expect(creates[0]).toMatchObject({ dispatchMode: "AUTO", priorityLevel: 3, pickupArUcoId: 0, deliveryArUcoId: 1 });
+  expect(creates[0]).toMatchObject({ dispatchMode: "AUTO", priorityLevel: 3, pickupStationId: 1, deliveryStationId: 2 });
+  expect(creates[0]).not.toHaveProperty("pickupArUcoId");
+  expect(creates[0]).not.toHaveProperty("deliveryArUcoId");
   expect(separateQrPosts).toHaveLength(0);
 });

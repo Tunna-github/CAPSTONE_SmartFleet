@@ -170,7 +170,7 @@ public sealed class AutoDispatchService(
 
                 var requiredType = DispatchRobotTypePolicy.RequiredType(configuration);
                 var candidates = await db.Robots
-                    .Where(r =>
+                    .Where(r => !db.StationBerths.Any(b => b.RobotId == r.RobotId) &&
                         // Same warehouse
                         r.WarehouseId == task.WarehouseId &&
 
@@ -225,6 +225,7 @@ public sealed class AutoDispatchService(
 
                 var routes = configuration.GetValue<bool>("DemoRoute:Enabled")
                     ? scope.ServiceProvider.GetService<QrDemoRouteService>() : null;
+                if (routes != null && await TaskLocationPolicy.SynchronizeRouteAsync(db, taskId, routes, cancellationToken) != null) return false;
                 var robot = candidates.FirstOrDefault(r => !configuration.GetValue<bool>("DemoRoute:Enabled") ||
                     (routes != null && routes.CanDispatchTask(taskId, r.RobotCode, out _, task.WarehouseId)));
 

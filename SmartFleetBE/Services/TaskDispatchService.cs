@@ -111,10 +111,15 @@ public sealed class TaskDispatchService : ITaskDispatchService
             (i.Severity == "ERROR" || i.Severity == "FATAL" || i.Severity == "HIGH" || i.Severity == "CRITICAL"))
             .Select(i => i.RobotId).Distinct().ToListAsync(cancellationToken)).ToHashSet();
         var now = DateTime.UtcNow;
+        var mappingError = _configuration.GetValue<bool>("DemoRoute:Enabled") && _routes != null
+            ? await TaskLocationPolicy.SynchronizeRouteAsync(_db, taskId, _routes, cancellationToken) : null;
+        var berthed = (await _db.StationBerths.Select(b => b.RobotId).ToListAsync(cancellationToken)).ToHashSet();
         var robots = new List<AvailableRobotResponse>();
         foreach (var robot in allRobots)
         {
             var reasons = new List<string>();
+            if (mappingError != null) reasons.Add(mappingError);
+            if (berthed.Contains(robot.RobotId)) reasons.Add("Release waiting/charging berth reservation before assignment");
             if (robot.WarehouseId != task.WarehouseId) reasons.Add("Different warehouse");
             if (!robot.IsActive) reasons.Add("Robot inactive");
             var requiredType = DispatchRobotTypePolicy.RequiredType(_configuration);
@@ -319,6 +324,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
                 .NotFound($"Robot {robotId} was not found.");
         }
 
+        if (_configuration.GetValue<bool>("DemoRoute:Enabled") && _routes != null &&
+            await TaskLocationPolicy.SynchronizeRouteAsync(_db, taskId, _routes, cancellationToken) is { } routeError)
+            return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict(routeError);
+        if (await _db.StationBerths.AnyAsync(b => b.RobotId == robotId, cancellationToken))
+            return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict("Release robot berth reservation before dispatch.");
         if (_configuration.GetValue<bool>("DemoRoute:Enabled"))
         {
             var reason = "Camera/IMU localization is unavailable.";

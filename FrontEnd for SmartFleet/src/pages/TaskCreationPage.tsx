@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useData } from "../context/DataContext";
 import type { Task } from "../data/mockData";
 import type { DispatchMode } from "../api/modules/tasks";
-import { apiClient } from "../api/client";
+import { useCatalog } from "../api/modules/catalog";
 
 // =====================================================
 // CREATE TASK FORM WITH AUTO / MANUAL MODE
@@ -36,30 +36,14 @@ export function TaskCreateForm({
     // SAFE DEFAULT: MANUAL
     const [dispatchMode, setDispatchMode] =
         useState<DispatchMode>("MANUAL");
-    const [qrPilotEnabled, setQrPilotEnabled] = useState(false);
-    const [qrPoints, setQrPoints] = useState<Array<{ id: number; label: string }>>([]);
-    useEffect(() => {
-        let cancelled = false;
-        async function loadQrPilot() {
-            try {
-                const health = await apiClient.get<{ enabled: boolean }>("/api/v1/demo-routing/health");
-                if (!health.data.enabled) return;
-                if (!cancelled) setQrPilotEnabled(true);
-                const result = await apiClient.get<{ cells: Array<Array<{
-                    type: string; label?: string; arucoId?: number | null
-                }>> }>("/api/v1/navigation/map");
-                const qrs = result.data.cells.flat()
-                    .filter(c => c.type === "qr" && c.arucoId !== undefined && c.arucoId !== null)
-                    .map(c => ({ id: Number(c.arucoId), label: c.label ?? `QR${c.arucoId}` }))
-                    .sort((a, b) => a.id - b.id);
-                if (!cancelled) setQrPoints(qrs);
-            } catch (error) {
-                console.warn("Demo QR route map not available", error);
-            }
-        }
-        void loadQrPilot();
-        return () => { cancelled = true; };
-    }, []);
+    const {catalog,error:catalogError,reload:reloadCatalog}=useCatalog();
+    const [warehouseIdSelected,setWarehouseIdSelected]=useState(0);
+    const [pickupSelected,setPickupSelected]=useState(0);
+    const [deliverySelected,setDeliverySelected]=useState(0);
+    const warehouse = warehouseIdSelected || catalog?.warehouses.find(w=>w.isActive && w.warehouseId===catalog.navigationWarehouseId)?.warehouseId || catalog?.warehouses.find(w=>w.isActive)?.warehouseId || 0;
+    const availableStations = catalog?.stations.filter(s=>s.warehouseId===warehouse && s.usable) ?? [];
+    const pickupStation = availableStations.find(s=>s.stationId===pickupSelected && s.type==="PICKUP");
+    const deliveryStation = availableStations.find(s=>s.stationId===deliverySelected && s.type==="DELIVERY");
 
     const inputClass =
         "w-full rounded-lg px-3 py-2.5 text-[13px] " +
@@ -112,14 +96,9 @@ export function TaskCreateForm({
             return;
         }
 
-        const pickupQr = Number(values.get("pickupArUcoId"));
-        const deliveryQr = Number(values.get("deliveryArUcoId"));
-        if (qrPilotEnabled) {
-            if (!qrPoints.some(p => p.id === pickupQr) ||
-                !qrPoints.some(p => p.id === deliveryQr) || pickupQr === deliveryQr) {
-                setError("Select two different pickup/drop QR markers from the saved Backend map.");
-                return;
-            }
+        if (!pickupStation || !deliveryStation) {
+            setError("Choose active mapped pickup and delivery stations. Reload the catalog if configuration changed.");
+            return;
         }
 
         if (pickupStationId === deliveryStationId) {
@@ -177,7 +156,7 @@ export function TaskCreateForm({
 
                 // NEW: dispatch mode selected by operator
                 dispatchMode,
-                ...(qrPilotEnabled ? { pickupArUcoId: pickupQr, deliveryArUcoId: deliveryQr } : {}),
+                // Navigation checkpoints are resolved from StationID by the server.
             });
         }
         catch (err) {
@@ -201,6 +180,7 @@ export function TaskCreateForm({
 
         if (created) {
             form.reset();
+            setPickupSelected(0);setDeliverySelected(0);
             setDispatchMode("MANUAL");
             onCreated(created);
         }
@@ -226,7 +206,7 @@ export function TaskCreateForm({
                 }
                 style={{ color: "var(--text-secondary)" }}
             >
-                Use existing warehouse and station IDs.
+                Choose a warehouse and its commissioned pickup/delivery stations.
                 Task tracking codes are generated automatically.
                 Required fields are marked *.
             </div>
@@ -251,95 +231,31 @@ export function TaskCreateForm({
                         01 / Transport Route
                     </legend>
 
-                    <div>
-                        <label
-                            htmlFor={`${id}-warehouseId`}
-                            className="block text-[12px] mb-1.5"
-                        >
-                            Warehouse ID *
-                        </label>
-
-                        <input
-                            id={`${id}-warehouseId`}
-                            name="warehouseId"
-                            type="number"
-                            min={1}
-                            max={2147483647}
-                            step={1}
-                            required
-                            autoFocus
-                            placeholder="Enter warehouse ID"
-                            className={inputClass}
-                            style={inputStyle}
-                        />
-                    </div>
-
+                    {catalogError && <p role="alert" className="text-red-500">{catalogError}</p>}
+                    {catalog && (!availableStations.some(s=>s.type==="PICKUP") || !availableStations.some(s=>s.type==="DELIVERY")) &&
+                        <p className="text-sm" role="status">This warehouse needs active mapped pickup and delivery stations. Ask an Admin to configure them in Warehouse &amp; Stations, then reload stations.</p>}
+                    <button type="button" className="border rounded px-3 py-1" onClick={()=>void reloadCatalog()}>Reload stations</button>
+                    <label className="block text-sm">Warehouse *
+                        <select aria-label="Warehouse" name="warehouseId" className={inputClass} style={inputStyle} required value={warehouse} onChange={e=>{setWarehouseIdSelected(Number(e.target.value));setPickupSelected(0);setDeliverySelected(0);}}>
+                            <option value="">Select warehouse</option>{catalog?.warehouses.filter(w=>w.isActive).map(w=><option key={w.warehouseId} value={w.warehouseId}>{w.code} — {w.name}</option>)}
+                        </select>
+                    </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {[
-                            [
-                                "pickupStationId",
-                                "Pickup Station ID",
-                                "Where the robot collects the package",
-                            ],
-                            [
-                                "deliveryStationId",
-                                "Delivery Station ID",
-                                "Where the robot delivers the package",
-                            ],
-                        ].map(([name, label, hint]) => (
-                            <div key={name}>
-                                <label
-                                    htmlFor={`${id}-${name}`}
-                                    className="block text-[12px] mb-1.5"
-                                >
-                                    {label} *
-                                </label>
-
-                                <input
-                                    id={`${id}-${name}`}
-                                    name={name}
-                                    type="number"
-                                    min={1}
-                                    max={2147483647}
-                                    step={1}
-                                    required
-                                    placeholder="Enter station ID"
-                                    className={inputClass}
-                                    style={inputStyle}
-                                />
-
-                                <p
-                                    className="mt-1.5 text-[11px]"
-                                    style={{
-                                        color: "var(--text-muted)",
-                                    }}
-                                >
-                                    {hint}
-                                </p>
-                            </div>
-                        ))}
+                        <label className="text-sm">Pickup station *
+                            <select aria-label="Pickup station" name="pickupStationId" className={inputClass} style={inputStyle} required value={pickupSelected||""} onChange={e=>setPickupSelected(Number(e.target.value))}>
+                                <option value="">Select pickup station</option>{availableStations.filter(s=>s.type==="PICKUP").map(s=><option value={s.stationId} key={s.stationId}>{s.code} — {s.name} · QR{s.arucoId}</option>)}
+                            </select>
+                        </label>
+                        <label className="text-sm">Delivery station *
+                            <select aria-label="Delivery station" name="deliveryStationId" className={inputClass} style={inputStyle} required value={deliverySelected||""} onChange={e=>setDeliverySelected(Number(e.target.value))}>
+                                <option value="">Select delivery station</option>{availableStations.filter(s=>s.type==="DELIVERY").map(s=><option value={s.stationId} key={s.stationId}>{s.code} — {s.name} · QR{s.arucoId}</option>)}
+                            </select>
+                        </label>
                     </div>
-                    {qrPilotEnabled && (
-                        <div className="rounded-xl border p-3 space-y-2" style={{ borderColor: "#0d9488" }}>
-                            <p className="text-[12px] font-semibold">Robot QR Route</p>
-                            <p className="text-[11px] opacity-70">QR markers and station IDs use separate identifiers. Both route markers are saved before AUTO or MANUAL assignment can begin.</p>
-                            {qrPoints.length === 0 && <p className="text-xs text-red-400">No QR markers loaded. Check Backend Warehouse Maps.</p>}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <label className="text-xs">Pickup ArUco QR
-                                    <select name="pickupArUcoId" className={inputClass + " mt-1"} style={inputStyle} required>
-                                        <option value="">Select pickup QR</option>
-                                        {qrPoints.map(p => <option value={p.id} key={p.id}>{p.label} (ID {p.id})</option>)}
-                                    </select>
-                                </label>
-                                <label className="text-xs">Delivery ArUco QR
-                                    <select name="deliveryArUcoId" className={inputClass + " mt-1"} style={inputStyle} required>
-                                        <option value="">Select delivery QR</option>
-                                        {qrPoints.map(p => <option value={p.id} key={p.id}>{p.label} (ID {p.id})</option>)}
-                                    </select>
-                                </label>
-                            </div>
-                        </div>
-                    )}
+                    <div className="rounded-xl border p-3 text-sm" style={{borderColor:"#0d9488"}} role="status">
+                        Navigation resolved by station: {pickupStation?`${pickupStation.code} → QR${pickupStation.arucoId}`:"Choose pickup"} · {deliveryStation?`${deliveryStation.code} → QR${deliveryStation.arucoId}`:"Choose delivery"}.
+                        <p className="text-xs mt-1">The backend validates current station mappings before dispatch. Station verification payloads are separate from navigation QR IDs.</p>
+                    </div>
                 </fieldset>
 
                 {/* ===================================== */}

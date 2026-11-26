@@ -23,6 +23,11 @@ def call(path, data=None):
         return json.load(response)
 
 
+token = call("/api/v1/auth/login", {"usernameOrEmail": "admin", "password": env["DEMO_ADMIN_PASSWORD"]})["accessToken"]
+catalog = call('/api/v1/warehouse-catalog')
+pickup = next((s for s in catalog['stations'] if s['arucoId']==2 and s['type']=='PICKUP' and s['usable']), None)
+delivery = next((s for s in catalog['stations'] if s['arucoId']==5 and s['type']=='DELIVERY' and s['usable']), None)
+assert pickup and delivery, 'Commission active PICKUP QR2 and DELIVERY QR5 stations in Warehouse & Stations before this isolated test'
 token = call("/api/v1/auth/login", {"usernameOrEmail": "operator", "password": env["DEMO_OPERATOR_PASSWORD"]})["accessToken"]
 assert not any(m["assignmentStatus"] == "ACTIVE" for m in call("/api/v1/missions")), "Finish active missions first"
 for _ in range(120):
@@ -32,9 +37,8 @@ for _ in range(120):
     time.sleep(1)
 else:
     raise RuntimeError("This regression requires a fresh world: R01 QR0 and R02 QR4")
-task = call("/api/v1/transport-tasks", {"warehouseId": 1, "pickupStationId": 1, "deliveryStationId": 2,
-    "payloadWeightKg": 1, "priorityLevel": 2, "dispatchMode": "MANUAL", "pickupArUcoId": 2,
-    "deliveryArUcoId": 5, "itemDescription": "Parked QR4 robot regression"})
+task = call("/api/v1/transport-tasks", {"warehouseId": pickup['warehouseId'], "pickupStationId": pickup['stationId'], "deliveryStationId": delivery['stationId'],
+    "payloadWeightKg": 1, "priorityLevel": 2, "dispatchMode": "MANUAL", "itemDescription": "Parked QR4 robot regression"})
 available = call(f'/api/v1/transport-tasks/{task["taskId"]}/available-robots?includeIneligible=true')
 selected = next(r for r in available if r["robotCode"] == "R01")
 assert selected["isEligible"], selected.get("ineligibilityReason")
@@ -55,7 +59,7 @@ while time.monotonic() < deadline:
     if stage and stage not in confirmed and mission["stationPresenceFresh"]:
         result = call(f'/api/v1/missions/{mission["missionId"]}/verifications', {
             "requestId": str(uuid.uuid4()), "stage": stage, "type": "QRCODE",
-            "scannedQr": "P1" if stage == "PICKUP" else "D1", "physicalTransferConfirmed": True})
+            "scannedQr": pickup['qrCodePayload'] if stage == "PICKUP" else delivery['qrCodePayload'], "physicalTransferConfirmed": True})
         assert result["accepted"]
         confirmed.add(stage)
     if mission["missionStatus"] == "COMPLETED":

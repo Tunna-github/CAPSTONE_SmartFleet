@@ -10,6 +10,7 @@ public partial class SmartFleetDbContext
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
     {
         ConfigureExecution(modelBuilder);
+        ConfigureCatalog(modelBuilder);
         modelBuilder.Entity<TaskIntervention>(e =>
         {
             e.ToTable("TaskInterventions");

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RobotPos } from "../data/mockData";
+import { useCatalog } from "../api/modules/catalog";
 import { useTheme } from "../context/ThemeContext";
 
 const CELL = 40;
@@ -113,6 +114,7 @@ export function WarehouseGrid({
     animateRobots?: boolean;
 }) {
     const { theme } = useTheme();
+    const {catalog}=useCatalog();
     const isLight = theme === "light";
     const handlePointClick = onPointClick ?? onStationClick;
 
@@ -338,7 +340,8 @@ export function WarehouseGrid({
                 {(cell.type === "station" || cell.type === "qr" || cell.type === "charge") && (
                     <>
                         <rect x={x + 2} y={y + 2} width={CELL - 4} height={CELL - 4} rx="3" fill={style.fill} stroke={style.stroke} strokeWidth="1.5" />
-                        <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize={focusQrNetwork ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.label}</text>
+                        <text x={x + CELL / 2} y={y + CELL / 2 + 4} textAnchor="middle" fontSize={focusQrNetwork ? 11 : 8} fontFamily="monospace" fontWeight="bold" fill={style.stroke}>{cell.type==="qr"?`QR${cell.arucoId}`:cell.label}</text>
+                        {cell.type==="qr" && catalog?.stations.filter(s=>s.warehouseId===catalog.navigationWarehouseId && s.arucoId===cell.arucoId).map(s=><g key={s.stationId}><title>{`${s.code} — ${s.name} · ${s.type} · Station #${s.stationId} · ${s.isActive?"Active":"Inactive"}`}</title><text x={x+CELL/2} y={y+CELL-3} textAnchor="middle" fontSize="7" fill={style.stroke}>{s.code}{s.isActive?"":" (off)"}</text></g>)}
                         {cell.type === "qr" && cell.isIntersection && (
                             <g>
                                 <circle cx={x + CELL - 8} cy={y + 8} r={6} fill="#f59e0b" />
@@ -349,7 +352,7 @@ export function WarehouseGrid({
                 )}
             </g>
         );
-    })), [gridWithRoads, cellTypeStyles, focusQrNetwork]);
+    })), [gridWithRoads, cellTypeStyles, focusQrNetwork, catalog]);
 
     return (
         <svg aria-label={focusQrNetwork ? "Live QR robot map" : "Warehouse map"} width="100%" height="100%" viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`} style={{ background: isLight ? "#ffffff" : "#060d1f", display: "block", transition: "background 0.2s ease" }} preserveAspectRatio="xMidYMid meet">

@@ -5,6 +5,9 @@ namespace SmartFleetBE.Model;
 
 public partial class Station
 {
+    public int Revision { get; set; } = 1;
+    public int Capacity { get; set; } = 1;
+    public virtual StationCheckpoint? Checkpoint { get; set; }
     public int StationId { get; set; }
 
     public int ZoneId { get; set; }

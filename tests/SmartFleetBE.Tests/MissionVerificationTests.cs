@@ -62,6 +62,8 @@ public sealed class MissionVerificationTests
             Db.TaskAssignments.Add(new TaskAssignment { AssignmentId=1, TaskId=1, RobotId=1, AssignmentType="MANUAL", AssignmentStatus="ACTIVE", AssignedAt=now });
             Db.Missions.Add(new Mission { MissionId=1, AssignmentId=1, MissionCode="M1", MissionStatus="NAVIGATING_TO_PICKUP", CreatedAt=now });
             Db.SaveChanges();
+            Db.StationCheckpoints.AddRange(new() { StationId=1, WarehouseId=1, ArucoId=1 }, new() { StationId=2, WarehouseId=1, ArucoId=2 });
+            Db.SaveChanges();
             Routes.ConfigureTask(1,1,2);
             Assert.True(Routes.ReceiveProgress("R01", new() { Event="READY", ArucoId=0, MapRevision=Nav.GetMap().Revision,
                 HeadingDeg=0, LocalizationSource="ARUCO_IMU", ReprojectionErrorPx=.1, StableFrames=5 }).Accepted);

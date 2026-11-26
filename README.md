@@ -36,6 +36,7 @@ database, review and apply the additive patches in order:
 2. `Database/20261124_outbox_safety_commands.sql`
 3. `Database/20261124_auth_uniqueness.sql`
 4. `Database/20261124_mission_verification.sql`
+5. `Database/20261126_station_management.sql`
 
 The second patch allows multiple safety controls per assignment while retaining
 uniqueness of its original mission command. It changes indexes, not task rows.
@@ -49,9 +50,12 @@ uses `DemoRoute:Enabled` and is restricted to Development or the isolated Simula
 See `docs/aruco-auto-localization.md` and `docs/warehouse-map-storage.md` for
 camera/marker commissioning and map storage.
 
-New QR tasks submit `pickupArUcoId` and `deliveryArUcoId` together with the task.
-The task becomes visible to the AUTO dispatcher only after route setup succeeds.
-Existing queued MANUAL pilot tasks may still use the separate QR configuration API.
+In **Warehouse & Stations**, Admin commissions each operational StationId against
+one physical ArUco checkpoint. Operator selects warehouse, pickup and delivery
+stations; the backend resolves navigation markers from these database mappings.
+Legacy requests supplying marker IDs must match the selected stations. Unmapped
+legacy stations cannot dispatch until commissioned; upgrades never guess mappings.
+See [FE-02 setup and acceptance](docs/warehouse-station-management.md).
 
 Heartbeat timeout is configured by `Dispatch:PresenceTimeoutSeconds` (default
 45). Missing mission-start acknowledgement uses
@@ -92,7 +96,7 @@ Apply patch 4 before running this backend/controller version. Configure distinct
 nonempty `Stations.QrCodePayload` values for the pickup/delivery stations; select
 navigation markers outside reserved intersections. The selected station QR payloads,
 optional package code and route are snapshotted when assigning the mission.
-Station-to-navigation-QR commissioning remains a warehouse setup responsibility.
+Station-to-navigation-QR commissioning is managed in **Warehouse & Stations**.
 
 In **QR Mission Monitor**, the robot stops at `AT_PICKUP`. Warehouse Operator
 uses a keyboard/USB QR scanner to enter the station payload, scans the package code

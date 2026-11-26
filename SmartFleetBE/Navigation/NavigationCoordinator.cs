@@ -152,6 +152,12 @@ public sealed class NavigationCoordinator
                 ? new[] { p.Value.CurrentArUcoId, next } : new[] { p.Value.CurrentArUcoId }).ToHashSet();
     }
 
+    public IReadOnlyDictionary<string, IReadOnlySet<int>> GetCheckpointOccupants()
+    {
+        lock (_gate) return _stored.RobotOccupancies.ToDictionary(p => p.Key,
+            p => (IReadOnlySet<int>)(p.Value.NextArUcoId is int next ? new HashSet<int> {p.Value.CurrentArUcoId, next} : [p.Value.CurrentArUcoId]));
+    }
+
     public bool PrepareUnreservedReturnHome(string robotCode)
     {
         lock (_gate)
@@ -728,6 +734,7 @@ public sealed class NavigationCoordinator
         {
             return NavigationOperation.Fail(ex.Message, true);
         }
+        catch (StationMapConflictException ex) { return NavigationOperation.Fail(ex.Message, true); }
         catch (DbUpdateConcurrencyException)
         {
             var latest = _mapStore!.LoadOrCreate(CopyMap(_stored.Map!));

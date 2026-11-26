@@ -288,6 +288,8 @@ public sealed class BusinessRegressionTests
         map.Cells[2][2] = new() { Type = "qr", Label = "QR0", ArucoId = 0, MarkerYawDeg = 0, MarkerSizeM = 0.04 };
         map.Cells[2][3] = new() { Type = "qr", Label = "QR1", ArucoId = 1, MarkerYawDeg = 0, MarkerSizeM = 0.04 };
         map.Links.Add(["QR0", "QR1"]); Assert.True(f.Navigation.ReplaceMap(map).Success);
+        f.Db.StationCheckpoints.AddRange(new() { StationId=1, WarehouseId=1, ArucoId=0 }, new() { StationId=2, WarehouseId=1, ArucoId=1 });
+        await f.Db.SaveChangesAsync();
         var result = await f.Tasks().CreateAsync(new() { WarehouseId = 1, PickupStationId = 1, DeliveryStationId = 2,
             DispatchMode = "AUTO", PayloadWeightKg = 1, PickupArUcoId = 0, DeliveryArUcoId = 1 }, 42);
         Assert.Equal(TransportTaskResultStatus.Success, result.Status);

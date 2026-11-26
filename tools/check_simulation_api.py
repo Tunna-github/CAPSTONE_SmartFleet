@@ -68,7 +68,7 @@ if '--map-write-check' in sys.argv:
         assert not json.loads(request('/api/v1/simulation',admin))['mapCompatible']
         probe=json.loads(request('/api/v1/transport-tasks',operator,{'warehouseId':1,'pickupStationId':1,
             'deliveryStationId':2,'priorityLevel':2,'payloadWeightKg':1,'dispatchMode':'MANUAL',
-            'pickupArUcoId':0,'deliveryArUcoId':2},expected=201))['taskId']
+            },expected=201))['taskId']
         eligible=json.loads(request(f'/api/v1/transport-tasks/{probe}/available-robots?includeIneligible=true',operator))
         assert len(eligible)==2 and all(not r['isEligible'] and 'Simulation world' in r['ineligibilityReason'] for r in eligible)
     finally:

@@ -1,6 +1,7 @@
 """End-to-end demo check: real controller movement + FE07 operator confirmations.
 
-Creates two AUTO test tasks in the isolated Compose demo database. Never targets Aiven.
+Creates AUTO test tasks for commissioned station pairs in the isolated Compose demo
+database (one pair on a fresh seed). Never targets Aiven.
 """
 import json
 import os
@@ -48,11 +49,18 @@ assert len(before) == 2, "Both simulated robots must localize within 120 seconds
 existing = call("/api/v1/missions")
 assert not any(m["assignmentStatus"] == "ACTIVE" for m in existing), "Finish existing demo tasks before running this check"
 tasks = []
-routes = [(4, 7)] if '--manual' in sys.argv else [(0, 2)] if '--single' in sys.argv else [(0, 2), (4, 7)]
+catalog = call('/api/v1/warehouse-catalog')
+pickups = [s for s in catalog['stations'] if s['usable'] and s['type']=='PICKUP']
+deliveries = [s for s in catalog['stations'] if s['usable'] and s['type']=='DELIVERY']
+routes = list(zip(pickups, deliveries))
+assert routes, 'Configure active mapped pickup/delivery stations first'
+if '--single' in sys.argv or '--manual' in sys.argv: routes = routes[:1]
+task_stations = {}
 for pickup, delivery in routes:
-    task = call("/api/v1/transport-tasks", {"warehouseId": 1, "pickupStationId": 1, "deliveryStationId": 2,
-        "payloadWeightKg": 1, "priorityLevel": 2, "dispatchMode": "MANUAL" if '--manual' in sys.argv else "AUTO", "pickupArUcoId": pickup,
-        "deliveryArUcoId": delivery, "itemDescription": "Compose integration check"})
+    assert pickup['warehouseId']==delivery['warehouseId']
+    task = call("/api/v1/transport-tasks", {"warehouseId": pickup['warehouseId'], "pickupStationId": pickup['stationId'], "deliveryStationId": delivery['stationId'],
+        "payloadWeightKg": 1, "priorityLevel": 2, "dispatchMode": "MANUAL" if '--manual' in sys.argv else "AUTO", "itemDescription": "Compose integration check"})
+    task_stations[task['taskId']] = (pickup,delivery)
     tasks.append(task["taskId"])
     if '--manual' in sys.argv:
         available = call(f'/api/v1/transport-tasks/{task["taskId"]}/available-robots?includeIneligible=true')
@@ -81,7 +89,7 @@ while time.monotonic() < deadline:
         stage = "PICKUP" if status == "AT_PICKUP" else "DELIVERY" if status == "AT_DELIVERY" else None
         if stage and (mid, stage) not in confirmed and mission["stationPresenceFresh"]:
             verification = {"requestId": str(uuid.uuid4()), "stage": stage, "type": "QRCODE",
-                "scannedQr": "P1" if stage == "PICKUP" else "D1", "scannedPackageCode": None,
+                "scannedQr": task_stations[mission['taskId']][0 if stage=='PICKUP' else 1]['qrCodePayload'], "scannedPackageCode": None,
                 "physicalTransferConfirmed": True, "note": None}
             if not wrong_checked:
                 rejected = call(f"/api/v1/missions/{mid}/verifications", {**verification, "scannedQr": "WRONG"}, expected=(422,))

@@ -26,6 +26,7 @@ if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled") && !builder.Enviro
 // =====================================================
 
 builder.Services.AddControllers();
+builder.Services.AddScoped<StationCatalogService>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<FleetConnectionRegistry>();
 builder.Services.AddSingleton<FleetRealtimePublisher>();

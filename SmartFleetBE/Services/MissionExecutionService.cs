@@ -36,6 +36,8 @@ public sealed class MissionExecutionService(SmartFleetDbContext db, QrDemoRouteS
         var delivery = task.DeliveryStation.QrCodePayload?.Trim();
         if (string.IsNullOrWhiteSpace(pickup) || string.IsNullOrWhiteSpace(delivery) || pickup == delivery)
             throw new InvalidOperationException("Configure distinct pickup/delivery station QR payloads before dispatch.");
+        var resolved = await TaskLocationPolicy.ResolveRouteAsync(db, task.WarehouseId, task.PickupStationId, task.DeliveryStationId, routes, ct);
+        routes.ConfigureTask(task.TaskId, resolved.PickupArUcoId, resolved.DeliveryArUcoId);
         var payload = routes.BuildMqttCommand(assignment);
         var view = routes.GetMission(assignment.Mission!.MissionId)!;
         routes.ForgetMission(view.MissionId); // Publish/cache only committed progress, never a rolled-back assignment.

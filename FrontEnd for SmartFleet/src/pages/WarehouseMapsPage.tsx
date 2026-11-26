@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 
 import { useWarehouseMap, computeDefaultLinks } from "../context/WarehouseMapContext"
 import { getMapReadiness, type MapReadiness } from "../api/modules/navigation"
+import { useCatalog } from "../api/modules/catalog"
 import { Icon, IC } from "../components/Icons"
 import { PageHeader, PrimaryBtn } from "../components/SharedUI"
 import {
@@ -10,6 +11,7 @@ import {
 } from "../components/WarehouseGrid"
 
 export default function WarehouseMapsPage() {
+  const {catalog} = useCatalog()
   const {
     warehouseLayout, setWarehouseLayout, links, setLinks,
     mapRevision, mapLoading, mapSaving, mapError, reloadMap, saveMap,
@@ -464,6 +466,7 @@ export default function WarehouseMapsPage() {
                       onChange={e => updateSelectedQr({ markerSizeM: e.target.value === "" ? undefined : Number(e.target.value) })}/>
                   </label>
                   <span className="text-xs">Marker +X: 0° North, +90° West, −90° East. Set once at installation.</span>
+                  {catalog?.stations.filter(s=>s.warehouseId===catalog.navigationWarehouseId && s.arucoId===selectedQrCell.arucoId).map(s=><span key={s.stationId} className="text-xs">Station #{s.stationId}: {s.code} — {s.name} · {s.type} · {s.isActive?"Active":"Inactive"}. Manage mapping in Warehouse &amp; Stations.</span>)}
                   <label className="text-xs flex items-center gap-1">ID
                     <input type="number" min={0} max={49} className="w-16 rounded border px-1 py-1"
                       style={{ borderColor: "var(--border-medium)", background: "var(--surface-2)" }}
