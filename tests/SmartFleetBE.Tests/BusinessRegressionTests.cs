@@ -307,6 +307,35 @@ public sealed class BusinessRegressionTests
         Assert.Equal(TransportTaskResultStatus.ValidationFailed, result.Status); Assert.Single(f.Db.TransportTasks);
     }
 
+    [Theory]
+    [InlineData("2026-12-15T20:10:00Z", 20)]
+    [InlineData("2026-12-15T20:10:00+00:00", 20)]
+    [InlineData("2026-12-15T20:10:00+07:00", 13)]
+    [InlineData("2026-12-15T20:10:00", 20)]
+    [InlineData(null, null)]
+    public async Task TaskCreationAndEditingPersistSchedulesInUtc(string? timestamp, int? utcHour)
+    {
+        using var f = new Fixture();
+        var input = timestamp == null ? (DateTime?)null : System.Text.Json.JsonSerializer.Deserialize<DateTime>("\"" + timestamp + "\"");
+        var result = await f.Tasks().CreateAsync(new() { WarehouseId = 1, PickupStationId = 1, DeliveryStationId = 2,
+            DispatchMode = "MANUAL", PayloadWeightKg = 1, ScheduledTime = input }, 42);
+        Assert.Equal(TransportTaskResultStatus.Success, result.Status);
+        var id = result.Value!.TaskId;
+        foreach (var phase in new[] { "create", "update" }) {
+            if (phase == "update") {
+                var updated = await f.Tasks().UpdateAsync(id, new() { WarehouseId = 1, PickupStationId = 1,
+                    DeliveryStationId = 2, PayloadWeightKg = 1, PriorityLevel = 2, ScheduledTime = input });
+                Assert.Equal(TransportTaskResultStatus.Success, updated.Status);
+            }
+            var stored = f.Db.TransportTasks.Single(t => t.TaskId == id).ScheduledTime;
+            if (utcHour == null) Assert.Null(stored);
+            else {
+                Assert.Equal(DateTimeKind.Utc, stored!.Value.Kind);
+                Assert.Equal(new DateTime(2026, 12, 15, utcHour.Value, 10, 0, DateTimeKind.Utc), stored.Value);
+            }
+        }
+    }
+
     [Fact]
     public async Task NewLowPriorityTaskCannotJumpAheadOfDueHighPriorityTask()
     {

@@ -40,6 +40,7 @@ interface TransportTaskApiModel {
     taskId?: number | string;
     taskTrackingCode?: string;
     warehouseId?: number;
+    warehouseName?: string;
     pickupStationId?: number;
     deliveryStationId?: number;
     pickupStationName?: string;
@@ -60,6 +61,7 @@ export interface TransportTaskDetails {
     taskId?: number | string;
     taskTrackingCode?: string;
     warehouseId?: number;
+    warehouseName?: string;
     pickupStationId?: number;
     deliveryStationId?: number;
     pickupStationName?: string;
@@ -224,6 +226,7 @@ function normalizeTask(
     return {
         taskId: item.taskId,
         id: formatTaskCode(item),
+        warehouseId: item.warehouseId, warehouseName: item.warehouseName,
         pickup:
             item.pickupStationName || "Unknown pickup",
         delivery:

@@ -18,6 +18,92 @@ namespace SmartFleetBE.Tests;
 
 public sealed class InterventionTests
 {
+    private static async Task<(SmartFleetDbContext db,TaskInterventionService service,System.Text.Json.JsonElement context)> PausedResumeFixture(bool loaded=false)
+    {
+        var (db,service,routes)=Fixture(home:true);
+        db.Robots.Single().RobotType="SIMULATION";
+        if (loaded) {
+            db.Missions.Single().MissionStatus="NAVIGATING_TO_DELIVERY";
+            db.DeliveryVerifications.Add(new(){VerificationId=1,MissionId=1,VerificationStage="PICKUP",IsVerified=true});
+        }
+        db.MissionExecutions.Add(new(){MissionId=1,MapRevision=routes.CurrentMapRevision,NextWaypointIndex=1,RoutePayloadJson="unchanged-route",Revision=8});
+        db.StationBerths.Add(new(){StationId=1,RobotId=1});await db.SaveChangesAsync();
+        await service.Act(1,"pause",new("Pause test",ExpectedAssignmentId:1),42,default);
+        var context=System.Text.Json.JsonSerializer.SerializeToElement(new {resumeToken=Guid.NewGuid(),controllerSessionId=Guid.NewGuid(),mapRevision=routes.CurrentMapRevision,nextWaypointIndex=1,phase="MOVING"});
+        Assert.Equal(MissionEventResult.Applied,await service.HandleEvent("R1",new(){Event="CONTROL_STOPPED",TaskId=1,AssignmentId=1,MissionId=1,
+            CommandId=db.TaskInterventions.Single().CommandId,ResumeContext=context},default));
+        return (db,service,context);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ResumeWaitsForRobotAndPreservesSameMissionLoadProgressAndReservation(bool loaded)
+    {
+        var (db,service,context)=await PausedResumeFixture(loaded);
+        await service.Act(1,"resume",new("Path inspected",PhysicalSafetyConfirmed:true,ExpectedAssignmentId:1),42,default);
+        Assert.True(await service.IsHeld(1,default));
+        var command=db.TaskInterventions.Single().CommandId;
+        Assert.Equal(MissionEventResult.Applied,await service.HandleEvent("R1",new(){Event="CONTROL_RESUMED",TaskId=1,AssignmentId=1,MissionId=1,CommandId=command,ResumeContext=context},default));
+        Assert.False(await service.IsHeld(1,default));Assert.Equal("EXECUTING",db.TransportTasks.Single().TaskStatus);
+        Assert.Equal(loaded?"NAVIGATING_TO_DELIVERY":"NAVIGATING_TO_PICKUP",db.Missions.Single().MissionStatus);
+        Assert.Equal("ACTIVE",db.TaskAssignments.Single().AssignmentStatus);Assert.Single(db.StationBerths);
+        Assert.Equal(1,db.MissionExecutions.Single().NextWaypointIndex);Assert.Equal(8,db.MissionExecutions.Single().Revision);
+        Assert.Equal("unchanged-route",db.MissionExecutions.Single().RoutePayloadJson);
+        Assert.Equal(loaded,db.DeliveryVerifications.Any(v=>v.IsVerified));Assert.Equal("BUSY",db.Robots.Single().OperationalStatus);
+        Assert.Equal(MissionEventResult.Duplicate,await service.HandleEvent("R1",new(){Event="CONTROL_RESUMED",TaskId=1,AssignmentId=1,MissionId=1,CommandId=command,ResumeContext=context},default));
+    }
+
+    [Theory]
+    [InlineData("OFFLINE")][InlineData("STALE")][InlineData("FAULT")][InlineData("BATTERY")]
+    [InlineData("MAINTENANCE")][InlineData("CANCEL")][InlineData("NO_ACK")][InlineData("NO_CONTEXT")]
+    public async Task ResumeFailsClosedForUnsafeOrUnacknowledgedPause(string problem)
+    {
+        var(db,service,_)=await PausedResumeFixture();var robot=db.Robots.Single();var control=db.TaskInterventions.Single();
+        switch(problem) {
+            case "OFFLINE":robot.ConnectionStatus="OFFLINE";break;
+            case "STALE":robot.LastTelemetryTime=DateTime.UtcNow.AddMinutes(-5);break;
+            case "FAULT":db.RobotIncidents.Add(new(){RobotId=1,IncidentType="TEST",Severity="ERROR",IsResolved=false});break;
+            case "BATTERY":robot.BatteryPercent=5;break;
+            case "MAINTENANCE":robot.OperationalStatus="MAINTENANCE";break;
+            case "CANCEL":control.State="CANCEL_REQUESTED";break;
+            case "NO_ACK":control.CommandAcknowledged=false;break;
+            case "NO_CONTEXT":control.PauseContextJson=null;break;
+        }
+        await db.SaveChangesAsync();
+        await Assert.ThrowsAsync<InvalidOperationException>(()=>service.Act(1,"resume",new("Checked",PhysicalSafetyConfirmed:true,ExpectedAssignmentId:1),42,default));
+        Assert.True(control.Paused);Assert.Single(db.RobotCommandOutbox);Assert.Single(db.StationBerths);
+    }
+
+    [Fact] public async Task NewPauseFencesALateResumeAcknowledgement()
+    {
+        var(db,service,context)=await PausedResumeFixture();
+        await service.Act(1,"resume",new("Checked",PhysicalSafetyConfirmed:true,ExpectedAssignmentId:1),42,default);
+        var old=db.TaskInterventions.Single().CommandId;
+        await service.Act(1,"pause",new("New stop overrides pending resume"),42,default);
+        Assert.Equal(MissionEventResult.Rejected,await service.HandleEvent("R1",new(){Event="CONTROL_RESUMED",TaskId=1,AssignmentId=1,MissionId=1,CommandId=old,ResumeContext=context},default));
+        Assert.True(db.TaskInterventions.Single().Paused);
+    }
+
+    [Fact] public void ResumeNavigationRequiresFreshClearSensors()
+    {
+        var nav=new NavigationCoordinator(new TestEnvironment(),new ConfigurationBuilder().Build(),NullLogger<NavigationCoordinator>.Instance);
+        Assert.False(nav.CanResumeMotion("R1",out _));
+        nav.OnLidar(1,"R1","CLEAR");Assert.True(nav.CanResumeMotion("R1",out _));
+        nav.OnLidar(1,"R1","CRITICAL");Assert.False(nav.CanResumeMotion("R1",out _));
+    }
+
+    [Fact] public async Task ResumingAStartingMissionGetsABoundedStartAckGrace()
+    {
+        var(db,service,_)=await PausedResumeFixture();var now=DateTime.UtcNow;
+        db.Missions.Single().MissionStatus="INITIALIZING";db.Missions.Single().CreatedAt=now.AddMinutes(-5);
+        var c=db.TaskInterventions.Single();c.Paused=false;c.ResumedAt=now;
+        await db.SaveChangesAsync();
+        var monitor=new RobotHealthMonitor(db,new ConfigurationBuilder().Build(),service);
+        Assert.Empty(await monitor.CheckAsync(now));Assert.Equal("INITIALIZING",db.Missions.Single().MissionStatus);
+        await monitor.CheckAsync(now.AddSeconds(31));Assert.Equal("FAILED",db.Missions.Single().MissionStatus);
+        Assert.Equal("ACTIVE",db.TaskAssignments.Single().AssignmentStatus);Assert.Single(db.StationBerths);
+    }
     private static (SmartFleetDbContext db, TaskInterventionService service, QrDemoRouteService routes) Fixture(bool assigned = true, bool home = false, bool navigation = false)
     {
         var options = new DbContextOptionsBuilder<SmartFleetDbContext>()

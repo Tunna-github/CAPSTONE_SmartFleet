@@ -35,8 +35,14 @@ public sealed class SimulationScene
     {
         if (!config.GetValue<bool>("Simulation:Enabled")) return new();
         var path=config["Simulation:ManifestPath"] ?? Path.Combine(env.ContentRootPath,"..","simulation","config","scene-manifest.json");
-        return JsonSerializer.Deserialize<SimulationScene>(File.ReadAllText(path),new JsonSerializerOptions(JsonSerializerDefaults.Web))
+        var scene = JsonSerializer.Deserialize<SimulationScene>(File.ReadAllText(path),new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new InvalidDataException("Simulation manifest is missing.");
+        // Warehouse identity is a deployment binding; geometry/hash/anchors stay
+        // exactly as commissioned in the manifest. SharedDatabaseLease validates
+        // this configured warehouse against the selected profile before startup.
+        if (config.GetValue<bool>("SharedDatabase:Enabled") && config.GetValue<int>("Navigation:WarehouseId") is > 0 and var warehouse)
+            scene.WarehouseId = warehouse;
+        return scene;
     }
     public bool Matches(WarehouseMapDocument map)
     {

@@ -193,6 +193,8 @@ html, body, #root {
 .sf-muted { color: var(--text-muted); }
 .sf-eyebrow { color: var(--text-faint); font-size: 10px; font-weight: 700; letter-spacing: .1em; line-height: 1.7; }
 .sf-card { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 16px; box-shadow: 0 4px 24px #00000008; }
+.map-switch-backdrop { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; background: #020617ba; backdrop-filter: blur(4px); }
+.map-switch-backdrop > div { max-height: calc(100dvh - 40px); overflow-y: auto; }
 .sf-label { display: block; color: var(--text-secondary); font-size: 12px; font-weight: 500; }
 .sf-input { width: 100%; padding: 10px 12px; min-height: 40px; border: 1px solid var(--border-medium); border-radius: 8px; background: var(--surface-3); color: var(--text-primary); font-size: 13px; line-height: 1.5; }
 .sf-input:focus { border-color: var(--primary); }

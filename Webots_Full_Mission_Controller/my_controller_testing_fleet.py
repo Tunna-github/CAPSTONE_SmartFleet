@@ -25,6 +25,7 @@ import datetime as sf_datetime
 import paho.mqtt.client as mqtt
 from controller import Robot, Keyboard
 from aruco_localization import PoseEstimator, HeadingFusion
+from task_resume import PausedMission
 
 # ============================================================
 # TEST CONFIGURATION - verify before a mission
@@ -781,6 +782,9 @@ SAFETY_FILE = os.path.join(SAFETY_DIRECTORY, ".smartfleet-safety-" + ROBOT_CODE 
 safety_hold = os.path.exists(SAFETY_FILE)
 safety_commands = {}
 safety_generation = {}
+controller_session_id = str(uuid.uuid4())
+pause_runtime = None
+resume_transition = None
 if safety_hold:
     try:
         with open(SAFETY_FILE, "r", encoding="utf-8") as handle:
@@ -797,16 +801,72 @@ def latch_safety(data):
                    "generation": data.get("generation", 0)}, handle)
 
 
-def safety_ack(data, event="CONTROL_STOPPED", marker=None):
-    publish(STATUS_TOPIC, {"eventId": str(uuid.uuid4()), "event": event,
+def safety_ack(data, event="CONTROL_STOPPED", marker=None, reason=None):
+    body = {"eventId": str(uuid.uuid4()), "event": event,
         "taskId": data["taskId"], "assignmentId": data["assignmentId"],
         "missionId": data["missionId"], "commandId": data["commandId"],
-        "currentArUcoId": marker})
+        "currentArUcoId": marker}
+    saved = globals().get('pause_runtime')
+    if event=='CONTROL_STOPPED' and saved is not None and saved.pause_command_id==data['commandId']:
+        body['resumeContext']=dict(saved.context)
+    if event=='CONTROL_RESUME_REJECTED': body['reason']=reason or ('RESUME_CONTEXT_LOST' if saved is None else 'RESUME_UNSAFE')
+    publish(STATUS_TOPIC,body)
+
+
+def capture_pause_runtime(data):
+    global pause_runtime, resume_transition
+    if not safety_hold or pause_runtime is None:
+        pause_runtime = PausedMission(mission,pending,robot.getTime(),time.monotonic(),
+            (left_encoder.getValue(),right_encoder.getValue()),get_yaw_deg(),controller_session_id,sf_nav_epoch)
+    pause_runtime.bind(data)
+    resume_transition=None
+
+
+def request_task_resume(data):
+    global pending, resume_transition
+    stop_robot()
+    if resume_transition is not None and resume_transition['commandId']==data['commandId']: return
+    context=globals().get('pause_runtime')
+    if context is None or mission is None:
+        safety_commands[data['commandId']]=('CONTROL_RESUME_REJECTED',None)
+        safety_ack(data,'CONTROL_RESUME_REJECTED',reason='RESUME_CONTEXT_LOST');return
+    safe = (safety_hold and connected and not sf_reconnected_with_mission and localization_valid and
+        context.matches(data,mission,(left_encoder.getValue(),right_encoder.getValue()),get_yaw_deg(),sf_nav_epoch) and
+        sf_local_obstacle=='CLEAR' and (mission['phase']!='MOVING' or sf_wheel_scale()>0))
+    if not safe:
+        safety_commands[data['commandId']]=('CONTROL_RESUME_REJECTED',None)
+        safety_ack(data,'CONTROL_RESUME_REJECTED',reason='RESUME_UNSAFE');return
+    pending=None
+    send_reliable('CONTROL_RESUMED',STATUS_TOPIC,dict(event='CONTROL_RESUMED',taskId=data['taskId'],
+        assignmentId=data['assignmentId'],missionId=data['missionId'],commandId=data['commandId'],
+        resumeContext=dict(context.context)),STATUS_ACK_TOPIC)
+    resume_transition=dict(data)
+
+
+def tick_task_resume():
+    global pending, resume_transition, pause_runtime, safety_hold, state_start_time, mission_camera_lost_since
+    stop_robot()
+    result=tick_pending()
+    if result is None:return
+    accepted,reason,kind,index=result
+    command=resume_transition;resume_transition=None
+    if not accepted:
+        safety_ack(command,'CONTROL_RESUME_REJECTED',reason='Backend did not authorize Resume: '+reason);return
+    saved=pause_runtime
+    if saved is None or mission is not saved.mission:return
+    pending,delta=saved.restore(robot.getTime(),time.monotonic(),sf_nav_request,ACK_TIMEOUT_SECONDS,ACK_RETRY_SECONDS)
+    state_start_time += delta
+    if mission_camera_lost_since is not None:mission_camera_lost_since += delta
+    if os.path.exists(SAFETY_FILE):os.remove(SAFETY_FILE)
+    safety_commands[command['commandId']]=('CONTROL_RESUMED',current_marker)
+    safety_hold=False;pause_runtime=None
+    print('[RESUME] Same mission and waypoint restored; load and traffic locks retained')
 
 
 def handle_safety_command(data):
     global mission, pending, current_state, safety_hold
     global sf_nav_request, sf_nav_directive
+    global pause_runtime, resume_transition
     command_id = data.get("commandId")
     if not isinstance(command_id, str) or not command_id:
         return
@@ -824,6 +884,10 @@ def handle_safety_command(data):
         safety_ack(data, event, marker)
         return
     kind = data.get("command")
+    if kind=='RESUME_TASK':
+        safety_generation[task_id]=generation
+        request_task_resume(data)
+        return
     if kind in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL"):
         marker = current_marker if current_marker is not None and visible_marker(current_marker) is not None else None
         if (kind == 'CANCEL_STOP' and marker is None and not safety_hold and mission is not None
@@ -839,6 +903,10 @@ def handle_safety_command(data):
             print('[CANCEL] Finishing current leg to a camera-confirmed checkpoint before returning to charge')
             return
         stop_robot()
+        if kind=='PAUSE_TASK' and mission is not None and all(k in mission for k in ('taskId','assignmentId','mapRevision','next_index')):
+            capture_pause_runtime(data)
+        else:
+            pause_runtime=None;resume_transition=None
         safety_generation[task_id] = generation
         latch_safety(data)
         pending = None
@@ -1026,7 +1094,7 @@ def handle_incoming():
                 except (ValueError, RuntimeError, KeyError) as ex:
                     print("[CHARGING REJECTED]", ex)
                 continue
-            if data.get("command") in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL", "RETURN_HOME"):
+            if data.get("command") in ("PAUSE_TASK", "CANCEL_STOP", "FORCE_CANCEL", "RETURN_HOME", "RESUME_TASK"):
                 try:
                     handle_safety_command(data)
                 except Exception as ex:
@@ -1495,6 +1563,9 @@ def tick_mission():
     global mission, current_state, stable_counter, last_detected_id
     global missing_align_frames, target_yaw_deg, ready_acknowledged
     global ready_event_id, ready_last_sent, safety_hold
+    if globals().get('resume_transition') is not None:
+        tick_task_resume()
+        return
     if safety_hold and (mission is None or mission.get("phase") != "HOME_ACK"):
         stop_robot()
         return

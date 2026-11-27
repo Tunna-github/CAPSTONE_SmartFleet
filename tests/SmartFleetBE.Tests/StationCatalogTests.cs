@@ -18,6 +18,39 @@ namespace SmartFleetBE.Tests;
 
 public sealed class StationCatalogTests
 {
+    private static async Task AddInactiveWarehouse(Fixture f)
+    {
+        f.Db.Warehouses.Add(new() { WarehouseId=2, WarehouseCode="WH2", WarehouseName="Other warehouse", IsActive=true });
+        f.Db.Zones.Add(new() { ZoneId=2, WarehouseId=2, ZoneCode="STORAGE", ZoneName="Storage", IsActive=true });
+        f.Db.Stations.AddRange(new Station { StationId=3,ZoneId=2,StationCode="WH2-QR2",StationName="Milk",StationType="TRANSFER",QrCodePayload="WH2:QR2",IsActive=true },
+            new Station { StationId=4,ZoneId=2,StationCode="WH2-QR7",StationName="Noodles",StationType="TRANSFER",QrCodePayload="WH2:QR7",IsActive=true });
+        f.Db.StationCheckpoints.AddRange(new() { StationId=3,WarehouseId=2,ArucoId=2 }, new() { StationId=4,WarehouseId=2,ArucoId=7 });
+        f.Db.MapConfigurations.Add(new() { MapId=2,WarehouseId=2,IsActive=true,MapVersion="independent",MapMetadataJson=JsonSerializer.Serialize(new {navigationMap=f.Nav.GetMap()},new JsonSerializerOptions(JsonSerializerDefaults.Web)) });
+        await f.Db.SaveChangesAsync();
+    }
+
+    [Fact] public async Task InactiveWarehouseCanQueueUsingItsOwnMapButCannotDispatch()
+    {
+        using var f = new Fixture(); await AddInactiveWarehouse(f);
+        var route = await TaskLocationPolicy.ResolveRouteAsync(f.Db,2,3,4,f.Routes,default,allowInactiveWarehouse:true);
+        Assert.Equal(2,route.PickupArUcoId); Assert.Equal(7,route.DeliveryArUcoId);
+        await Assert.ThrowsAsync<ArgumentException>(()=>TaskLocationPolicy.ResolveRouteAsync(f.Db,2,3,4,f.Routes,default));
+        await Assert.ThrowsAsync<ArgumentException>(()=>TaskLocationPolicy.ResolveRouteAsync(f.Db,1,3,4,f.Routes,default,true));
+        f.Db.TransportTasks.Add(new() {TaskId=100,WarehouseId=2,PickupStationId=3,DeliveryStationId=4,TaskStatus="QUEUED"});await f.Db.SaveChangesAsync();
+        Assert.Contains("inactive",(await TaskLocationPolicy.SynchronizeRouteAsync(f.Db,100,f.Routes,default))!);
+        Assert.Null(f.Routes.GetTaskSelection(100));
+    }
+
+    [Fact] public async Task CatalogKeepsTheSameQrNumberBoundToDifferentWarehouseStations()
+    {
+        using var f=new Fixture();await f.Catalog.SaveStation(1,f.Request("TRANSFER",2) with { QrCodePayload="P1" },1,default);await AddInactiveWarehouse(f);
+        using var doc=JsonDocument.Parse(JsonSerializer.Serialize(await f.Catalog.Read(default),new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        var points=doc.RootElement.GetProperty("transportPoints").EnumerateArray().Where(p=>p.GetProperty("arucoId").GetInt32()==2).ToArray();
+        Assert.Equal(2,points.Length);
+        Assert.Equal(1,points.Single(p=>p.GetProperty("warehouseId").GetInt32()==1).GetProperty("stationId").GetInt32());
+        var other=points.Single(p=>p.GetProperty("warehouseId").GetInt32()==2);
+        Assert.Equal(3,other.GetProperty("stationId").GetInt32());Assert.True(other.GetProperty("pickupEligible").GetBoolean());
+    }
     private sealed class Fixture : IDisposable
     {
         public readonly SmartFleetDbContext Db;

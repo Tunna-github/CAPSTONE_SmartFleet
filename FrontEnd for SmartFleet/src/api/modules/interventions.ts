@@ -5,7 +5,7 @@ export interface InterventionRow {
   taskStatus: string; operationalStatus: string; connectionStatus: string; missionStatus: string;
   assignmentStatus?: string; pickupVerified?: boolean;
   pickupStationId?: number; pickupStationName?: string;
-  intervention: { state: string; paused: boolean; commandAcknowledged: boolean } | null;
+  intervention: { state: string; paused: boolean; commandAcknowledged: boolean; resumeSupported?: boolean; resumeFailureReason?: string | null } | null;
 }
 export async function getInterventions(): Promise<InterventionRow[]> {
   return (await apiClient.get<InterventionRow[]>("/api/v1/task-interventions")).data;

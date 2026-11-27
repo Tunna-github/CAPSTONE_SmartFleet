@@ -9,5 +9,8 @@ public sealed class TaskIntervention
     public string? CommandId { get; set; }
     public int Generation { get; set; }
     public bool CommandAcknowledged { get; set; }
+    public string? PauseContextJson { get; set; }
+    public string? ResumeFailureReason { get; set; }
+    public DateTime? ResumedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

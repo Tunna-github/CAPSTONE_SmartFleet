@@ -20,6 +20,7 @@ export default function RobotSafetyPanel({ isCollapsed = false }: { isCollapsed?
   const [message, setMessage] = useState("");
   const [readError, setReadError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resumeConfirmed,setResumeConfirmed] = useState<Record<number,boolean>>({});
   const trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLElement>(null), close = useRef<HTMLButtonElement>(null);
   const confirm = (id: number, field: "stopped" | "unloaded" | "returned", value: boolean) =>
     setConfirmations(prev => ({ ...prev, [id]: { ...(prev[id] ?? { stopped: false, unloaded: false, returned: false }), [field]: value } }));
@@ -47,7 +48,8 @@ export default function RobotSafetyPanel({ isCollapsed = false }: { isCollapsed?
     try {
       const checked = confirmations[row.assignmentId];
       setMessage(await intervene(row.taskId, action, action === "pause" ? reason.trim() || "Emergency software stop requested by user" : reason,
-        checked?.stopped, checked?.unloaded, checked?.returned, row.assignmentId));
+        action==="resume" ? resumeConfirmed[row.assignmentId] : checked?.stopped, checked?.unloaded, checked?.returned, row.assignmentId));
+      setResumeConfirmed(prev=>({...prev,[row.assignmentId]:false}));
       setConfirmations(prev => { const next = { ...prev }; delete next[row.assignmentId]; return next; }); await refresh();
     } catch (e) { setMessage((e as Error).message); }
     finally { setBusy(false); }
@@ -55,14 +57,14 @@ export default function RobotSafetyPanel({ isCollapsed = false }: { isCollapsed?
   const drawer = open && <>
     <div className="safety-backdrop" onClick={() => setOpen(false)} aria-hidden="true" />
     <section ref={panel} id="robot-safety-panel" role="dialog" aria-modal="true" aria-label="Robot safety controls" className="safety-drawer">
-      <header className="safety-header"><div><p className="sf-eyebrow">FLEET SAFETY</p><h2>Stop, cancel &amp; recover</h2></div>
+      <header className="safety-header"><div><p className="sf-eyebrow">FLEET SAFETY</p><h2>Pause, resume &amp; recover</h2></div>
         <button ref={close} type="button" aria-label="Close safety panel" className="sf-button !px-3" onClick={() => setOpen(false)}>✕</button></header>
       <div className="safety-content">
         <p className="safety-intro"><strong>Pause stops movement.</strong> Cancel ends the task and returns an empty, healthy robot to charging. A loaded or faulty robot needs Maintenance.</p>
         <p className="sf-muted text-xs">Software Pause is not a physical E-Stop. Use the device E-Stop for immediate danger.</p>
         {readError && <p role="alert" className="sf-notice sf-notice-danger mt-3">Status could not refresh: {readError}. Cancellation controls are locked.</p>}
         {message && <p role="status" className="sf-notice mt-3 whitespace-pre-wrap">{message}</p>}
-        <label className="sf-label mt-4">Reason <span className="sf-muted text-xs font-normal">Required for cancellation or recovery</span>
+        <label className="sf-label mt-4">Reason <span className="sf-muted text-xs font-normal">Required for Resume, cancellation or recovery</span>
           <input className="sf-input mt-1" placeholder="For example: duplicate order or wrong item requested" value={reason} maxLength={400} onChange={e => setReason(e.target.value)} /></label>
         {rows.length === 0 && <div className="safety-empty"><strong>No transport tasks need intervention</strong><p className="sf-muted text-sm mt-1">Charging and return controls appear below when needed.</p></div>}
         {rows.map(row => {
@@ -70,12 +72,22 @@ export default function RobotSafetyPanel({ isCollapsed = false }: { isCollapsed?
           const recovered = row.taskStatus === "QUEUED" && row.assignmentStatus === "FAILED";
           const pending = ["CANCEL_STOP_PENDING", "RETURNING_HOME"].includes(state), paused = !!row.intervention?.paused;
           const canDirect = !cancelled && !recovered && state === "NORMAL" && !paused && !row.pickupVerified && ["INITIALIZING", "NAVIGATING_TO_PICKUP"].includes(row.missionStatus) && row.connectionStatus === "ONLINE" && row.operationalStatus === "BUSY";
-          const info = recovered ? { title: "Task queued · robot awaiting recovery", detail: "The failed attempt is preserved. Maintenance can return the inspected empty robot to charging before it takes another task." } : paused && pending ? {title:"Cancellation return paused",detail:"Movement has stopped. Request Maintenance recovery before continuing the return; task and resource locks remain held."} : stages[state] ?? (paused ? { title: "Movement paused", detail: "The task and resource locks remain held. Maintenance recovery is required before movement resumes." } : { title: "Task in progress", detail: canDirect ? "No pickup confirmed. Direct cancellation is available while the device is healthy." : "Load or device state needs Maintenance review before cancellation." });
+          const normalPause=paused && state==="NORMAL" && !cancelled && !recovered;
+          const canResume=normalPause && row.intervention?.resumeSupported && row.intervention.commandAcknowledged && row.connectionStatus==="ONLINE" && row.operationalStatus==="BUSY";
+          const info = recovered ? { title: "Task queued · robot awaiting recovery", detail: "The failed attempt is preserved. Maintenance can return the inspected empty robot to charging before it takes another task." } : paused && pending ? {title:"Cancellation return paused",detail:"Movement has stopped. Request Maintenance recovery before continuing the return; task and resource locks remain held."} : stages[state] ?? (paused ? { title: "Movement paused", detail: "The same task, load and resource locks remain held. Check safety before using Resume; faults or a lost controller session require Maintenance." } : { title: "Task in progress", detail: canDirect ? "No pickup confirmed. Direct cancellation is available while the device is healthy." : "Load or device state needs Maintenance review before cancellation." });
           const checked = confirmations[row.assignmentId], physical = !!checked?.stopped && !!checked?.unloaded && !!reason.trim() && !busy && !readError;
           return <article key={row.assignmentId} className="safety-task">
             <div className="flex justify-between gap-3 items-start"><div><h3>{row.robotCode}</h3><p className="sf-muted text-xs">Task #{row.taskId} · Pickup: {row.pickupStationName || "See transport task"}</p></div><span className="sf-badge">{row.connectionStatus}</span></div>
             <div className={`safety-stage ${state === "CANCELLED_HOLD" || paused ? "safety-stage-warning" : ""}`}><strong>{info.title}</strong><p>{info.detail}</p>{row.intervention && <span className="text-xs sf-muted block mt-2">{row.intervention.commandAcknowledged ? "Robot acknowledged control" : "Waiting for robot acknowledgement"}</span>}</div>
             {!recovered && <div className="safety-action"><div><strong>Pause movement</strong><p>Stop now and keep the task, load and resource locks.</p></div><button className="sf-button safety-stop" disabled={busy} onClick={() => void act(row, "pause")}>Pause / Stop</button></div>}
+            {normalPause && <div className="sf-card p-4 mt-3"><strong>Resume the same task</strong>
+              <p className="sf-muted text-sm mt-1">Continue from the paused progress. Goods verification, charging reservations and traffic locks stay unchanged.</p>
+              {!row.intervention?.commandAcknowledged && <p className="sf-notice mt-2">Waiting for robot acknowledgement. Movement remains stopped.</p>}
+              {row.intervention?.commandAcknowledged && !row.intervention.resumeSupported && <p className="sf-notice mt-2">The controller cannot restore this paused mission. Maintenance recovery is required.</p>}
+              {row.intervention?.resumeFailureReason && <p role="alert" className="sf-notice sf-notice-danger mt-2">{row.intervention.resumeFailureReason==="RESUME_CONTEXT_LOST" ? "Controller mission state was lost; Maintenance recovery is required." : "Robot stayed paused because it could not confirm safe continuation. Check the path, connection and robot position before retrying."}</p>}
+              <label className="flex gap-2 items-start text-sm mt-3"><input type="checkbox" checked={!!resumeConfirmed[row.assignmentId]} onChange={e=>setResumeConfirmed(prev=>({...prev,[row.assignmentId]:e.target.checked}))} />I checked that the path, robot and current load are safe to continue.</label>
+              <button className="sf-button sf-button-primary mt-3" disabled={busy || !!readError || !canResume || !resumeConfirmed[row.assignmentId] || !reason.trim()} onClick={()=>void act(row,"resume")}>Resume task</button>
+            </div>}
             {role === "operator" && !recovered && <>
               {!cancelled && <div className="safety-action"><div><strong>Cancel &amp; return to charging</strong><p>{canDirect ? "Finish the current empty leg at a safe QR, then reserve a charging bay." : "Unavailable while paused, loaded, offline or awaiting another intervention. Use Maintenance recovery."}</p></div><button className="sf-button sf-button-primary" disabled={busy || !!readError || !reason.trim() || !canDirect} onClick={() => void act(row, "cancel")}>Cancel task &amp; return</button></div>}
               {(!pending || paused) && state !== "CANCEL_REQUESTED" && <div className="safety-action"><div><strong>Ask Maintenance</strong><p>Use for a load, device fault or a cancelled robot without a safe QR.</p></div><button className="sf-button" disabled={busy || !!readError || !reason.trim()} onClick={() => void act(row, "request-cancel")}>Request Maintenance cancel</button></div>}

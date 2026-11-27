@@ -77,6 +77,10 @@ public sealed class AutoDispatchService(
                         IsolationLevel.Serializable,
                         cancellationToken);
 
+                if (!await MapSwitchGate.AllowsDispatch(db, configuration, cancellationToken)) return false;
+                if (configuration.GetValue<bool>("Charging:Enabled"))
+                    await DispatchChargingReservation.LockReadyAsync(db, taskId, null, cancellationToken);
+
                 // ======================================
                 // STEP 1: LOAD TASK
                 // ======================================
@@ -406,7 +410,7 @@ public sealed class AutoDispatchService(
                 if (routes != null)
                 {
                     try { payload = await MissionExecutionService.PrepareAsync(db, routes, assignment, cancellationToken); }
-                    catch (InvalidOperationException ex)
+                    catch (InvalidOperationException ex) when (!IsRetryablePostgresConflict(ex))
                     { logger.LogWarning("Task {TaskId} route/verification setup is not ready: {Reason}", taskId, ex.Message); return false; }
                 }
                 db.RobotCommandOutbox.Add(

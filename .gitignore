@@ -12,6 +12,7 @@ SmartFleetBE/appsettings.Local.json
 *.pfx
 *.key
 .env
+.aiven/
 .env.*
 !.env.example
 /.simulation-runtime/

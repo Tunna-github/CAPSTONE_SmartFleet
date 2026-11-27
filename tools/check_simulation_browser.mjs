@@ -54,7 +54,11 @@ try {
   await page.getByRole('button',{name:'Connect 3D',exact:true}).click();
   const frame=page.frameLocator('iframe[title="Live Webots 3D simulation"]');
   await frame.locator('canvas').first().waitFor({timeout:90000});
-  await page.waitForTimeout(20000);
+  // A cold browser may still be downloading Webots meshes after 20 seconds.
+  // Wait for the actual ready state; keep the subsequent strict checks unchanged.
+  await page.getByText('3D connected',{exact:true}).waitFor({timeout:180000});
+  const renderer=await (await page.locator('iframe[title="Live Webots 3D simulation"]').elementHandle()).contentFrame();
+  await renderer.waitForFunction(()=>document.body.innerText.trim()==='',undefined,{timeout:180000});
   await page.screenshot({path:path.join(output,'webots-3d.png'),fullPage:true,timeout:60000});
   const state=await frame.locator('body').evaluate(body=>({text:body.innerText.slice(0,500),
     canvases:[...body.querySelectorAll('canvas')].map(c=>({width:c.width,height:c.height})),

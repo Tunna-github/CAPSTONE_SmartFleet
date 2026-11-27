@@ -85,6 +85,7 @@ export function TasksPage() {
         const q = search.trim().toLowerCase();
         const matchSearch = !q
             || t.id.toLowerCase().includes(q)
+            || (t.warehouseName ?? "").toLowerCase().includes(q)
             || t.pickup.toLowerCase().includes(q)
             || t.delivery.toLowerCase().includes(q)
             || t.packageInfo.toLowerCase().includes(q)
@@ -356,7 +357,7 @@ export function TasksPage() {
                             <table className="w-full border-collapse" style={{ minWidth: 1000 }}>
                                 <thead className="sticky top-0 z-10">
                                     <tr style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-1)" }}>
-                                        {["Task ID", "Pickup", "Delivery", "Package", "Priority", "Assigned Robot", "Status", "Actions"].map((h) => (
+                                        {["Task ID", "Warehouse", "Pickup", "Delivery", "Package", "Priority", "Assigned Robot", "Status", "Actions"].map((h) => (
                                             <th
                                                 key={h}
                                                 className="text-left px-4 py-3 font-mono text-[10px] font-semibold tracking-wider whitespace-nowrap"
@@ -381,6 +382,7 @@ export function TasksPage() {
                                                 <div className="font-mono text-[12px] font-bold" style={{ color: "#22d3ee" }}>{task.id}</div>
                                                 <div className="font-mono text-[10px]" style={{ color: "var(--text-dimmest)" }}>{task.created}</div>
                                             </td>
+                                            <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-muted)" }}>{task.warehouseName || (task.warehouseId ? `Warehouse ${task.warehouseId}` : "—")}</td>
                                             <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-secondary)" }}>{task.pickup}</td>
                                             <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-secondary)" }}>{task.delivery}</td>
                                             <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-muted)" }}>{task.packageInfo}</td>
@@ -457,7 +459,7 @@ export function TasksPage() {
                                     {section.items.length === 0 && (
                                         <tr>
                                             <td
-                                                colSpan={8}
+                                                colSpan={9}
                                                 className="text-center py-12 text-[13px]"
                                                 style={{ color: "var(--text-dimmest)" }}
                                             >

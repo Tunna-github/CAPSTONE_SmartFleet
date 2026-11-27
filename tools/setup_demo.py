@@ -25,8 +25,12 @@ else:
     print("Created private credentials:", destination)
 if args.charging_layout:
     lines=destination.read_text(encoding="utf-8").splitlines()
+    shared = any(line.startswith("AIVEN_CONNECTION_STRING=") for line in lines)
     lines=[line for line in lines if not line.startswith("COMPOSE_FILE=")]
-    lines.append("COMPOSE_FILE="+os.pathsep.join(["compose.yaml","compose.charging.yaml"]))
+    files=["compose.yaml","compose.charging.yaml"]
+    if shared: files.append("compose.aiven.yaml")
+    lines.append("COMPOSE_FILE="+os.pathsep.join(files))
     destination.write_text("\n".join(lines)+"\n",encoding="utf-8")
-    print("Selected separated lanes and four charging bays. Existing active work must be recovered before physical scene commissioning.")
+    if shared: print("Preserved shared Aiven configuration. Select map1/map2 with tools/select_aiven_map.py; no database was changed.")
+    else: print("Selected separated lanes and four charging bays. Existing active work must be recovered before physical scene commissioning.")
 print("Login usernames: admin, operator, maintenance. Passwords are in the private .env file.")

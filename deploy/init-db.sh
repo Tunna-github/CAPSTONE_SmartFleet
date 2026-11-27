@@ -3,6 +3,7 @@ set -eu
 export PGPASSWORD="$POSTGRES_PASSWORD"
 until pg_isready -h database -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 2; done
 finish_charging_schema() {
+  psql -X -v ON_ERROR_STOP=1 -h database -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /database/20261127_task_resume.sql
   psql -X -v ON_ERROR_STOP=1 -h database -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /database/20261127_cancelled_task_actions.sql
   psql -X -v ON_ERROR_STOP=1 -h database -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /database/20261127_charging_jobs.sql
   if [ "${COMMISSION_DUAL_LANE:-false}" = true ]; then

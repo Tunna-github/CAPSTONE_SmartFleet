@@ -21,7 +21,7 @@ public sealed class MissionLifecycleService(SmartFleetDbContext db,
         RobotMissionEvent message,
         CancellationToken ct = default)
     {
-        if (message.Event is "CONTROL_STOPPED" or "HOME_REACHED")
+        if (message.Event is "CONTROL_STOPPED" or "HOME_REACHED" or "CONTROL_RESUMED" or "CONTROL_RESUME_REJECTED")
             return await interventions.HandleEvent(robotCode, message, ct);
         // =====================================================
         // 1. VALIDATE EVENT

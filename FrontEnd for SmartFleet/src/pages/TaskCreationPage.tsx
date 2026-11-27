@@ -49,6 +49,8 @@ export function TaskCreateForm({
         unavailableReason:s.unavailableReason || (!s.usable ? "Station is not ready." : null),
     }))).filter(p=>p.warehouseId===warehouse).sort((a,b)=>(a.arucoId??999)-(b.arucoId??999));
 
+    const worldInactive = !!catalog && warehouse !== catalog.navigationWarehouseId;
+
     const pickupStation = availableStations.find(s=>s.stationId===pickupSelected && ["PICKUP","TRANSFER"].includes(s.type));
     const deliveryStation = availableStations.find(s=>s.stationId===deliverySelected && ["DELIVERY","TRANSFER"].includes(s.type));
 
@@ -251,6 +253,7 @@ export function TaskCreateForm({
                             <option value="">Select warehouse</option>{catalog?.warehouses.filter(w=>w.isActive).map(w=><option key={w.warehouseId} value={w.warehouseId}>{w.code} — {w.name}</option>)}
                         </select>
                     </label>
+                    {worldInactive && <p className="sf-notice" role="status">This warehouse world is inactive. You can create tasks here; they stay queued until Admin selects its map.</p>}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <label className="text-sm">Pickup point (QR) *
                             <select aria-label="Pickup station" name="pickupStationId" className={inputClass} style={inputStyle} required value={pickupSelected||""} onChange={e=>setPickupSelected(Number(e.target.value))}>

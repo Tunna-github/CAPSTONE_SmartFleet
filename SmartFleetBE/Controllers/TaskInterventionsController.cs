@@ -25,7 +25,8 @@ public sealed class TaskInterventionsController(TaskInterventionService service,
                 a.Task.PickupStationId, pickupStationName = a.Task.PickupStation.StationName,
                 a.Robot.ConnectionStatus, missionStatus = a.Mission == null ? null : a.Mission.MissionStatus,
                 pickupVerified=db.DeliveryVerifications.Any(v=>a.Mission!=null&&v.MissionId==a.Mission.MissionId&&v.VerificationStage=="PICKUP"&&v.IsVerified),
-                intervention = db.TaskInterventions.FirstOrDefault(c => c.TaskId == a.TaskId) })
+                intervention = db.TaskInterventions.Where(c => c.TaskId == a.TaskId).Select(c=>new {
+                    c.State,c.Paused,c.CommandAcknowledged,c.ResumeFailureReason,resumeSupported=c.PauseContextJson!=null }).FirstOrDefault() })
             .ToListAsync(ct);
         return Ok(rows);
     }
@@ -54,6 +55,11 @@ public sealed class TaskInterventionsController(TaskInterventionService service,
     [HttpPost("{taskId:long}/pause")]
     public Task<IActionResult> Pause(long taskId, InterventionRequest request, CancellationToken ct) =>
         Execute(taskId, "pause", request, ct);
+
+    [HttpPost("{taskId:long}/resume")]
+    [Authorize(Roles=AppRoles.AdminOrWarehouseOperator+","+AppRoles.MaintenanceTechnician)]
+    public Task<IActionResult> Resume(long taskId, InterventionRequest request, CancellationToken ct) =>
+        Execute(taskId,"resume",request,ct);
 
     [HttpPost("{taskId:long}/return-to-charge")]
     [Authorize(Roles=AppRoles.MaintenanceTechnician)]

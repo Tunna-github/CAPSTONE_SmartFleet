@@ -188,8 +188,8 @@ public sealed class TransportTaskService : ITransportTaskService
             CreatedBy = createdByUserId,
             CreatedAt = now,
 
-            // Frontend already sends UTC ISO 8601.
-            ScheduledTime = request.ScheduledTime
+            // API clients may also send explicit ISO offsets; timestamptz needs UTC.
+            ScheduledTime = NormalizeUtc(request.ScheduledTime)
         };
 
         await _repository.AddAsync(
@@ -225,7 +225,7 @@ public sealed class TransportTaskService : ITransportTaskService
         // Configure the route before the QUEUED row becomes visible to AUTO's
         // worker. A file/DB failure rolls back creation; no half-configured task
         // can be assigned between two frontend requests.
-        if (qrPilot)
+        if (qrPilot && _routes!.SupportsWarehouse(task.WarehouseId))
         {
             try { _routes!.ConfigureTask(task.TaskId, stationRoute!.PickupArUcoId, stationRoute.DeliveryArUcoId); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -379,7 +379,7 @@ public sealed class TransportTaskService : ITransportTaskService
             NormalizeOptional(request.ItemDescription);
 
         task.PayloadWeightKg = request.PayloadWeightKg;
-        task.ScheduledTime = request.ScheduledTime;
+        task.ScheduledTime = NormalizeUtc(request.ScheduledTime);
 
         try { await _repository.SaveChangesAsync(cancellationToken); }
         catch (DbUpdateConcurrencyException)
@@ -388,7 +388,7 @@ public sealed class TransportTaskService : ITransportTaskService
                 .Conflict("Task changed during editing. Reload before trying again.");
         }
 
-        if (updatedRoute != null) _routes!.ConfigureTask(taskId, updatedRoute.PickupArUcoId, updatedRoute.DeliveryArUcoId);
+        if (updatedRoute != null && _routes!.SupportsWarehouse(task.WarehouseId)) _routes.ConfigureTask(taskId, updatedRoute.PickupArUcoId, updatedRoute.DeliveryArUcoId);
         await edit.CommitAsync(cancellationToken);
         var updated = await _repository.GetByIdAsync(
             taskId, cancellationToken);
@@ -550,4 +550,11 @@ public sealed class TransportTaskService : ITransportTaskService
             ? null
             : value.Trim();
     }
+
+    private static DateTime? NormalizeUtc(DateTime? value) => value?.Kind switch {
+        null => null,
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.Value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value!.Value, DateTimeKind.Utc)
+    };
 }

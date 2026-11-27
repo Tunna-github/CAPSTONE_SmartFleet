@@ -17,7 +17,7 @@ public sealed class RobotHealthMonitor(SmartFleetDbContext db, IConfiguration co
              r.LastTelemetryTime == null || r.LastTelemetryTime < cutoff || r.BatteryPercent < 20 ||
              db.Missions.Any(m => m.Assignment.RobotId == r.RobotId && m.Assignment.AssignmentStatus == "ACTIVE" &&
                  m.MissionStatus == "INITIALIZING" && m.CreatedAt < ackCutoff &&
-                 !db.TaskInterventions.Any(c => c.TaskId == m.Assignment.TaskId && (c.Paused || c.State != "NORMAL")))))
+                 !db.TaskInterventions.Any(c => c.TaskId == m.Assignment.TaskId && (c.Paused || c.State != "NORMAL" || c.ResumedAt>=ackCutoff)))))
             .Select(r => r.RobotId).ToListAsync(ct);
         var changed = new List<string>();
         foreach (var id in robots)
@@ -33,7 +33,8 @@ public sealed class RobotHealthMonitor(SmartFleetDbContext db, IConfiguration co
             var assignment = await db.TaskAssignments.Include(a => a.Task).Include(a => a.Mission)
                 .SingleOrDefaultAsync(a => a.RobotId == id && a.AssignmentStatus == "ACTIVE", ct);
             var ackTimeout = assignment?.Mission is { MissionStatus: "INITIALIZING" } initializing &&
-                initializing.CreatedAt < ackCutoff && !await interventions.IsHeld(assignment.TaskId, ct);
+                initializing.CreatedAt < ackCutoff && !await interventions.IsHeld(assignment.TaskId, ct) &&
+                !await db.TaskInterventions.AnyAsync(c=>c.TaskId==assignment.TaskId&&c.ResumedAt>=ackCutoff,ct);
             if (!offline && !ackTimeout && (robot.BatteryPercent == null || robot.BatteryPercent >= 20)) continue;
             var reason = offline ? "Robot heartbeat/telemetry timed out. Physical recovery is required before redispatching an active load."
                 : ackTimeout ? "Robot did not acknowledge mission start before the configured timeout. Stop and physically confirm recovery."

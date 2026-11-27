@@ -13,4 +13,5 @@ public sealed class RobotMissionEvent
     public string? Reason { get; set; }
     public string? CommandId { get; set; }
     public int? CurrentArUcoId { get; set; }
+    public System.Text.Json.JsonElement? ResumeContext { get; set; }
 }

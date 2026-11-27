@@ -9,7 +9,7 @@ public sealed class TransportTaskRepository : ITransportTaskRepository
 {
     public Task<SmartFleetBE.Services.TaskLocationPolicy.StationRoute> ResolveStationRouteAsync(int warehouseId, int pickupId, int deliveryId,
         SmartFleetBE.Services.QrDemoRouteService routes, CancellationToken ct) =>
-        SmartFleetBE.Services.TaskLocationPolicy.ResolveRouteAsync(_dbContext, warehouseId, pickupId, deliveryId, routes, ct);
+        SmartFleetBE.Services.TaskLocationPolicy.ResolveRouteAsync(_dbContext, warehouseId, pickupId, deliveryId, routes, ct, allowInactiveWarehouse: true);
     private readonly SmartFleetDbContext _dbContext;
 
     public TransportTaskRepository(SmartFleetDbContext dbContext)

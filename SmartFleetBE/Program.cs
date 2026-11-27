@@ -29,6 +29,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<StationCatalogService>();
 builder.Services.AddScoped<RobotRegistryService>();
 builder.Services.AddScoped<AnalyticsService>();
+builder.Services.AddScoped<MapSwitchService>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<FleetConnectionRegistry>();
 builder.Services.AddSingleton<FleetRealtimePublisher>();
@@ -185,6 +186,11 @@ builder.Services.AddSingleton<
 // =====================================================
 
 // Keep the existing Fast ACK implementation unchanged.
+if (builder.Configuration.GetValue<bool>("SharedDatabase:Enabled"))
+{
+    builder.Services.AddSingleton<SharedDatabaseLease>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<SharedDatabaseLease>());
+}
 builder.Services.AddSingleton<MqttService>();
 // QR graph A* / Webots progress state for one-robot pilot.
 builder.Services.AddSingleton<QrDemoRouteService>();
@@ -327,6 +333,9 @@ builder.Services.AddAuthorization();
 // =====================================================
 
 var app = builder.Build();
+// Acquire before any MQTT/navigation worker is even constructed.
+if (builder.Configuration.GetValue<bool>("SharedDatabase:Enabled"))
+    await app.Services.GetRequiredService<SharedDatabaseLease>().AcquireAsync(CancellationToken.None);
 
 // =====================================================
 // 10. SWAGGER

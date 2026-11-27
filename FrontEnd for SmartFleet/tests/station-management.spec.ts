@@ -46,8 +46,23 @@ async function setup(page:Page,role="Administrator",reject=false) {
         if(url.pathname==='/api/v1/demo-routing/map/validation')return route.fulfill({json:{readyForRouting:true,qrNodeCount:4,corridorCount:3,issues:[]}});
         return route.fulfill({json:url.pathname.endsWith('/positions')?{}:[]});
     });
-    return {writes, stations};
+    return {writes, stations, catalog};
 }
+
+test("Operator selects another warehouse with its own stations and sees the queue-only policy", async ({page}) => {
+    const {catalog,stations}=await setup(page,"Warehouse Operator");
+    catalog.warehouses.push({warehouseId:2,code:"WH1",name:"Warehouse 1 (Map 1)",isActive:true,revision:1});
+    catalog.zones.push({zoneId:2,warehouseId:2,code:"STORAGE",name:"Other storage",type:"STORAGE",speedLimit:.18,isActive:true,revision:1});
+    stations.push({...stations[0],stationId:17,zoneId:2,warehouseId:2,code:"WH1-QR2",name:"Milk WH1",type:"TRANSFER",qrCodePayload:"WH1:QR2"});
+    stations.push({...stations[1],stationId:18,zoneId:2,warehouseId:2,code:"WH1-QR7",name:"Noodles WH1",type:"TRANSFER",qrCodePayload:"WH1:QR7"});
+    await page.goto('/dashboard/tasks');await page.getByRole('button',{name:'Create Transport Task',exact:true}).click();
+    await page.getByRole('combobox',{name:'Warehouse',exact:true}).selectOption('2');
+    await expect(page.getByText(/This warehouse world is inactive/)).toBeVisible();
+    const pickup=page.getByRole('combobox',{name:'Pickup station',exact:true});
+    await expect(pickup.locator('option[value="1"]')).toHaveCount(0);
+    await pickup.selectOption('17');await page.getByRole('combobox',{name:'Delivery station',exact:true}).selectOption('18');
+    await expect(page.getByText(/Navigation resolved by station:/)).toContainText('QR2 → QR7');
+});
 
 test("Admin edits station mapping without writing map geometry",async({page},info)=>{
     const {writes}=await setup(page);await page.goto('/warehouse-stations');

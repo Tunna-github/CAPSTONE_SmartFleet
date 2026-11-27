@@ -256,6 +256,11 @@ public sealed class TaskDispatchService : ITaskDispatchService
                 IsolationLevel.Serializable,
                 cancellationToken);
 
+        if (!await MapSwitchGate.AllowsDispatch(_db, _configuration, cancellationToken))
+            return TransportTaskServiceResult<ManualAssignTaskResponse>.Conflict("Map change in progress. Dispatch will resume after the new world is verified.");
+        if (_configuration.GetValue<bool>("Charging:Enabled"))
+            await DispatchChargingReservation.LockReadyAsync(_db, taskId, robotId, cancellationToken);
+
         // STEP 1: GET TASK
 
         var task = await _db.TransportTasks

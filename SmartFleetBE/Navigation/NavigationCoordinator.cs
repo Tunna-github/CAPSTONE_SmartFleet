@@ -308,6 +308,19 @@ public sealed class NavigationCoordinator
         }
     }
 
+    public bool CanResumeMotion(string robotCode, out string reason)
+    {
+        lock (_gate) {
+            if (!_robots.TryGetValue(robotCode,out var robot) || DateTime.UtcNow-robot.LidarAtUtc>TimeSpan.FromSeconds(2.5) || robot.LidarStatus!="CLEAR") {
+                reason="Wait for fresh CLEAR LiDAR before resuming."; return false;
+            }
+            if (_intersections.Values.Any(i=>i.Blocked && (i.ActiveRobotCode==robotCode || i.Waiting.ContainsKey(robotCode)))) {
+                reason="An intersection safety hold requires Maintenance recovery."; return false;
+            }
+            reason="";return true;
+        }
+    }
+
     /// <summary>
     /// Register the *last scanned marker* and the *planned next marker*.
     /// Counting happens only when the next marker is an actual intersection and

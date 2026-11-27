@@ -57,3 +57,25 @@ for (const role of ["Warehouse Operator", "Maintenance Technician", "Administrat
     }
   });
 }
+
+for (const role of ["Warehouse Operator","Maintenance Technician","Administrator"]) test(`${role} resumes the same loaded mission after safety confirmation`,async({page})=>{
+ const user={userId:1,fullName:"Resume tester",roles:[role]}, calls:any[]=[];
+ let paused=true;
+ await page.addInitScript(user=>{localStorage.setItem("smartfleet_access_token","test-only");localStorage.setItem("smartfleet_user",JSON.stringify(user));},user);
+ await page.route("https://localhost:7166/**",async route=>{
+  const req=route.request(),path=new URL(req.url()).pathname;
+  if(path.endsWith("/users/me"))return route.fulfill({json:user});
+  if(path==="/api/v1/task-interventions")return route.fulfill({json:[{taskId:1,assignmentId:7,robotId:1,robotCode:"RESUME-R1",taskTrackingCode:"TEST",taskStatus:"EXECUTING",missionStatus:"NAVIGATING_TO_DELIVERY",pickupVerified:true,connectionStatus:"ONLINE",operationalStatus:"BUSY",intervention:{state:"NORMAL",paused,commandAcknowledged:true,resumeSupported:true}}]});
+  if(path.endsWith("/resume")){calls.push(req.postDataJSON());paused=false;return route.fulfill({json:{message:"Same mission resumed"}});}
+  if(path.startsWith("/hubs/"))return route.fulfill({status:503,json:{}});
+  return route.fulfill({json:[]});
+ });
+ await page.goto("/profile");await page.getByRole("button",{name:"Robot safety / Pause",exact:true}).click();
+ const button=page.getByRole("button",{name:"Resume task",exact:true});await expect(button).toBeDisabled();
+ await page.getByRole("textbox",{name:"Reason"}).fill("Path and loaded robot inspected");await expect(button).toBeDisabled();
+ await page.getByRole("checkbox",{name:"I checked that the path, robot and current load are safe to continue.",exact:true}).check();await button.click();
+ await expect.poll(()=>calls.length).toBe(1);
+ expect(calls[0]).toMatchObject({expectedAssignmentId:7,physicalSafetyConfirmed:true,loadRemovedConfirmed:false,loadReturnedToPickupConfirmed:false});
+ await expect(page.getByText("Same mission resumed",{exact:true})).toBeVisible();
+ await expect(page.getByRole("button",{name:"Resume task",exact:true})).toHaveCount(0);
+});

@@ -12,7 +12,7 @@ public sealed record StationWrite(int ZoneId, string Code, string Name, string T
     decimal CoordZ, decimal YawAngle, string? QrCodePayload, int? ArucoId, bool IsActive, int Capacity, int Revision);
 public sealed record BerthWrite(int RobotId, bool Release, bool PhysicalAreaConfirmedClear, string Reason);
 
-public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoordinator navigation)
+public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoordinator navigation, IConfiguration? config = null)
 {
     public static readonly string[] StationTypes = ["PICKUP", "DELIVERY", "TRANSFER", "WAITING", "CHARGING"];
     public static readonly string[] ZoneTypes = ["PICKUP", "DELIVERY", "WAITING", "CHARGING", "TRANSIT", "DISPATCH", "STORAGE"];
@@ -28,30 +28,43 @@ public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoor
         var robots = await db.Robots.AsNoTracking().Select(r => new { r.RobotId, r.RobotCode, r.WarehouseId }).ToListAsync(ct);
         var map = navigation.GetMap();
         var occupied = navigation.GetCheckpointOccupants();
+        var warehouseMaps = new Dictionary<int, WarehouseMapDocument>();
+        foreach (var saved in await db.MapConfigurations.AsNoTracking().Where(m => m.IsActive).ToListAsync(ct)) {
+            try {
+                using var doc = JsonDocument.Parse(saved.MapMetadataJson ?? "{}");
+                if (doc.RootElement.TryGetProperty("navigationMap", out var stored))
+                    warehouseMaps[saved.WarehouseId] = stored.Deserialize<WarehouseMapDocument>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            } catch (JsonException) { /* Invalid saved maps remain unavailable for task creation. */ }
+        }
+        if (navigation.WarehouseId is int activeWarehouse) warehouseMaps[activeWarehouse] = map;
         var stations = rows.Select(s => {
             var claim = berths.SingleOrDefault(b => b.StationId == s.StationId);
             var codes = s.Checkpoint != null && s.Checkpoint.WarehouseId == navigation.WarehouseId
                 ? occupied.Where(p => p.Value.Contains(s.Checkpoint.ArucoId)).Select(p => p.Key).ToList() : [];
             if (claim != null && robots.SingleOrDefault(r => r.RobotId == claim.RobotId) is { } robot && !codes.Contains(robot.RobotCode)) codes.Add(robot.RobotCode);
-            var unavailableReason = UnavailableReason(s, map, navigation.WarehouseId);
+            var hasMap = warehouseMaps.TryGetValue(s.Zone.WarehouseId, out var stationMap);
+            var unavailableReason = UnavailableReason(s, stationMap ?? map, hasMap ? s.Zone.WarehouseId : navigation.WarehouseId);
             return new { s.StationId, s.ZoneId, s.Zone.WarehouseId, code = s.StationCode, name = s.StationName, type = s.StationType,
                 s.CoordX, s.CoordY, s.CoordZ, s.YawAngle, coordinateFrame = "LOCAL_METRIC", s.QrCodePayload,
                 arucoId = s.Checkpoint?.ArucoId, s.IsActive, s.Capacity, s.Revision,
                 usable = unavailableReason == null, unavailableReason,
                 isOccupied = s.IsOccupied || codes.Count > 0, occupantRobotCodes = codes, reservedRobotId = claim?.RobotId };
         }).ToList();
-        var transportPoints = map.Cells.SelectMany(r => r).Where(c => c.Type == "qr" && c.ArucoId != null &&
-                (!map.DirectedLinks || c.IsIntersection || c.OperationalRole is "PICKUP" or "DELIVERY" or "TRANSFER"))
+        var mapViews = warehouseMaps.Select(p => (WarehouseId: (int?)p.Key, Map: p.Value)).ToList();
+        if (mapViews.Count == 0) mapViews.Add((navigation.WarehouseId, map));
+        var transportPoints = mapViews.SelectMany(view => view.Map.Cells.SelectMany(r => r)
+            .Where(c => c.Type == "qr" && c.ArucoId != null &&
+                (!view.Map.DirectedLinks || c.IsIntersection || c.OperationalRole is "PICKUP" or "DELIVERY" or "TRANSFER"))
             .OrderBy(c => c.ArucoId).Select(c => {
-                var station = stations.SingleOrDefault(s => s.WarehouseId == navigation.WarehouseId && s.arucoId == c.ArucoId);
+                var station = stations.SingleOrDefault(s => s.WarehouseId == view.WarehouseId && s.arucoId == c.ArucoId);
                 var reason = c.IsIntersection ? "Reserved intersection: transit only, no goods transfer." : station?.unavailableReason ??
                     (station == null ? "No operational station is configured at this checkpoint." : null);
-                return new { warehouseId = navigation.WarehouseId, arucoId = c.ArucoId, label = c.Label,
+                return new { warehouseId = view.WarehouseId, arucoId = c.ArucoId, label = c.Label,
                     stationId = station?.StationId, stationCode = station?.code, stationName = station?.name,
                     pickupEligible = reason == null && station!.type is "PICKUP" or "TRANSFER",
                     deliveryEligible = reason == null && station!.type is "DELIVERY" or "TRANSFER",
                     unavailableReason = reason, stationType = station?.type };
-            }).ToList();
+            })).ToList();
         return new { warehouses, zones, stations, transportPoints, robots, navigationWarehouseId = navigation.WarehouseId,
             mapRevision = map.Revision, capacityPolicy = "One robot per marker; reservations and last camera occupancy persist until confirmed clear. A reservation alone never proves physical docking." };
     }
@@ -99,6 +112,8 @@ public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoor
         var name = Required(request.Name, "Warehouse name", 120);
         if (request.Address?.Length > 255) throw new ArgumentException("Address must not exceed 255 characters.");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (config != null && !await MapSwitchGate.AllowsDispatch(db, config, ct))
+            throw new InvalidOperationException("Map change in progress. Wait before changing station configuration.");
         var row = id.HasValue ? await db.Warehouses.SingleOrDefaultAsync(w => w.WarehouseId == id, ct) ?? throw new KeyNotFoundException() : new Warehouse();
         if (id.HasValue) { Revision(row.Revision, request.Revision); await Guard(id.Value, ct); }
         if (await db.Warehouses.AnyAsync(w => w.WarehouseId != (id ?? 0) && w.WarehouseCode.ToUpper() == code, ct)) throw new InvalidOperationException("Duplicate warehouse code.");
@@ -117,6 +132,8 @@ public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoor
         var code = Required(request.Code, "Zone code", 30).ToUpperInvariant(); var name = Required(request.Name, "Zone name", 80);
         if (!ZoneTypes.Contains(request.Type) || request.SpeedLimit is <= 0 or > 1) throw new ArgumentException("Invalid zone type or speed limit (0 < limit <= 1).");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (config != null && !await MapSwitchGate.AllowsDispatch(db, config, ct))
+            throw new InvalidOperationException("Map change in progress. Wait before changing station configuration.");
         var row = id.HasValue ? await db.Zones.SingleOrDefaultAsync(z => z.ZoneId == id, ct) ?? throw new KeyNotFoundException() : new Zone();
         if (id.HasValue) { Revision(row.Revision, request.Revision); await Guard(row.WarehouseId, ct); }
         await Guard(request.WarehouseId, ct);
@@ -140,6 +157,8 @@ public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoor
         var payload = request.QrCodePayload?.Trim();
         if (payload?.Length > 150 || request.IsActive && request.Type is "PICKUP" or "DELIVERY" or "TRANSFER" && string.IsNullOrWhiteSpace(payload)) throw new ArgumentException("Active pickup/delivery requires a station verification QR payload (max 150 characters).");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (config != null && !await MapSwitchGate.AllowsDispatch(db, config, ct))
+            throw new InvalidOperationException("Map change in progress. Wait before changing station configuration.");
         var zone = await db.Zones.Include(z => z.Warehouse).SingleOrDefaultAsync(z => z.ZoneId == request.ZoneId, ct) ?? throw new ArgumentException("Zone does not exist.");
         if (request.IsActive && (!zone.IsActive || !zone.Warehouse.IsActive)) throw new ArgumentException("An active station requires an active zone and warehouse.");
         await Guard(zone.WarehouseId, ct);
@@ -148,7 +167,7 @@ public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoor
             Revision(row.Revision, request.Revision); await Guard(row.Zone.WarehouseId, ct);
             if (row.Zone.WarehouseId != zone.WarehouseId) throw new InvalidOperationException("Station cannot move between warehouses; preserve historical references.");
             if (row.IsOccupied || await db.StationBerths.AnyAsync(b => b.StationId == id, ct)) throw new InvalidOperationException("Release the occupied/reserved station before editing it.");
-            if (row.Checkpoint != null && navigation.GetCheckpointOccupants().Values.Any(ids => ids.Contains(row.Checkpoint.ArucoId)) &&
+            if (row.Zone.WarehouseId == navigation.WarehouseId && row.Checkpoint != null && navigation.GetCheckpointOccupants().Values.Any(ids => ids.Contains(row.Checkpoint.ArucoId)) &&
                 (request.ArucoId != row.Checkpoint.ArucoId || request.Type != row.StationType || !request.IsActive || row.ZoneId != request.ZoneId ||
                     row.CoordX != request.CoordX || row.CoordY != request.CoordY || row.CoordZ != request.CoordZ || row.YawAngle != request.YawAngle))
                 throw new InvalidOperationException("A robot occupies this checkpoint/corridor. Clear it before changing placement, type or active state.");
@@ -157,17 +176,17 @@ public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoor
         if (!string.IsNullOrEmpty(payload) && await db.Stations.AnyAsync(s => s.StationId != (id ?? 0) && s.QrCodePayload == payload, ct)) throw new InvalidOperationException("Station verification QR payload must be unique.");
         if (request.IsActive && request.ArucoId == null) throw new ArgumentException("Active operational stations require an explicit ArUco checkpoint mapping.");
         if (request.ArucoId is int qr) {
-            if (navigation.WarehouseId != zone.WarehouseId) throw new ArgumentException("Configure the navigation map for this warehouse before mapping stations.");
             var savedMap = await db.MapConfigurations.AsNoTracking().SingleOrDefaultAsync(m => m.WarehouseId == zone.WarehouseId && m.IsActive, ct);
             var map = navigation.GetMap();
             if (savedMap != null && !string.IsNullOrEmpty(savedMap.MapMetadataJson)) {
                 using var doc = JsonDocument.Parse(savedMap.MapMetadataJson);
                 if (doc.RootElement.TryGetProperty("navigationMap", out var stored)) {
                     var current = stored.Deserialize<WarehouseMapDocument>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-                    if (current.Revision != map.Revision) throw new InvalidOperationException("Database map changed. Reload the navigation map before station commissioning.");
+                    if (navigation.WarehouseId == zone.WarehouseId && current.Revision != map.Revision) throw new InvalidOperationException("Database map changed. Reload the navigation map before station commissioning.");
                     map = current;
                 }
             }
+            if (savedMap == null && navigation.WarehouseId != zone.WarehouseId) throw new ArgumentException("Configure this warehouse map before mapping stations.");
             var markers = map.Cells.SelectMany(r => r).Where(c => c.Type == "qr" && c.ArucoId == qr).ToList();
             if (markers.Count != 1 || markers[0].IsIntersection || markers[0].MarkerYawDeg == null || markers[0].MarkerSizeM == null) throw new ArgumentException("Map to a unique, commissioned QR outside reserved intersections.");
             if (map.DirectedLinks && markers[0].OperationalRole != request.Type) throw new ArgumentException("A lane scene station must match its commissioned physical bay role.");
@@ -187,6 +206,8 @@ public sealed class StationCatalogService(SmartFleetDbContext db, NavigationCoor
     {
         Required(request.Reason, "Reason", 400);
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (config != null && !await MapSwitchGate.AllowsDispatch(db, config, ct))
+            throw new InvalidOperationException("Map change in progress. Wait before changing station configuration.");
         var station = await db.Stations.Include(s => s.Zone).ThenInclude(z => z.Warehouse).Include(s => s.Checkpoint).SingleOrDefaultAsync(s => s.StationId == id, ct) ?? throw new KeyNotFoundException();
         if (station.StationType is not ("WAITING" or "CHARGING")) throw new ArgumentException("Berth reservations apply only to WAITING or CHARGING stations.");
         var robot = await db.Robots.SingleOrDefaultAsync(r => r.RobotId == request.RobotId && r.IsActive, ct) ?? throw new ArgumentException("Robot not found or inactive.");

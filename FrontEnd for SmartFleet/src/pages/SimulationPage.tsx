@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ChargingPanel from "../components/ChargingPanel";
+import SharedMapNotice from "../components/SharedMapNotice";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/client";
 import { getRobots, type RobotInfo } from "../api/modules/robots";
@@ -17,6 +18,7 @@ export default function SimulationPage({ visible = true }: { visible?: boolean }
     const [fleetError, setFleetError] = useState("");
     const [busy, setBusy] = useState(false);
     const connecting = useRef(false);
+    const viewerRequested = useRef(false);
     const reconnectTimer = useRef<number | undefined>(undefined);
     const reconnects = useRef({ count: 0, since: 0 });
     const [tab, setTab] = useState("3d");
@@ -65,6 +67,7 @@ export default function SimulationPage({ visible = true }: { visible?: boolean }
         }
     }, [visible, tab, viewer]);
     async function connect(automatic = false) {
+        viewerRequested.current = true;
         if (connecting.current) return;
         window.clearTimeout(reconnectTimer.current);
         if (!automatic) reconnects.current = { count: 0, since: Date.now() };
@@ -81,6 +84,10 @@ export default function SimulationPage({ visible = true }: { visible?: boolean }
             <div><p className="sf-eyebrow">FLEET OPERATIONS</p><h1>Live tracking &amp; handover</h1><p className="sf-muted text-sm mt-1">Follow each mission and confirm pickup or delivery in one workspace.</p></div>
             <Link className="sf-button shrink-0" to="/simulation" target="_blank" rel="noopener noreferrer">Open tracking in new tab ↗</Link>
         </header>
+        <SharedMapNotice visible={visible} sceneId={status?.sceneId} onMapChanged={() => {
+            setViewer(""); setViewerReady(false); setError("");
+            if (viewerRequested.current) void connect();
+        }} />
         <div className="tracking-summary" aria-label="Fleet overview">
             <span><i className={`status-dot ${fleetError ? "" : "online"}`} /><strong>{fleetError ? "—" : robots.filter(r => r.connectionStatus === "ONLINE").length} / {robots.length}</strong> robots online</span>
             <span><strong>{fresh ? active.length : "—"}</strong> active missions</span>
@@ -100,7 +107,7 @@ export default function SimulationPage({ visible = true }: { visible?: boolean }
                 </div>
                 {error && <p role="alert" className="sf-notice sf-notice-danger m-3">{error}</p>}
                 <div className="tracking-viewport">
-                    {mapOpened && <div className="tracking-view" style={{ display: tab === "2d" ? "flex" : "none" }}><LiveFleetMap robots={robots} selectedRobot={selectedRobot} onSelectRobot={setSelectedRobot} showRobotStatus={false} missionSnapshot={missions} /></div>}
+                    {mapOpened && <div className="tracking-view" style={{ display: tab === "2d" ? "flex" : "none" }}><LiveFleetMap key={status?.sceneId ?? "initial"} robots={robots} selectedRobot={selectedRobot} onSelectRobot={setSelectedRobot} showRobotStatus={false} missionSnapshot={missions} /></div>}
                     <div className="tracking-view" style={{ display: tab === "3d" ? "flex" : "none" }}>
                         {viewer ? <iframe ref={viewerFrame} src={viewer} title="Live Webots 3D simulation" className="w-full h-full border-0" allow="fullscreen" /> : <div className="tracking-placeholder"><div className="tracking-placeholder-symbol" aria-hidden="true">⬡</div><h2>View the live Webots world</h2><p>Connect to the server simulation to watch the robots in 3D. Use the panel on the right to confirm goods transfers.</p><span className="sf-badge">No local Webots installation required</span></div>}
                     </div>

@@ -9,7 +9,9 @@ function fail(error, recoverable = false) {
   message.textContent = String(error);
   parent.postMessage({type:'smartfleet-simulation-error',message:String(error),recoverable}, location.origin);
 }
-const deadline = setTimeout(() => fail('Webots 3D did not respond within 45 seconds. Check simulator health and retry.'), 45000);
+// Cold mesh/module downloads can exceed 45s on a slow network. This is only
+// viewer loading; backend stream and robot safety timeouts remain unchanged.
+const deadline = setTimeout(() => fail('Webots 3D assets did not finish loading within 180 seconds. Check the network/simulator and retry.'), 180000);
 try {
   const [, {default: MeshLoader}, {default: ImageLoader}, {default: Stream}] = await Promise.all([
     import('https://cyberbotics.com/wwi/R2025a/WebotsView.js'),

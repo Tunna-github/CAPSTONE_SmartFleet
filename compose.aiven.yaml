@@ -1,0 +1,39 @@
+# Use LAST, after compose.yaml and compose.charging.yaml. Secrets stay in .env.
+services:
+  database:
+    profiles: [local-database]
+  db-init:
+    profiles: [local-database]
+  backend:
+    image: ${AIVEN_BACKEND_IMAGE:-smartfleet-backend}
+    depends_on: !override
+      mqtt: {condition: service_healthy}
+    environment:
+      ConnectionStrings__DefaultConnection: ${AIVEN_CONNECTION_STRING:?Configure the shared Aiven database first}
+      SharedDatabase__Enabled: 'true'
+      Deployment__MapKey: ${AIVEN_MAP_KEY:-map2}
+      MapSwitch__HostId: ${MAP_SWITCH_HOST_ID:-}
+      Navigation__WarehouseId: ${AIVEN_WAREHOUSE_ID:-1}
+      Charging__Enabled: ${AIVEN_CHARGING_ENABLED:-true}
+      Simulation__ManifestPath: /simulation/${AIVEN_MANIFEST:-config/dual-lane-manifest.json}
+    volumes: !override
+      - shared-backend-state:/app/App_Data
+      - type: bind
+        source: ${AIVEN_CA_FILE:-./.aiven/ca.pem}
+        target: /run/secrets/aiven-ca.pem
+        read_only: true
+  webots:
+    environment:
+      SMARTFLEET_WORLD: ${AIVEN_WORLD:-worlds/smartfleet-dual-lane.wbt}
+      SMARTFLEET_SCENE_MANIFEST: ${AIVEN_MANIFEST:-config/dual-lane-manifest.json}
+    volumes: !override
+      - shared-simulator-state:/state
+  web:
+    image: ${AIVEN_WEB_IMAGE:-smartfleet-web}
+volumes:
+  shared-backend-state:
+    external: true
+    name: ${AIVEN_BACKEND_VOLUME:?Select a map runtime volume first}
+  shared-simulator-state:
+    external: true
+    name: ${AIVEN_SIMULATOR_VOLUME:?Select a map runtime volume first}

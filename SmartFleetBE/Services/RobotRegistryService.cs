@@ -46,6 +46,8 @@ public sealed class RobotRegistryService(SmartFleetDbContext db, IConfiguration 
         if (request.RobotType is not ("PHYSICAL" or "SIMULATION")) throw new ArgumentException("Robot type must be PHYSICAL or SIMULATION.");
         if (request.RobotType == "SIMULATION" && !config.GetValue<bool>("Simulation:Enabled")) throw new ArgumentException("Simulation robots can only be registered in the isolated simulation environment.");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (!await MapSwitchGate.AllowsDispatch(db, config, ct))
+            throw new InvalidOperationException("Map change in progress. Wait before changing robot registration.");
         var robot = id.HasValue ? await db.Robots.SingleOrDefaultAsync(r => r.RobotId == id, ct) ?? throw new KeyNotFoundException() : new Robot();
         if (!await db.Warehouses.AnyAsync(w => w.WarehouseId == request.WarehouseId && w.IsActive, ct)) throw new ArgumentException("Choose an active warehouse.");
         if (await db.Robots.AnyAsync(r => r.RobotId != (id ?? 0) && (r.RobotCode.ToUpper() == code || r.MqttClientIdentifier.ToUpper() == client.ToUpper()), ct))

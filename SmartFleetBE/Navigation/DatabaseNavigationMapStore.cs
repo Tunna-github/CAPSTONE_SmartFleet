@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using SmartFleetBE.Model;
+using SmartFleetBE.Services;
 
 namespace SmartFleetBE.Navigation;
 
@@ -53,6 +54,8 @@ public sealed class DatabaseNavigationMapStore(
         var warehouseId = WarehouseId(db);
         using var tx = db.Database.IsRelational()
             ? db.Database.BeginTransaction(System.Data.IsolationLevel.Serializable) : null;
+        if (!MapSwitchGate.AllowsDispatch(db, configuration, CancellationToken.None).GetAwaiter().GetResult())
+            throw new InvalidOperationException("Map change in progress. Wait before editing the map.");
         if (db.TaskAssignments.Any(a => a.AssignmentStatus == "ACTIVE" && a.Task.WarehouseId == warehouseId))
             throw new MapInUseException();
         if (db.ChargingJobs.Any(j => j.State != "COMPLETED" && j.Robot.WarehouseId == warehouseId))

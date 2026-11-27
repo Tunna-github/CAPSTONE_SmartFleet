@@ -20,7 +20,8 @@ public static class CancellationPolicy
 }
 
 public sealed class TaskInterventionService(SmartFleetDbContext db,
-    QrDemoRouteService routes, IConfiguration configuration, TimeProvider? clock = null)
+    QrDemoRouteService routes, IConfiguration configuration, TimeProvider? clock = null,
+    SmartFleetBE.Navigation.NavigationCoordinator? navigation = null)
 {
     public async Task<bool> IsHeld(long taskId, CancellationToken ct) =>
         await db.TaskInterventions.AnyAsync(x => x.TaskId == taskId &&
@@ -44,6 +45,8 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length > 400)
             throw new ArgumentException("A reason of 1..400 characters is required.");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (action=="resume" && !await MapSwitchGate.AllowsDispatch(db,configuration,ct))
+            throw new InvalidOperationException("Map change/recovery hold blocks Resume.");
         var task = await db.TransportTasks.SingleOrDefaultAsync(t => t.TaskId == taskId && t.DeletedAt == null, ct)
             ?? throw new KeyNotFoundException("Task not found.");
         var assignment = await db.TaskAssignments.Include(a => a.Robot).Include(a => a.Mission)
@@ -74,6 +77,19 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         Audit(action, taskId, userId, request.Reason.Trim(), assignment, control, now, request);
         switch (action)
         {
+            case "resume":
+                if (assignment?.Mission==null || request.ExpectedAssignmentId!=assignment.AssignmentId ||
+                    control.State!="NORMAL" || !control.Paused || !control.CommandAcknowledged ||
+                    !request.PhysicalSafetyConfirmed || control.PauseContextJson==null)
+                    throw new InvalidOperationException("Resume requires the current paused assignment, robot stop acknowledgement and a safety confirmation. Cancellation/fault recovery cannot be resumed.");
+                using (var context=JsonDocument.Parse(control.PauseContextJson)) {
+                    await ValidateResume(assignment,context.RootElement,now,ct);
+                    Queue(control,assignment,"RESUME_TASK",now,context.RootElement.Clone());
+                }
+                control.ResumeFailureReason=null;
+                // Keep the overlay held until the same controller confirms its
+                // retained mission. No task/load/assignment/berth/traffic changes.
+                break;
             case "return-to-charge":
                 var recovered=task.TaskStatus=="QUEUED" && assignment?.AssignmentStatus=="FAILED" && control.State=="NORMAL";
                 if(!configuration.GetValue<bool>("Charging:Enabled") || !(task.TaskStatus=="CANCELLED"||recovered) ||
@@ -196,7 +212,11 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                 break;
             case "pause":
                 if (assignment == null) throw new InvalidOperationException("No active assignment for this task.");
+                if (control.Paused && control.State=="NORMAL" && control.CommandAcknowledged && control.PauseContextJson!=null)
+                    return new {message="Task is already paused. Use Resume after checking safety."};
                 control.Paused = true;
+                control.PauseContextJson=null;
+                control.ResumeFailureReason=null;
                 command = "PAUSE_TASK";
                 break;
             default: throw new ArgumentException("Unknown intervention action.");
@@ -209,10 +229,39 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
             paused = control.Paused, retryAt = task.ScheduledTime,
             message = action == "recover-requeue" ?
                 $"Recovered at pickup. Task QUEUED; eligible for {(task.DispatchMode == "AUTO" ? "AUTO" : "manual")} assignment at {task.ScheduledTime:O}. Failed robot remains in Maintenance." :
+                action=="resume" ? "Resume requested. Robot remains stopped until its retained mission and safety checks are acknowledged." :
                 action=="return-to-charge" ? "Stopped-position validation requested. The empty robot will remain unavailable until its charging return is confirmed." :
                 command == null ? "Task cancelled." :
                 "Intervention saved. Robot command pending acknowledgement; robot is not available for dispatch." };
     }
+
+    private async Task ValidateResume(TaskAssignment assignment,JsonElement context,DateTime now,CancellationToken ct)
+    {
+        var robot=assignment.Robot;var mission=assignment.Mission!;
+        if (assignment.AssignmentStatus!="ACTIVE" || mission.MissionStatus is not ("INITIALIZING" or "NAVIGATING_TO_PICKUP" or "AT_PICKUP" or "NAVIGATING_TO_DELIVERY" or "AT_DELIVERY") ||
+            !await db.TransportTasks.AnyAsync(t=>t.TaskId==assignment.TaskId && (t.TaskStatus=="ASSIGNED"||t.TaskStatus=="EXECUTING"),ct) ||
+            !robot.IsActive || robot.ConnectionStatus!="ONLINE" || robot.OperationalStatus!="BUSY" || robot.BatteryPercent is null or <20 ||
+            !RobotPresencePolicy.IsFresh(robot,now,configuration) || !configuration.GetValue<bool>("Mqtt:EnableWorkers") ||
+            await db.RobotMaintenanceRecords.AnyAsync(m=>m.RobotId==robot.RobotId&&(m.MaintenanceStatus=="SCHEDULED"||m.MaintenanceStatus=="IN_PROGRESS"),ct) ||
+            await db.RobotIncidents.AnyAsync(i=>i.RobotId==robot.RobotId&&!i.IsResolved&&(i.Severity=="ERROR"||i.Severity=="FATAL"||i.Severity=="HIGH"||i.Severity=="CRITICAL"),ct) ||
+            await db.ChargingJobs.AnyAsync(j=>j.RobotId==robot.RobotId&&j.State!="COMPLETED"&&j.State!="DEPARTING",ct))
+            throw new InvalidOperationException("Robot/mission is not safe to resume: check online telemetry, battery, faults and Maintenance state.");
+        if (!ValidResumeContext(context) || context.GetProperty("mapRevision").GetInt32()!=routes.CurrentMapRevision)
+            throw new InvalidOperationException("Controller pause context or map changed. Maintenance recovery is required.");
+        var execution=await db.MissionExecutions.AsNoTracking().SingleOrDefaultAsync(e=>e.MissionId==mission.MissionId,ct);
+        if (execution==null || execution.MapRevision!=context.GetProperty("mapRevision").GetInt32())
+            throw new InvalidOperationException("Persisted mission progress is unavailable or belongs to a different map.");
+        if (configuration.GetValue<bool>("Navigation:Enabled")) {
+            if (navigation==null) throw new InvalidOperationException("Navigation safety state is unavailable.");
+            if (!navigation.CanResumeMotion(robot.RobotCode,out var reason)) throw new InvalidOperationException(reason);
+        }
+    }
+
+    private static bool ValidResumeContext(JsonElement c) => c.ValueKind==JsonValueKind.Object && c.GetRawText().Length<=2048 &&
+        c.TryGetProperty("resumeToken",out var token) && token.ValueKind==JsonValueKind.String && Guid.TryParse(token.GetString(),out _) &&
+        c.TryGetProperty("controllerSessionId",out var session) && session.ValueKind==JsonValueKind.String && Guid.TryParse(session.GetString(),out _) &&
+        c.TryGetProperty("mapRevision",out var revision) && revision.TryGetInt32(out _) &&
+        c.TryGetProperty("nextWaypointIndex",out var index) && index.TryGetInt32(out var i) && i>=0;
 
     private async Task<bool> EmptyAndHealthy(TaskAssignment a,CancellationToken ct,bool recovered=false)
     {
@@ -315,6 +364,8 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
         {
             command.DeliveredAt = now;
             c.CommandAcknowledged = true;
+            c.PauseContextJson=sent=="PAUSE_TASK" && c.State=="NORMAL" && c.Paused && e.ResumeContext is {} context && ValidResumeContext(context)
+                ? context.GetRawText() : null;
             if (sent == "CANCEL_STOP")
             {
                 c.State = "CANCELLED_HOLD"; // No pose/route => retain ACTIVE assignment.
@@ -328,6 +379,20 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
                     catch (InvalidOperationException) { /* Physical recovery is required. */ }
                 }
             }
+        }
+        else if (e.Event is "CONTROL_RESUMED" or "CONTROL_RESUME_REJECTED" && sent=="RESUME_TASK" && c.State=="NORMAL" && c.Paused && a.AssignmentStatus=="ACTIVE")
+        {
+            if (e.Event=="CONTROL_RESUMED") {
+                if (c.PauseContextJson==null || e.ResumeContext is not {} resumed || !ValidResumeContext(resumed)) return MissionEventResult.Rejected;
+                using var stored=JsonDocument.Parse(c.PauseContextJson);
+                if (stored.RootElement.GetProperty("resumeToken").GetString()!=resumed.GetProperty("resumeToken").GetString() ||
+                    stored.RootElement.GetProperty("controllerSessionId").GetString()!=resumed.GetProperty("controllerSessionId").GetString()) return MissionEventResult.Rejected;
+                await ValidateResume(a,resumed,now,ct);
+                c.Paused=false;c.PauseContextJson=null;c.ResumedAt=now;
+            }
+            command.DeliveredAt=now;c.CommandAcknowledged=true;
+            c.ResumeFailureReason=e.Event=="CONTROL_RESUME_REJECTED" ? (e.Reason??"Robot could not validate a safe resume.")[..Math.Min((e.Reason??"Robot could not validate a safe resume.").Length,400)] : null;
+            if (e.Event=="CONTROL_RESUME_REJECTED" && e.Reason=="RESUME_CONTEXT_LOST") c.PauseContextJson=null;
         }
         else if (e.Event == "HOME_REACHED" && sent == "RETURN_HOME" && c.State == "RETURNING_HOME" &&
             !c.Paused && e.CurrentArUcoId == JsonDocument.Parse(command.Payload).RootElement.GetProperty("route").GetProperty("homeArUcoId").GetInt32())
