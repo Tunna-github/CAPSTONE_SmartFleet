@@ -2,3 +2,8 @@ services:
   mqtt:
     ports:
       - "192.168.137.1:1884:1883"
+
+  backend:
+    environment:
+      PhysicalPilot__Enabled: "true"
+      PhysicalPilot__RobotCode: "R03"

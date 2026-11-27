@@ -92,7 +92,8 @@ public sealed class QrDemoRouteService
     private readonly Dictionary<long, MissionView> _missions = [];
     private readonly Dictionary<long, string> _publishedPayloads = [];
     private readonly HashSet<string> _freshRobotPositions = new(StringComparer.OrdinalIgnoreCase);
-    public sealed record RobotLocalization(int ArucoId, double HeadingDeg, int MapRevision,
+    // Heading is intentionally unknown for the explicitly gated ArUco-only physical pilot.
+    public sealed record RobotLocalization(int ArucoId, double? HeadingDeg, int MapRevision,
         string Source, DateTime ReceivedAtUtc);
     private readonly Dictionary<string, RobotLocalization> _localizations = new(StringComparer.OrdinalIgnoreCase);
 
@@ -159,11 +160,16 @@ public sealed class QrDemoRouteService
     }
     public void RecordCameraProgress(string code, int arucoId, double? heading, int revision)
     {
-        if (heading is not { } yaw || !double.IsFinite(yaw) || yaw is < -180 or > 180) return;
+        bool measured = heading is { } yaw && double.IsFinite(yaw) && yaw is >= -180 and <= 180;
+        bool pilotConfigured = PhysicalPilotPolicy.EnabledFor(_configuration, code);
         lock (_gate)
         {
+            bool pilot = pilotConfigured && _localizations.TryGetValue(code, out var previous) &&
+                previous.Source == "ARUCO_ONLY";
+            if (!measured && !pilot) return;
             _store.RobotPositions[code] = arucoId; _freshRobotPositions.Add(code);
-            _localizations[code] = new(arucoId, yaw, revision, "ARUCO_IMU", DateTime.UtcNow);
+            _localizations[code] = new(arucoId, measured ? heading : null, revision,
+                measured ? "ARUCO_IMU" : "ARUCO_ONLY", DateTime.UtcNow);
             SaveLocked();
             _navigation.RecordCameraCheckpoint(code, arucoId);
         }
@@ -203,6 +209,18 @@ public sealed class QrDemoRouteService
                 var start = _localizations[code].ArucoId;
                 var pickupRoute = FindPath(map, nodes, start, selection.PickupArUcoId, robotCode: code);
                 var deliveryRoute = FindPath(map, nodes, selection.PickupArUcoId, selection.DeliveryArUcoId, robotCode: code);
+                // R03: website chooses station/QR pair; physical robot must be
+                // camera-localized AT pickup, with exactly ONE direct corridor.
+                // Every other route remains blocked until turning/IMU/obstacle tests.
+                if (PhysicalPilotPolicy.EnabledFor(_configuration, code) &&
+                    (start != selection.PickupArUcoId ||
+                     start == selection.DeliveryArUcoId ||
+                     pickupRoute.Count != 1 || pickupRoute[0] != start ||
+                     deliveryRoute.Count != 2 || deliveryRoute[0] != start ||
+                     deliveryRoute[1] != selection.DeliveryArUcoId ||
+                     map.Cells[nodes[start].Row][nodes[start].Col].IsIntersection ||
+                     map.Cells[nodes[selection.DeliveryArUcoId].Row][nodes[selection.DeliveryArUcoId].Col].IsIntersection))
+                { reason = "R03 physical pilot needs its current pickup QR plus ONE directly linked non-intersection delivery QR."; return false; }
                 if (pickupRoute.Concat(deliveryRoute).Distinct().Any(id =>
                     map.Cells[nodes[id].Row][nodes[id].Col].MarkerYawDeg == null ||
                     map.Cells[nodes[id].Row][nodes[id].Col].MarkerSizeM == null))
@@ -445,21 +463,33 @@ public sealed class QrDemoRouteService
             if (string.Equals(report.Event, "READY", StringComparison.OrdinalIgnoreCase))
             {
                 var cell = map.Cells.SelectMany(row => row).Single(c => c.Type == "qr" && c.ArucoId == report.ArucoId);
-                if (report.MapRevision != map.Revision || report.LocalizationSource != "ARUCO_IMU" ||
-                    report.HeadingDeg is not { } heading || !double.IsFinite(heading) || heading is < -180 or > 180 ||
-                    report.ReprojectionErrorPx is not { } error || !double.IsFinite(error) || error is < 0 or > 2 ||
-                    report.StableFrames < 5 || cell.MarkerYawDeg == null || cell.MarkerSizeM == null)
+                bool cameraImuReady = report.LocalizationSource == "ARUCO_IMU" &&
+                    report.HeadingDeg is { } measuredHeading && double.IsFinite(measuredHeading) &&
+                    measuredHeading is >= -180 and <= 180 &&
+                    report.ReprojectionErrorPx is { } measuredError && double.IsFinite(measuredError) &&
+                    measuredError is >= 0 and <= 2 && report.StableFrames >= 5;
+                // Deliberately narrow physical pilot: no fabricated heading or fake IMU claim.
+                // The operator must align a stationary robot on an isolated STRAIGHT QR0->QR5 lane.
+                bool physicalPilotReady = PhysicalPilotPolicy.EnabledFor(_configuration, robotCode) &&
+                    report.LocalizationSource == "ARUCO_ONLY" && report.HeadingDeg == null &&
+                    report.ReprojectionErrorPx == null && report.RobotStopped &&
+                    report.StableFrames >= 5 && !cell.IsIntersection;
+                if (report.MapRevision != map.Revision || cell.MarkerYawDeg == null ||
+                    cell.MarkerSizeM == null || !(cameraImuReady || physicalPilotReady))
                 {
                     _freshRobotPositions.Remove(robotCode);
                     _localizations.Remove(robotCode);
-                    return (false, "Valid camera/IMU heading, commissioned marker and current map revision are required.");
+                    return (false, "Valid camera/IMU localization, or explicitly configured stationary R03 physical pilot, is required.");
                 }
                 _store.RobotPositions[robotCode] = report.ArucoId;
                 _freshRobotPositions.Add(robotCode);
-                _localizations[robotCode] = new(report.ArucoId, heading, map.Revision, "ARUCO_IMU", DateTime.UtcNow);
+                _localizations[robotCode] = new(report.ArucoId,
+                    cameraImuReady ? report.HeadingDeg : null, map.Revision,
+                    cameraImuReady ? "ARUCO_IMU" : "ARUCO_ONLY", DateTime.UtcNow);
                 _navigation.RecordCameraCheckpoint(robotCode, report.ArucoId);
                 SaveLocked();
-                return (true, "Webots QR and camera/IMU heading recorded");
+                return (true, cameraImuReady ? "Camera/IMU localization recorded" :
+                    "Stationary physical pilot QR recorded; heading unknown");
             }
             if (!string.Equals(report.Event, "WAYPOINT_REACHED", StringComparison.OrdinalIgnoreCase))
                 return (false, "Unsupported QR progress event");

@@ -137,8 +137,8 @@ public sealed class TaskDispatchService : ITaskDispatchService
             if (berthed.Contains(robot.RobotId) && !chargeReady.Contains(robot.RobotId)) reasons.Add("Robot must finish safe return/docking before assignment");
             if (robot.WarehouseId != task.WarehouseId) reasons.Add("Different warehouse");
             if (!robot.IsActive) reasons.Add("Robot inactive");
-            var requiredType = DispatchRobotTypePolicy.RequiredType(_configuration);
-            if (robot.RobotType != requiredType) reasons.Add("Robot type must be " + requiredType);
+            if (!DispatchRobotTypePolicy.ManualAllows(_configuration, robot.RobotType, robot.RobotCode))
+                reasons.Add("Robot type not allowed for this environment or physical pilot");
             if (robot.ConnectionStatus != "ONLINE") reasons.Add("Robot OFFLINE");
             if (robot.OperationalStatus != "AVAILABLE") reasons.Add($"Robot status: {robot.OperationalStatus}");
             if (!RobotPresencePolicy.IsFresh(robot, now, _configuration)) reasons.Add("Heartbeat/telemetry missing or stale");
@@ -363,14 +363,10 @@ public sealed class TaskDispatchService : ITaskDispatchService
                 .Conflict("Robot is inactive.");
         }
 
-        var requiredRobotType = DispatchRobotTypePolicy.RequiredType(_configuration);
-        if (!string.Equals(
-                robot.RobotType,
-                requiredRobotType,
-                StringComparison.OrdinalIgnoreCase))
+        if (!DispatchRobotTypePolicy.ManualAllows(_configuration, robot.RobotType, robot.RobotCode))
         {
             return TransportTaskServiceResult<ManualAssignTaskResponse>
-                .Conflict($"Robot must be {requiredRobotType}.");
+                .Conflict("Robot type is not allowed for this environment or physical pilot.");
         }
 
         if (robot.WarehouseId != task.WarehouseId)

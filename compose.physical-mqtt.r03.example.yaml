@@ -1,0 +1,14 @@
+# Merge into your EXISTING compose.physical-mqtt.yaml.
+# Do not overwrite unrelated local overrides.
+services:
+  mqtt:
+    ports:
+      - "192.168.137.1:1884:1883"
+  backend:
+    environment:
+      PhysicalPilot__Enabled: 'true'
+      PhysicalPilot__RobotCode: R03
+      PhysicalPilot__StartArUcoId: '0'
+      PhysicalPilot__DeliveryArUcoId: '5'
+# Simulation__Enabled remains true in compose.yaml.
+# AUTO still selects SIMULATION robots; R03 requires MANUAL assignment.

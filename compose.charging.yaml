@@ -1,23 +1,12 @@
-# Explicit physical scene upgrade. Use WITH compose.yaml; never while a robot
-# has an ACTIVE assignment/failed load hold. db-init rejects unsafe conversion.
+
 services:
-  db-init:
-    environment:
-      COMMISSION_DUAL_LANE: 'true'
+  mqtt:
+    ports:
+      - "192.168.137.1:1884:1883"
+
   backend:
     environment:
-      Charging__Enabled: 'true'
-      Simulation__ManifestPath: /simulation/config/dual-lane-manifest.json
-    volumes:
-      - backend-dual-lane-state:/app/App_Data
-  webots:
-    environment:
-      SMARTFLEET_WORLD: worlds/smartfleet-dual-lane.wbt
-      SMARTFLEET_SCENE_MANIFEST: config/dual-lane-manifest.json
-      SMARTFLEET_REAL_SIM_LIDAR: 'true'
-      SMARTFLEET_CRUISE_SCALE: ${SIMULATION_CRUISE_SCALE:-4.0}
-    volumes:
-      - simulator-dual-lane-state:/state
-volumes:
-  backend-dual-lane-state:
-  simulator-dual-lane-state:
+      PhysicalPilot__Enabled: "true"
+      PhysicalPilot__RobotCode: "R03"
+      PhysicalPilot__StartArUcoId: "0"
+      PhysicalPilot__DeliveryArUcoId: "5"
