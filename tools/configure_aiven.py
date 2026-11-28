@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import uuid
 from aiven_support import ROOT, private_dir, quoted, sql, STATION_SNAPSHOT, update_env, map_matches_scene, read_env, backup
+from mqtt_hotspot import keep_hotspot_overlay
 
 
 def parse_connection_string(text):
@@ -61,7 +62,9 @@ def main():
     values['AIVEN_CONNECTION_STRING'] = ';'.join(k + '=' + part(v) for k, v in {
         'Host': values['AIVEN_HOST'], 'Port': values['AIVEN_PORT'], 'Username': values['AIVEN_USER'],
         'Password': values['AIVEN_PASSWORD'], 'Database': args.database, 'SSL Mode': 'VerifyFull',
-        'Root Certificate': '/run/secrets/aiven-ca.pem', 'Maximum Pool Size': 4, 'Minimum Pool Size': 0,
+        'Root Certificate': '/run/secrets/aiven-ca.pem', 'Maximum Pool Size': 8, 'Minimum Pool Size': 0,
+        'Keepalive': 10, 'TCP Keepalive': True, 'GSS Encryption Mode': 'Disable',
+        'Options': '-c idle_session_timeout=60000',
         'Connection Idle Lifetime': 30, 'Timeout': 15, 'Command Timeout': 30, 'Application Name': 'SmartFleet-shared'
     }.items())
     update_env(values)
@@ -76,7 +79,7 @@ def main():
         key = sql('''SELECT p."Key" FROM "MapDeploymentProfiles" p JOIN "MapConfigurations" m ON m."MapID"=p."MapID" WHERE p."IsSelected" AND m."IsActive";''')
         if key not in ('map1', 'map2'): raise SystemExit('The shared deployment has no single valid map profile')
         warehouse = sql('''SELECT m."WarehouseID" FROM "MapDeploymentProfiles" p JOIN "MapConfigurations" m ON m."MapID"=p."MapID" WHERE p."Key"=''' + quoted(key) + ';')
-        update_env(dict(COMPOSE_FILE=os.pathsep.join(['compose.yaml', 'compose.charging.yaml', 'compose.aiven.yaml']), AIVEN_WAREHOUSE_ID=warehouse,
+        update_env(dict(COMPOSE_FILE=os.pathsep.join(keep_hotspot_overlay(['compose.yaml', 'compose.charging.yaml', 'compose.aiven.yaml'],read_env())), AIVEN_WAREHOUSE_ID=warehouse,
             AIVEN_MAP_KEY=key, AIVEN_CHARGING_ENABLED='true' if key == 'map2' else 'false',
             AIVEN_MANIFEST='config/dual-lane-manifest.json' if key == 'map2' else 'config/scene-manifest.json',
             AIVEN_WORLD='worlds/smartfleet-dual-lane.wbt' if key == 'map2' else 'worlds/smartfleet.wbt',
@@ -111,7 +114,7 @@ FROM "MapConfigurations" m WHERE m."MapVersion"='aiven-original-map1';
 COMMIT;''')
     backup('before-independent-map-warehouses')
     sql((ROOT / 'Database/20261127_independent_map_warehouses.sql').read_text())
-    update_env(dict(COMPOSE_FILE=os.pathsep.join(['compose.yaml', 'compose.charging.yaml', 'compose.aiven.yaml']),
+    update_env(dict(COMPOSE_FILE=os.pathsep.join(keep_hotspot_overlay(['compose.yaml', 'compose.charging.yaml', 'compose.aiven.yaml'],read_env())),
         AIVEN_MAP_KEY='map2', AIVEN_WAREHOUSE_ID='1', AIVEN_CHARGING_ENABLED='true', AIVEN_MANIFEST='config/dual-lane-manifest.json',
         AIVEN_WORLD='worlds/smartfleet-dual-lane.wbt', AIVEN_BACKEND_VOLUME='smartfleet_backend-dual-lane-state',
         AIVEN_SIMULATOR_VOLUME='smartfleet_simulator-dual-lane-state'))

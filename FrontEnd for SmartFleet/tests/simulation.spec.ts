@@ -41,6 +41,21 @@ test("Unconfigured server explains 3D availability and disables connecting",asyn
   await expect(page.getByRole("status")).toContainText("not configured");
 });
 
+test("Physical odometry pose remains visible when Webots 3D is disabled and is labelled as an estimate",async({page})=>{
+  await setup(page,"Warehouse Operator",false);
+  await page.route("https://localhost:7166/api/v1/simulation/poses",route=>route.fulfill({json:{
+    mapRevision:5,serverTimeUtc:new Date().toISOString(),poses:[{
+      robotCode:"R01",runId:"physical-session",sequence:2,mapRevision:5,source:"ARUCO_IMU_ODOMETRY",
+      frame:"GRID_COL_ROW",x:4.25,y:3,yaw:-90,capturedAtUtc:new Date().toISOString()
+    }]}}));
+  await page.reload();
+  await page.getByRole("button",{name:"Fleet map 2D",exact:true}).click();
+  await expect(page.locator('[data-robot-code="R01"] title')).toContainText("Live physical pose estimate");
+  await expect(page.getByLabel("Live robot status")).toContainText("Battery 85%");
+  await page.getByRole("button",{name:"Webots 3D",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Connect 3D",exact:true})).toBeDisabled();
+});
+
 test("Unresponsive simulator reports a useful error instead of opening a stuck viewer",async({page})=>{
   await setup(page,"Warehouse Operator");
   await page.route("https://localhost:7166/api/v1/simulation/session",route=>route.fulfill({status:503,json:{

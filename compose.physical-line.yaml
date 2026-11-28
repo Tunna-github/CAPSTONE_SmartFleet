@@ -1,0 +1,15 @@
+# Opt-in physical straight-line demo on the selected 3x3 Map 1.
+# Original world/maps/robot records are retained. Only R03 is the physical agent.
+services:
+  backend:
+    environment:
+      PhysicalRobots__Enabled: 'true'
+      PhysicalRobots__LineDemoRobotCodes__0: R03
+      Dispatch__AllowMixedRobotTypes: 'true'
+      AutoDispatch__EnableOnCreate: 'false'
+    volumes:
+      - physical-line-runtime:/app/App_Data
+  webots:
+    profiles: [optional-webots]
+volumes:
+  physical-line-runtime:

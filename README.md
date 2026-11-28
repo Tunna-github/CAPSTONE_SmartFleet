@@ -5,7 +5,20 @@ controller is a simulation adapter; `Robot code` contains JetRacer/ROS Melodic
 prototype scripts. Neither the simulated run nor a legacy CIRCLE/line-follow
 test constitutes pickup/delivery verification for production.
 
+The opt-in [physical demo adapter](docs/physical-mission-demo.md) follows the same
+backend waypoint, verification and intersection protocol for task-selected straight
+missions. The marker/line demo does not require metric camera/encoder calibration:
+it follows tape, stops on the expected ArUco and waits for transfer verification,
+then remains connected for the next task. Metric pose visualization is a separate
+optional mode. Physical acceptance is still pending.
+
 ## Local setup
+
+For the current R03 physical demo on Map 1, start with the Vietnamese
+[home test and handoff guide](docs/physical-demo-home-test.md). It covers the
+saved Aiven/Docker configuration, hotspot MQTT, ROS/Jupyter startup, QR6 → QR7,
+Pause/Resume, recovery and known limits. Use that configuration when resuming
+the physical demo below; the simulation setup commands are for other presets.
 
 For the separated-lane 3×3 layout with four charging bays and mandatory safe
 return after delivery, use `python tools/setup_demo.py --charging-layout` before

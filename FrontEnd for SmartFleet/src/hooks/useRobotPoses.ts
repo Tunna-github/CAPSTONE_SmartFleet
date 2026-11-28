@@ -4,23 +4,25 @@ import { apiBaseUrl, apiClient, tokenStorage } from "../api/client";
 
 export interface RobotPose {
     robotCode: string; runId: string; sequence: number; mapRevision: number;
-    source: "SIMULATION_GROUND_TRUTH"; frame: "GRID_COL_ROW";
+    source: "SIMULATION_GROUND_TRUTH" | "ARUCO_IMU_ODOMETRY"; frame: "GRID_COL_ROW";
     x: number; y: number; yaw: number; capturedAtUtc: string;
 }
 export function acceptPose(old: RobotPose | undefined, next: RobotPose, revision: number | null): boolean {
-    if (next.mapRevision !== revision || next.frame !== "GRID_COL_ROW" || next.source !== "SIMULATION_GROUND_TRUTH" ||
+    if (next.mapRevision !== revision || next.frame !== "GRID_COL_ROW" || !["SIMULATION_GROUND_TRUTH", "ARUCO_IMU_ODOMETRY"].includes(next.source) ||
         !Number.isFinite(next.x) || !Number.isFinite(next.y) || !Number.isFinite(next.yaw) || !Number.isFinite(Date.parse(next.capturedAtUtc))) return false;
     return !old || next.runId === old.runId && next.sequence > old.sequence ||
         next.runId !== old.runId && Date.parse(next.capturedAtUtc) > Date.parse(old.capturedAtUtc);
 }
 export default function useRobotPoses(revision: number | null) {
     const [poses, setPoses] = useState<Record<string, RobotPose>>({});
+    const [telemetry, setTelemetry] = useState<Record<string, { encoderDistanceM: number; receivedAt: string }>>({});
     const [connected, setConnected] = useState(false);
     const [clockOffset, setClockOffset] = useState(0);
     const [now, setNow] = useState(Date.now());
     useEffect(() => {
         let disposed = false;
         setPoses({});
+        setTelemetry({});
         const connection = new signalR.HubConnectionBuilder().withUrl(`${apiBaseUrl}/hubs/robots`,
             { accessTokenFactory: () => tokenStorage.get() ?? "" }).withAutomaticReconnect().build();
         const receive = (pose: RobotPose) => {
@@ -36,6 +38,10 @@ export default function useRobotPoses(revision: number | null) {
             } catch { /* retain last measured position and let its freshness expire */ }
         }
         connection.on("RobotPoseUpdated", receive);
+        connection.on("RobotTelemetryUpdated", (event: {robotCode: string; encoderDistanceM: number | null; receivedAt: string}) => {
+            if (!disposed && Number.isFinite(event.encoderDistanceM) && event.encoderDistanceM! >= 0)
+                setTelemetry(old => ({...old, [event.robotCode]: {encoderDistanceM: event.encoderDistanceM!, receivedAt: event.receivedAt}}));
+        });
         connection.onreconnecting(() => { if (!disposed) setConnected(false); });
         connection.onclose(() => { if (!disposed) setConnected(false); });
         connection.onreconnected(() => { if (!disposed) { setConnected(true); void snapshot(); } });
@@ -49,5 +55,5 @@ export default function useRobotPoses(revision: number | null) {
         return () => { disposed = true; window.clearInterval(timer); void (starting ?? Promise.resolve()).finally(() => connection.stop()); };
     }, [revision]);
     useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 500); return () => window.clearInterval(timer); }, []);
-    return { poses, connected, serverNow: now + clockOffset };
+    return { poses, telemetry, connected, serverNow: now + clockOffset };
 }

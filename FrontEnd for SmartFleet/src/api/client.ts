@@ -69,6 +69,11 @@ apiClient.interceptors.response.use(
         }
 
         const data: any = error.response?.data;
+        const connectionMessage = error.code === "ECONNABORTED" || error.code === "ETIMEDOUT"
+            ? "The server did not respond in time. Fleet data is unavailable; please retry."
+            : [502, 503, 504].includes(status)
+                ? "The backend is temporarily unavailable. Please retry shortly."
+                : null;
         const normalized: ApiError = {
             status,
             message:
@@ -77,6 +82,7 @@ apiClient.interceptors.response.use(
                 data?.title ||
                 data?.error ||
                 (typeof data?.result === "string" ? data.result : null) ||
+                connectionMessage ||
                 error.message ||
                 "Something went wrong",
             errors: data?.errors,

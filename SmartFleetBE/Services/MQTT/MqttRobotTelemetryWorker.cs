@@ -251,7 +251,7 @@ public sealed class MqttRobotTelemetryWorker(
         var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
         var robot = await db.Robots.AsNoTracking()
             .Where(r => r.RobotCode == robotCode && r.IsActive)
-            .Select(r => new { r.RobotId, r.RobotCode })
+            .Select(r => new { r.RobotId, r.RobotCode, r.RobotType })
             .SingleOrDefaultAsync(ct);
         if (robot == null) return;
 
@@ -259,7 +259,8 @@ public sealed class MqttRobotTelemetryWorker(
         // Only the single active navigation Backend may publish NAV_CONTROL.
         if (configuration.GetValue<bool>("Navigation:Enabled"))
         {
-            var decision = navigation.OnLidar(robot.RobotId, robot.RobotCode, status);
+            var decision = navigation.OnLidar(robot.RobotId, robot.RobotCode, status,
+                robot.RobotType=="PHYSICAL" && PhysicalLineDemoPolicy.SupervisedStraight(configuration,robot.RobotCode));
             if (!decision.Success)
             {
                 logger.LogWarning("Navigation rejected LiDAR update from {Robot}: {Reason}",
@@ -293,7 +294,7 @@ public sealed class MqttRobotTelemetryWorker(
         => (x.BatteryPercent.HasValue || x.BatteryVoltage.HasValue || x.PositionX.HasValue ||
             x.PositionY.HasValue || x.Heading.HasValue || x.LinearVelocity.HasValue ||
             x.AngularVelocity.HasValue || x.CpuTemperature.HasValue || x.WifiSignalDbm.HasValue) &&
-           Range(x.BatteryPercent, 0, 100) &&
+           Range(x.EncoderDistanceM, 0, 9999999) && Range(x.BatteryPercent, 0, 100) &&
            Range(x.BatteryVoltage, 0, 999) &&
            Range(x.PositionX, -9999999, 9999999) &&
            Range(x.PositionY, -9999999, 9999999) &&

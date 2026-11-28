@@ -37,7 +37,7 @@ export default function QrMissionMonitorPage() {
     const [missions, setMissions] = useState<Mission[]>([]);
     const [positions, setPositions] = useState<Record<string, number>>({});
     const [localizations, setLocalizations] = useState<Record<string, {
-        headingDeg: number; mapRevision: number; source: string;
+        headingDeg: number | null; mapRevision: number; source: string;
     }>>({});
     const [error, setError] = useState("");
     const [lastUpdated, setLastUpdated] = useState("");
@@ -68,7 +68,7 @@ export default function QrMissionMonitorPage() {
             <Link className="sf-button sf-button-primary mt-3" to="/simulation">Open live tracking &amp; handover →</Link>
             <p className="text-xs mt-2" style={{ color: "var(--text-faint)" }}>
                 Live route chosen from the Backend QR map, robot waypoint confirmations, and pickup/drop-off progress.
-                Starting QR and heading are localized from camera ArUco pose and IMU.
+                Checkpoints come from camera ArUco reports. Heading is shown when camera/IMU pose localization is available.
             </p>
             <p className="text-xs mt-2" style={{ color: "var(--text-faint)" }}>
                 Last updated: {lastUpdated || "Connecting"} · Auto-refresh every 1.5 seconds
@@ -78,12 +78,13 @@ export default function QrMissionMonitorPage() {
                 <h2 className="font-semibold">Robot checkpoint positions reported to Backend</h2>
                 <div className="flex flex-wrap gap-2 mt-3">
                     {Object.keys(positions).length === 0
-                        ? <span className="text-sm opacity-60">Waiting for a valid camera/IMU localization on the saved map. Check marker calibration and the robot's camera view.</span>
+                        ? <span className="text-sm opacity-60">Waiting for a camera-confirmed checkpoint on the selected map.</span>
                         : Object.entries(positions).map(([name, id]) =>
                             <span key={name} className="rounded-md border px-3 py-2 text-sm" style={{ borderColor: "var(--border-medium)" }}>
                                 {name} : QR{id}
                                 {localizations[name] && <span className="block text-xs opacity-70">
-                                    Heading {localizations[name].headingDeg.toFixed(1)}° · {localizations[name].source} · map {localizations[name].mapRevision}
+                                    {localizations[name].headingDeg == null ? "Camera checkpoint · heading not measured" : `Heading ${localizations[name].headingDeg.toFixed(1)}°`}
+                                    {` · ${localizations[name].source} · map ${localizations[name].mapRevision}`}
                                 </span>}
                             </span>)}
                 </div>

@@ -26,15 +26,22 @@ public sealed class QrDemoProgressWorker(IServiceScopeFactory scopes, IConfigura
                 if (report == null || string.IsNullOrWhiteSpace(report.EventId) || report.EventId.Length > 100) return;
                 using var scope = scopes.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<SmartFleetDbContext>();
-                if (!await db.Robots.AnyAsync(r => r.RobotCode == parts[2] && r.IsActive, stoppingToken)) return;
+                var robotType=await db.Robots.Where(r=>r.RobotCode==parts[2] && r.IsActive)
+                    .Select(r=>r.RobotType).SingleOrDefaultAsync(stoppingToken);
+                if(robotType==null) return;
                 if (report.Event == "LOCALIZATION_CONFIG")
                 {
                     await publisher.PublishAsync($"smartfleet/robot/{parts[2]}/localization-map",
-                        JsonSerializer.Serialize(new { eventId = report.EventId, map = routes.GetLocalizationMap() }, Options), stoppingToken);
+                        JsonSerializer.Serialize(new { eventId = report.EventId, serverTimeUtc = DateTime.UtcNow,
+                            lineDemoAllowed = robotType=="PHYSICAL" && PhysicalLineDemoPolicy.Allows(configuration,parts[2]),
+                            map = routes.GetLocalizationMap() }, Options), stoppingToken);
                     return;
                 }
                 ProgressDecision result;
-                if (report.Event is "CHARGE_WAYPOINT" or "CHARGE_DOCK_STATUS" or "CHARGE_FAILED" or "CHARGE_STOPPED")
+                if(report.LocalizationSource==PhysicalLineDemoPolicy.Source &&
+                    (robotType!="PHYSICAL" || !PhysicalLineDemoPolicy.Allows(configuration,parts[2])))
+                    result=new(false,"Line demo reports require an explicitly enabled registered PHYSICAL robot.");
+                else if (report.Event is "CHARGE_WAYPOINT" or "CHARGE_DOCK_STATUS" or "CHARGE_FAILED" or "CHARGE_STOPPED")
                     result = await scope.ServiceProvider.GetRequiredService<ChargingService>().Progress(parts[2], report, stoppingToken);
                 else if (report.Event is "WAYPOINT_REACHED" or "VERIFICATION_STATUS")
                     result = await scope.ServiceProvider.GetRequiredService<MissionExecutionService>().ProgressAsync(parts[2], report, stoppingToken);

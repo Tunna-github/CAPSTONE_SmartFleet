@@ -43,7 +43,8 @@ def pg_command(tool, args=(), input=None, output=None):
         PGPASSWORD=config['AIVEN_PASSWORD'], PGDATABASE=config['AIVEN_DATABASE'], PGSSLMODE='verify-full',
         PGSSLROOTCERT='/run/secrets/aiven-ca.pem', PGOPTIONS='-c statement_timeout=30000 -c application_name=SmartFleet-map-management')
     ca = str((ROOT / config['AIVEN_CA_FILE']).resolve())
-    command = ['docker', 'run', '--rm', '-i', '--mount', f'type=bind,source={ca},target=/run/secrets/aiven-ca.pem,readonly']
+    command = ['docker', 'run', '--rm', '-i', '--dns', '1.1.1.1', '--dns', '8.8.8.8',
+        '--mount', f'type=bind,source={ca},target=/run/secrets/aiven-ca.pem,readonly']
     for key in ['PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE', 'PGSSLMODE', 'PGSSLROOTCERT', 'PGOPTIONS']:
         command.extend(['-e', key])
     command += ['postgres:18.6-alpine', tool, *args]
@@ -60,7 +61,13 @@ def sql(text):
 
 def backup(label):
     path = private_dir() / (label + '-' + time.strftime('%Y%m%d-%H%M%S') + '.dump')
-    with path.open('wb') as output: pg_command('pg_dump', ['-Fc'], output=output)
+    partial = path.with_suffix('.dump.partial')
+    try:
+        with partial.open('wb') as output: pg_command('pg_dump', ['-Fc'], output=output)
+        partial.replace(path)
+    except Exception:
+        partial.unlink(missing_ok=True)
+        raise
     return path
 
 

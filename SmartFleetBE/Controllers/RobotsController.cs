@@ -33,59 +33,40 @@ public sealed class RobotsController : ControllerBase
     public async Task<IActionResult> GetRobots(
         CancellationToken ct)
     {
-        var robots = await _db.Robots
+        // Fetch the fleet snapshot in one database round trip. Four sequential
+        // queries made every fleet refresh pay the cloud network latency four times.
+        var result = await _db.Robots
             .AsNoTracking()
+            .AsSingleQuery()
             .OrderBy(r => r.RobotId)
-            .ToListAsync(ct);
-
-        var assignedIds = (await _db.TaskAssignments
-            .AsNoTracking()
-            .Where(a => a.AssignmentStatus == "ACTIVE")
-            .Select(a => a.RobotId)
-            .Distinct()
-            .ToListAsync(ct))
-            .ToHashSet();
-
-        var maintenanceIds = (await _db.RobotMaintenanceRecords
-            .AsNoTracking()
-            .Where(m =>
-                m.MaintenanceStatus == "IN_PROGRESS" ||
-                m.MaintenanceStatus == "SCHEDULED")
-            .Select(m => m.RobotId)
-            .Distinct()
-            .ToListAsync(ct))
-            .ToHashSet();
-
-        var openIncidents = await _db.RobotIncidents
-            .AsNoTracking()
-            .Where(i => !i.IsResolved)
-            .OrderByDescending(i => i.CreatedAt)
-            .Select(i => new RobotIncidentInfo
+            .Select(r => new RobotInfo
             {
-                IncidentId = i.IncidentId,
-                RobotId = i.RobotId,
-                IncidentType = i.IncidentType,
-                Severity = i.Severity,
-                Description = i.Description,
-                CreatedAt = i.CreatedAt
+                RobotId = r.RobotId,
+                RobotCode = r.RobotCode,
+                Model = r.Model,
+                ConnectionStatus = r.ConnectionStatus,
+                OperationalStatus = r.OperationalStatus,
+                BatteryPercent = r.BatteryPercent,
+                IsActive = r.IsActive,
+                HasActiveAssignment = _db.TaskAssignments.Any(a =>
+                    a.RobotId == r.RobotId && a.AssignmentStatus == "ACTIVE"),
+                HasActiveMaintenance = _db.RobotMaintenanceRecords.Any(m =>
+                    m.RobotId == r.RobotId &&
+                    (m.MaintenanceStatus == "IN_PROGRESS" || m.MaintenanceStatus == "SCHEDULED")),
+                OpenIncidents = _db.RobotIncidents
+                    .Where(i => i.RobotId == r.RobotId && !i.IsResolved)
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Select(i => new RobotIncidentInfo
+                    {
+                        IncidentId = i.IncidentId,
+                        RobotId = i.RobotId,
+                        IncidentType = i.IncidentType,
+                        Severity = i.Severity,
+                        Description = i.Description,
+                        CreatedAt = i.CreatedAt
+                    }).ToList()
             })
             .ToListAsync(ct);
-
-        var result = robots.Select(r => new RobotInfo
-        {
-            RobotId = r.RobotId,
-            RobotCode = r.RobotCode,
-            Model = r.Model,
-            ConnectionStatus = r.ConnectionStatus,
-            OperationalStatus = r.OperationalStatus,
-            BatteryPercent = r.BatteryPercent,
-            IsActive = r.IsActive,
-            HasActiveAssignment = assignedIds.Contains(r.RobotId),
-            HasActiveMaintenance = maintenanceIds.Contains(r.RobotId),
-            OpenIncidents = openIncidents
-                .Where(i => i.RobotId == r.RobotId)
-                .ToList()
-        }).ToList();
 
         return Ok(result);
     }

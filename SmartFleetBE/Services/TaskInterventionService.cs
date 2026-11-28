@@ -42,6 +42,20 @@ public sealed class TaskInterventionService(SmartFleetDbContext db,
     public async Task<object> Act(long taskId, string action, InterventionRequest request,
         int? userId, CancellationToken ct)
     {
+        for (var attempt = 1; ; attempt++)
+            try { return await ActCore(taskId, action, request, userId, ct); }
+            catch (Exception ex) when (action == "recover-requeue" && attempt < 4 && MissionExecutionService.IsConflict(ex))
+            {
+                // Recovery can race a final telemetry/stop acknowledgement.
+                // Retry only transactions PostgreSQL explicitly rolled back.
+                db.ChangeTracker.Clear();
+                await Task.Delay(50 * attempt, ct);
+            }
+    }
+
+    private async Task<object> ActCore(long taskId, string action, InterventionRequest request,
+        int? userId, CancellationToken ct)
+    {
         if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length > 400)
             throw new ArgumentException("A reason of 1..400 characters is required.");
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);

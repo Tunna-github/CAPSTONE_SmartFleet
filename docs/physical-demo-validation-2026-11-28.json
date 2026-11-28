@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-28",
+  "scope": "Historical pre-deployment software validation snapshot; live deployment, database and sensor status below describe that earlier stage only. See physical-handoff-validation-2026-11-28.json and physical-demo-home-test.md for the later handoff.",
+  "branch": "feat/aiven-warehouses-task-resume",
+  "backend": {
+    "passed": 223,
+    "failed": 0,
+    "command": "dotnet test tests/SmartFleetBE.Tests/SmartFleetBE.Tests.csproj --no-restore"
+  },
+  "python": {
+    "passed": 83,
+    "failed": 0,
+    "physicalAdapterTests": 15,
+    "command": "python -m unittest discover -s tests -p test_*.py"
+  },
+  "frontend": {
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "simulationBrowserTests": {
+      "passed": 7,
+      "failed": 0,
+      "note": "Six existing tests passed in initial run. New physical pose test assertion was corrected to open the 3D tab before checking its disabled connection button; targeted rerun passed. Frontend implementation unchanged between runs."
+    }
+  },
+  "jetson": {
+    "python27Compile": "passed in-memory only",
+    "python36Compile": "passed in-memory only",
+    "newFilesDeployed": false,
+    "newMotorCommandsSent": false
+  },
+  "liveDataModified": false,
+  "aivenChanged": false,
+  "physicalAcceptance": "pending",
+  "newMixedWorldRuntimeAcceptance": "pending",
+  "pending": [
+    "Measured camera installation and black marker geometry",
+    "Encoder metre scale and station stopping/body-clearance bounds",
+    "LiDAR mounting and actual scan data",
+    "Battery sensor calibration",
+    "Dedicated physical/mixed warehouse, identities and matching scene",
+    "Second physical robot connection and calibration"
+  ],
+  "changes": [
+    "Task-selected collinear physical WAYPOINT_ROUTE execution",
+    "Backend application ACKs and pickup/delivery verification gates",
+    "Existing navigation APPROACH/ENTER/EXIT lease protocol",
+    "Pause/resume context preservation and persistent restart/cancel holds",
+    "Opt-in mixed dispatch without weakening existing eligibility",
+    "Physical pose estimates and session encoder distance stream",
+    "Explicit measured-profile to matching Webots scene exporter"
+  ],
+  "limitations": [
+    "No automatic physical curved turns or return-to-charge implementation in this straight demo adapter",
+    "No ROS2 migration; existing ROS Melodic reused",
+    "No claim of calibrated physical distance or collision safety from software tests"
+  ]
+}

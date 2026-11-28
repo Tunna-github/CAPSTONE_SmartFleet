@@ -1,0 +1,7 @@
+# Optional LAN access to the SAME broker used internally by the backend.
+# Enable once with: python tools/mqtt_hotspot.py --enable
+# Keep the hotspot on when starting this configuration. No Windows broker needed.
+services:
+  mqtt:
+    ports:
+      - '${MQTT_HOTSPOT_ADDRESS:-192.168.137.1}:${MQTT_HOTSPOT_PORT:-1883}:1883'

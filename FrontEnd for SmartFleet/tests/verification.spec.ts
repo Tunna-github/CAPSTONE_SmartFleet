@@ -25,7 +25,7 @@ async function setup(page: Page, role = "Warehouse Operator") {
         }
         return route.fulfill({ json: path.endsWith("/positions") || path.endsWith("/localizations") ? {} : [] });
     });
-    await page.goto(role === "Administrator" ? "/admin/qr-missions" : "/dashboard/qr-missions");
+    await page.goto(role === "Administrator" ? "/admin/qr-missions" : "/dashboard/qr-missions", { waitUntil: "domcontentloaded" });
     return { mission, posts };
 }
 
@@ -49,7 +49,7 @@ test("Wrong QR leaves robot waiting; manual confirmation requires a reason", asy
     const form = page.getByRole("form", { name: "PICKUP verification" });
     await form.getByLabel("Station QR payload").fill("WRONG"); await form.getByLabel("Package code").fill("BOX-1");
     await form.getByRole("checkbox").check(); await form.getByRole("button", { name: "Confirm pickup" }).click();
-    await expect(form.getByRole("alert")).toContainText("QR_OR_PACKAGE_MISMATCH");
+    await expect(form.getByRole("alert")).toContainText("station QR or package does not match");
     await expect(page.getByText("AT_PICKUP", { exact: true })).toBeVisible();
     await form.getByLabel("Verification method").selectOption("MANUAL");
     await expect(form.getByRole("button", { name: "Confirm pickup" })).toBeDisabled();
@@ -63,4 +63,31 @@ test("Admin can inspect persisted mission but cannot confirm the transfer", asyn
     await setup(page,"Administrator");
     await expect(page.getByText("Waiting for Warehouse Operator to verify pickup.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Confirm pickup" })).toHaveCount(0);
+});
+
+test("Namespaced station clearly accepts a short QR without pre-filling physical confirmation", async ({page}) => {
+    const {mission,posts}=await setup(page);
+    mission.pickupArUcoId=6;mission.pickupVerificationCode="WH1:QR6";
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const form=page.getByRole("form",{name:"PICKUP verification"});
+    await expect(form.getByLabel("Accepted station QR")).toContainText("QR6");
+    await expect(form.getByLabel("Accepted station QR")).toContainText("WH1:QR6");
+    const input=form.getByLabel("Station QR payload");
+    await expect(input).toHaveValue("");await expect(input).toHaveAttribute("placeholder","QR6");
+    await input.fill("QR6");await form.getByLabel("Package code").fill("BOX-1");
+    await expect(form.getByRole("button",{name:"Confirm pickup"})).toBeDisabled();
+    await form.getByRole("checkbox").check();await form.getByRole("button",{name:"Confirm pickup"}).click();
+    await expect.poll(()=>posts.length).toBe(1);expect(posts[0].scannedQr).toBe("QR6");
+});
+
+test("Marker line demo with unknown heading keeps the mission and verification screen usable", async ({page}) => {
+    await setup(page);
+    await page.route("https://localhost:7166/api/v1/demo-routing/robots/positions",r=>r.fulfill({json:{R01:1}}));
+    await page.route("https://localhost:7166/api/v1/demo-routing/robots/localizations",r=>r.fulfill({json:{
+        R01:{arucoId:1,headingDeg:null,mapRevision:5,source:"ARUCO_LINE_DEMO"}
+    }}));
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Camera checkpoint · heading not measured",{exact:false})).toBeVisible();
+    await expect(page.getByRole("form",{name:"PICKUP verification"})).toBeVisible();
+    await expect(page.getByText("Heading 0.0°",{exact:false})).toHaveCount(0);
 });

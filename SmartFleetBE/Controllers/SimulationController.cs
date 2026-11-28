@@ -17,7 +17,7 @@ public sealed class SimulationController(IConfiguration config,SimulationScene s
 {
     public sealed record BridgeRegistration(string RunId,string WorldSha256);
     private bool Enabled=>config.GetValue<bool>("Simulation:Enabled");
-    private bool StreamReady=>Enabled && scene.Matches(navigation.GetMap()) && poses.Snapshot(navigation.GetMap().Revision).Count>0;
+    private bool StreamReady=>Enabled && scene.Matches(navigation.GetMap()) && poses.Snapshot(navigation.GetMap().Revision).Any(p=>p.Source=="SIMULATION_GROUND_TRUTH");
     [HttpGet("map-template"),Authorize(Roles=AppRoles.Admin)]
     public IActionResult MapTemplate() => !Enabled || scene.Anchors.Count < 3 ? NotFound() : Ok(scene.MapTemplate(navigation.GetMap()));
     [HttpGet]
@@ -27,7 +27,7 @@ public sealed class SimulationController(IConfiguration config,SimulationScene s
 
     [HttpGet("poses")]
     public IActionResult Poses()=>Ok(new {mapRevision=navigation.GetMap().Revision,
-        poses=Enabled && scene.Matches(navigation.GetMap()) ? poses.Snapshot(navigation.GetMap().Revision):[],serverTimeUtc=DateTime.UtcNow});
+        poses=poses.Snapshot(navigation.GetMap().Revision).Where(p=>p.Source=="ARUCO_IMU_ODOMETRY" || Enabled && scene.Matches(navigation.GetMap())),serverTimeUtc=DateTime.UtcNow});
 
     [AllowAnonymous,HttpPost("bridge/register")]
     public IActionResult Register(BridgeRegistration request)

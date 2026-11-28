@@ -4,6 +4,9 @@ namespace SmartFleetBE.DTOs;
 
 public sealed class RobotTelemetryEvent
 {
+    // Monotonic session odometry distance; robot journal preserves the session label.
+    [JsonPropertyName("encoderDistanceM")]
+    public decimal? EncoderDistanceM { get; set; }
     [JsonPropertyName("batteryPercent")]
     public decimal? BatteryPercent { get; set; }
     [JsonPropertyName("batteryVoltage")]

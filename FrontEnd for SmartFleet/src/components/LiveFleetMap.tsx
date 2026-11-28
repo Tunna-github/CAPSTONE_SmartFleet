@@ -20,7 +20,7 @@ export default function LiveFleetMap({ robots, selectedRobot, onSelectRobot, sho
     const { theme } = useTheme();
     const charging = useCharging();
     const colors = theme === "light" ? lightColors : darkColors;
-    const { poses, connected, serverNow } = useRobotPoses(mapRevision);
+    const { poses, telemetry, connected, serverNow } = useRobotPoses(mapRevision);
     const [positions, setPositions] = useState<Record<string, number>>({});
     const [loadedMissions, setMissions] = useState<Mission[]>([]);
     const externalSnapshot = missionSnapshot !== undefined;
@@ -75,7 +75,7 @@ export default function LiveFleetMap({ robots, selectedRobot, onSelectRobot, sho
             tx: hasPose ? pose.x : point!.x, ty: hasPose ? pose.y : point!.y,
             heading: hasPose ? pose.yaw : undefined, battery: robot.batteryPercent ?? 0,
             mqtt: (robot.connectionStatus === "ONLINE" && (!hasPose || fresh) ? "ONLINE" : "OFFLINE") as "ONLINE" | "OFFLINE",
-            missionId: null, color, positionLabel: hasPose ? `${fresh ? "Live" : "Stale"} simulation pose · ${new Date(pose.capturedAtUtc).toLocaleTimeString()}` : "Last camera-confirmed QR" }];
+            missionId: null, color, positionLabel: hasPose ? `${fresh ? "Live" : "Stale"} ${pose.source === "ARUCO_IMU_ODOMETRY" ? "physical pose estimate" : "simulation pose"} · ${new Date(pose.capturedAtUtc).toLocaleTimeString()}` : "Last camera-confirmed QR" }];
     });
     const routes = active.filter(m => !selected || selected === m.robotCode).map(m => ({ robotId: m.robotCode,
         color: colors[Math.max(0, robots.findIndex(r => r.robotCode === m.robotCode)) % colors.length],
@@ -95,7 +95,7 @@ export default function LiveFleetMap({ robots, selectedRobot, onSelectRobot, sho
                 <option value="">All robots</option>{robots.map(r => <option key={r.robotCode} value={r.robotCode}>{r.robotCode}</option>)}
             </select></label>}
         </div>
-        <p className="px-3 pb-1 text-[11px] opacity-65">Cyan/colored: measured simulation position · Gray: stale pose · Yellow: last QR only. Simulation ground truth is for visualization.</p>
+        <p className="px-3 pb-1 text-[11px] opacity-65">Colored: live position · Gray: stale pose · Yellow: last confirmed QR. Physical positions use ArUco/IMU/odometry estimates; Webots positions use simulation measurements.</p>
         {directedLinks&&<p className="px-3 pb-1 text-[11px] opacity-75">Arrows: one-way lanes · Purple: pickup/delivery bays · Amber: charging · Small dots: transit QR checkpoints</p>}
         <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-y border-[var(--border-subtle)]" aria-label="Map view controls">
             <div className="inline-flex items-center gap-1">
@@ -143,6 +143,8 @@ export default function LiveFleetMap({ robots, selectedRobot, onSelectRobot, sho
         </div>}
         {chosen && <p className="px-3 py-2 text-xs border-t border-[var(--border-subtle)]">{chosen.robotCode} · {chosen.operationalStatus} · {chosen.connectionStatus} · Battery {chosen.batteryPercent ?? "?"}%
             {chosenMission ? ` · Task #${chosenMission.taskId} · ${chosenMission.missionStatus}` : " · No active mission"}
-            {poses[chosen.robotCode] && ` · Heading ${poses[chosen.robotCode].yaw.toFixed(1)}°`}</p>}
+            {poses[chosen.robotCode] && ` · Heading ${poses[chosen.robotCode].yaw.toFixed(1)}°`}
+            {telemetry[chosen.robotCode] && serverNow - Date.parse(telemetry[chosen.robotCode].receivedAt) < 5000 &&
+                ` · Odometry ${telemetry[chosen.robotCode].encoderDistanceM.toFixed(2)} m (session)`}</p>}
     </div>;
 }

@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 import unittest
 import subprocess
@@ -55,11 +56,13 @@ class AivenMapTests(unittest.TestCase):
     def test_old_setup_command_does_not_silently_revert_shared_database(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder); (root / 'tools').mkdir()
-            shutil.copyfile(Path(__file__).resolve().parents[1] / 'tools/setup_demo.py', root / 'tools/setup_demo.py')
-            (root / '.env').write_text('AIVEN_CONNECTION_STRING=private-placeholder\nJWT_KEY=keep-this\n')
+            for name in ('setup_demo.py','aiven_support.py','mqtt_hotspot.py'):
+                shutil.copyfile(Path(__file__).resolve().parents[1] / 'tools' / name, root / 'tools' / name)
+            (root / '.env').write_text('AIVEN_CONNECTION_STRING=private-placeholder\nJWT_KEY=keep-this\nCOMPOSE_FILE=compose.yaml'+os.pathsep+'compose.mqtt-hotspot.yaml\n')
             subprocess.run([sys.executable, str(root / 'tools/setup_demo.py'), '--charging-layout'], check=True, capture_output=True)
             text = (root / '.env').read_text()
             self.assertIn('compose.aiven.yaml', text); self.assertIn('JWT_KEY=keep-this', text)
+            self.assertIn('compose.mqtt-hotspot.yaml',text)
 
     def test_switch_is_transactional_and_retains_business_history(self):
         text = select_sql('map1', [2], 3)

@@ -3,6 +3,8 @@ import argparse
 from pathlib import Path
 import secrets
 import os
+from aiven_support import read_env
+from mqtt_hotspot import keep_hotspot_overlay
 
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
@@ -29,6 +31,7 @@ if args.charging_layout:
     lines=[line for line in lines if not line.startswith("COMPOSE_FILE=")]
     files=["compose.yaml","compose.charging.yaml"]
     if shared: files.append("compose.aiven.yaml")
+    files=keep_hotspot_overlay(files,read_env())
     lines.append("COMPOSE_FILE="+os.pathsep.join(files))
     destination.write_text("\n".join(lines)+"\n",encoding="utf-8")
     if shared: print("Preserved shared Aiven configuration. Select map1/map2 with tools/select_aiven_map.py; no database was changed.")

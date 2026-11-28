@@ -112,6 +112,33 @@ public sealed class MissionVerificationTests
     private static VerificationRequest Request(string stage="PICKUP", string? id=null) => new(id??Guid.NewGuid().ToString(),stage,"QRCODE",
         stage=="PICKUP"?"STATION:P1":"STATION:D1","BOX-1",true,null);
 
+    [Theory]
+    [InlineData("QR6","WH1:QR6",6,true)]
+    [InlineData("qr06","WH1:QR6",6,true)]
+    [InlineData("WH1:QR6","WH1:QR6",6,true)]
+    [InlineData("WH2:QR6","WH1:QR6",6,false)]
+    [InlineData("QR7","WH1:QR6",6,false)]
+    [InlineData("QR6","WH1:QR6",7,false)]
+    [InlineData("QR6","STATION:P1",6,false)]
+    [InlineData("P1","STATION:P1",6,false)]
+    public void ShortQrIsScopedToTheFrozenStationAndCheckpoint(string scanned,string expected,int marker,bool accepted)
+        => Assert.Equal(accepted,MissionExecutionService.MatchesStationQr(scanned,expected,marker));
+
+    [Fact]
+    public async Task NamespacedStationAcceptsShortQrWithoutChangingSnapshotOrBypassingPackage()
+    {
+        using var f=new Fixture();await f.ReachPickup();
+        var execution=f.Db.MissionExecutions.Single();execution.ExpectedPickupQr="WH1:QR1";
+        await f.Db.SaveChangesAsync();
+        Assert.False((await f.Service().VerifyAsync(1,1,Request() with { ScannedQr="WH2:QR1" },default)).Accepted);
+        Assert.False((await f.Service().VerifyAsync(1,1,Request() with { ScannedQr="QR1",ScannedPackageCode="WRONG" },default)).Accepted);
+        Assert.True((await f.Service().VerifyAsync(1,1,Request() with { ScannedQr="QR1" },default)).Accepted);
+        Assert.Equal("WH1:QR1",execution.ExpectedPickupQr);
+        var saved=f.Db.DeliveryVerifications.Single();
+        Assert.Equal("WH1:QR1",saved.ExpectedQrPayload);Assert.Equal("QR1",saved.QrPayloadScanned);
+        Assert.Equal("NAVIGATING_TO_DELIVERY",f.Db.Missions.Single().MissionStatus);
+    }
+
     [Fact]
     public async Task HappyPathRequiresBothVerificationsAndRobotCompletion()
     {

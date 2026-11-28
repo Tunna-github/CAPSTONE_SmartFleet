@@ -6,6 +6,10 @@ services:
     profiles: [local-database]
   backend:
     image: ${AIVEN_BACKEND_IMAGE:-smartfleet-backend}
+    restart: unless-stopped
+    # Keep external Aiven lookup independent of hotspot DNS forwarding.
+    # Docker's embedded resolver still resolves internal names such as mqtt.
+    dns: [1.1.1.1, 8.8.8.8]
     depends_on: !override
       mqtt: {condition: service_healthy}
     environment:

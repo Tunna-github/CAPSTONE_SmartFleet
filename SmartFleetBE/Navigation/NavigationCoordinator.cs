@@ -18,6 +18,7 @@ public sealed class NavigationCoordinator
         public required string RobotCode { get; init; }
         public string LidarStatus { get; set; } = "NO_SCAN_DATA";
         public DateTime LidarAtUtc { get; set; } = DateTime.MinValue;
+        public bool SupervisedStraightDemo { get; set; }
         public int? IntersectionId { get; set; }
         public int? CurrentArUcoId { get; set; }
         public int? NextArUcoId { get; set; }
@@ -285,7 +286,7 @@ public sealed class NavigationCoordinator
         }
     }
 
-    public NavigationOperation OnLidar(int robotId, string robotCode, string status)
+    public NavigationOperation OnLidar(int robotId, string robotCode, string status, bool supervisedStraightDemo = false)
     {
         if (status is not ("CLEAR" or "DETECTED" or "CRITICAL" or "NO_SCAN_DATA"))
             return NavigationOperation.Fail("Unsupported LiDAR status.");
@@ -296,6 +297,7 @@ public sealed class NavigationCoordinator
             var robot = GetOrCreateRobot(robotId, robotCode);
             robot.LidarStatus = status;
             robot.LidarAtUtc = DateTime.UtcNow;
+            robot.SupervisedStraightDemo = supervisedStraightDemo;
 
             var outgoing = new Dictionary<string, NavigationDirective>(StringComparer.OrdinalIgnoreCase);
             if (robot.IntersectionId is int id && _intersections.TryGetValue(id, out var traffic))
@@ -601,7 +603,8 @@ public sealed class NavigationCoordinator
         ClaimCorridor(robot);
         return NewDirective(robot, robot.LidarStatus == "DETECTED" ? "SLOW" : "GO",
             robot.LidarStatus == "DETECTED" ? config.ObstacleSpeed : config.NormalSpeed,
-            false, robot.LidarStatus == "DETECTED" ? "OBSTACLE_DETECTED" : "CLEAR_ROAD");
+            false, robot.LidarStatus == "DETECTED" ? "OBSTACLE_DETECTED" :
+                robot.LidarStatus=="NO_SCAN_DATA" ? "SUPERVISED_STRAIGHT_LINE_DEMO_NO_LIDAR" : "CLEAR_ROAD");
     }
 
     private void ClaimCorridor(RobotState robot)
@@ -638,9 +641,13 @@ public sealed class NavigationCoordinator
         };
     }
 
-    private static bool IsLidarSafe(RobotState robot, DateTime now) =>
+    private bool IsLidarSafe(RobotState robot, DateTime now) =>
         now - robot.LidarAtUtc <= TimeSpan.FromSeconds(2.5) &&
-        (robot.LidarStatus is "CLEAR" or "DETECTED");
+        (robot.LidarStatus is "CLEAR" or "DETECTED" ||
+            robot.LidarStatus=="NO_SCAN_DATA" && robot.SupervisedStraightDemo && robot.IntersectionId==null &&
+            robot.CurrentArUcoId is int current && robot.NextArUcoId is int next &&
+            FindQrCell(_stored.Map!,current) is {IsIntersection:false} && FindQrCell(_stored.Map!,next) is {IsIntersection:false} &&
+            AreDirectQrNeighbors(current,next));
 
     private RobotNavigationConfig ConfigFor(string code) =>
         _stored.RobotConfigs.TryGetValue(code, out var config)

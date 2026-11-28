@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-28",
+  "scope": "Historical pre-deployment software validation snapshot; live deployment, database and camera status below describe that earlier stage only. See physical-handoff-validation-2026-11-28.json and physical-demo-home-test.md for the later handoff.",
+  "mode": "MARKER_LINE_DEMO",
+  "backendTestsPassed": 228,
+  "pythonTestsPassed": 91,
+  "verificationBrowserTestsPassed": 4,
+  "typescript": "passed",
+  "productionBuild": "passed",
+  "validated": [
+    "Follow black tape using image pixels",
+    "Stop on first expected-ID observation, confirm distinct frames before progress",
+    "Ignore unrelated marker IDs for progress",
+    "Wait for backend pickup and delivery verification",
+    "Complete task then receive a second task in the same connected controller",
+    "Line loss/stale frames stop without fake waypoint",
+    "Revoke idle READY when camera loses its marker",
+    "Do not require camera/marker dimensions, metric pose, heading or encoder distance calibration",
+    "Do not fabricate heading or reprojection error",
+    "Retain existing traffic grants and center-versus-exit distinction",
+    "Display checkpoint-only localization without crashing on null heading"
+  ],
+  "physicalMotorsExecuted": false,
+  "liveDatabaseModified": false,
+  "liveDockerConfigurationChanged": false,
+  "activation": "New profile and notebook in Robot code/physical. Backend requires an explicitly allowlisted PHYSICAL identity and Charging:Enabled=false for this demo.",
+  "limits": [
+    "Car must face the intended black line; no automatic U-turn",
+    "Real camera/tape performance has not yet been tested with this adapter",
+    "Registered identity, actual printed route markers and backend topology must agree",
+    "Existing real LiDAR/traffic freshness requirements remain; no fake CLEAR reports"
+  ]
+}

@@ -92,7 +92,7 @@ public sealed class QrDemoRouteService
     private readonly Dictionary<long, MissionView> _missions = [];
     private readonly Dictionary<long, string> _publishedPayloads = [];
     private readonly HashSet<string> _freshRobotPositions = new(StringComparer.OrdinalIgnoreCase);
-    public sealed record RobotLocalization(int ArucoId, double HeadingDeg, int MapRevision,
+    public sealed record RobotLocalization(int ArucoId, double? HeadingDeg, int MapRevision,
         string Source, DateTime ReceivedAtUtc);
     private readonly Dictionary<string, RobotLocalization> _localizations = new(StringComparer.OrdinalIgnoreCase);
 
@@ -137,7 +137,8 @@ public sealed class QrDemoRouteService
     {
         var revision = _navigation.GetMap().Revision;
         lock (_gate) return _localizations.Where(p => p.Value.MapRevision == revision &&
-            DateTime.UtcNow - p.Value.ReceivedAtUtc < TimeSpan.FromSeconds(30))
+            DateTime.UtcNow - p.Value.ReceivedAtUtc < TimeSpan.FromSeconds(30) &&
+            (p.Value.Source!=PhysicalLineDemoPolicy.Source || PhysicalLineDemoPolicy.Allows(_configuration,p.Key)))
             .ToDictionary(p => p.Key, p => p.Value, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -159,9 +160,16 @@ public sealed class QrDemoRouteService
     }
     public void RecordCameraProgress(string code, int arucoId, double? heading, int revision)
     {
-        if (heading is not { } yaw || !double.IsFinite(yaw) || yaw is < -180 or > 180) return;
         lock (_gate)
         {
+            if (heading == null && PhysicalLineDemoPolicy.Allows(_configuration,code) &&
+                _localizations.TryGetValue(code,out var previous) && previous.Source==PhysicalLineDemoPolicy.Source)
+            {
+                _store.RobotPositions[code]=arucoId;_freshRobotPositions.Add(code);
+                _localizations[code]=new(arucoId,null,revision,PhysicalLineDemoPolicy.Source,DateTime.UtcNow);
+                SaveLocked();_navigation.RecordCameraCheckpoint(code,arucoId);return;
+            }
+            if (heading is not { } yaw || !double.IsFinite(yaw) || yaw is < -180 or > 180) return;
             _store.RobotPositions[code] = arucoId; _freshRobotPositions.Add(code);
             _localizations[code] = new(arucoId, yaw, revision, "ARUCO_IMU", DateTime.UtcNow);
             SaveLocked();
@@ -173,10 +181,14 @@ public sealed class QrDemoRouteService
     {
         var map = _navigation.GetMap();
         return new { protocolVersion = 1, mapRevision = map.Revision, markerDictionary = map.MarkerDictionary, frame = "MAP_N_W_UP",
+            metersPerGridCell = _configuration.GetValue("DemoRoute:MetersPerGridCell", 0.35),
+            map.DirectedLinks, map.Links,
+            checkpointLinks = TraversableQrLinks(map, ReadNodes(map))
+                .Select(edge => new[] { edge.From.Id, edge.To.Id }).ToArray(),
             markers = map.Cells.SelectMany((row, r) => row.Select((cell, c) => new { cell, r, c }))
                 .Where(p => p.cell.Type == "qr" && p.cell.ArucoId.HasValue)
-                .Select(p => new { arucoId = p.cell.ArucoId, row = p.r, col = p.c,
-                    markerYawDeg = p.cell.MarkerYawDeg, markerSizeM = p.cell.MarkerSizeM }).ToArray() };
+                .Select(p => new { arucoId = p.cell.ArucoId, label = p.cell.Label, row = p.r, col = p.c,
+                    markerYawDeg = p.cell.MarkerYawDeg, markerSizeM = p.cell.MarkerSizeM, p.cell.IsIntersection }).ToArray() };
     }
 
     public bool SupportsWarehouse(int warehouseId) => !_navigation.WarehouseId.HasValue || _navigation.WarehouseId == warehouseId;
@@ -203,7 +215,7 @@ public sealed class QrDemoRouteService
                 var start = _localizations[code].ArucoId;
                 var pickupRoute = FindPath(map, nodes, start, selection.PickupArUcoId, robotCode: code);
                 var deliveryRoute = FindPath(map, nodes, selection.PickupArUcoId, selection.DeliveryArUcoId, robotCode: code);
-                if (pickupRoute.Concat(deliveryRoute).Distinct().Any(id =>
+                if (_localizations[code].Source!=PhysicalLineDemoPolicy.Source && pickupRoute.Concat(deliveryRoute).Distinct().Any(id =>
                     map.Cells[nodes[id].Row][nodes[id].Col].MarkerYawDeg == null ||
                     map.Cells[nodes[id].Row][nodes[id].Col].MarkerSizeM == null))
                 { reason = "Commission every QR marker on this route before assignment."; return false; }
@@ -445,6 +457,16 @@ public sealed class QrDemoRouteService
             if (string.Equals(report.Event, "READY", StringComparison.OrdinalIgnoreCase))
             {
                 var cell = map.Cells.SelectMany(row => row).Single(c => c.Type == "qr" && c.ArucoId == report.ArucoId);
+                if(report.LocalizationSource==PhysicalLineDemoPolicy.Source)
+                {
+                    if(!PhysicalLineDemoPolicy.Allows(_configuration,robotCode) || report.MapRevision!=map.Revision ||
+                        report.StableFrames<2 || !report.RobotStopped || report.HeadingDeg!=null || report.ReprojectionErrorPx!=null)
+                    { _freshRobotPositions.Remove(robotCode);_localizations.Remove(robotCode);return(false,"Invalid or disabled physical line demo checkpoint report."); }
+                    _store.RobotPositions[robotCode]=report.ArucoId;_freshRobotPositions.Add(robotCode);
+                    _localizations[robotCode]=new(report.ArucoId,null,map.Revision,PhysicalLineDemoPolicy.Source,DateTime.UtcNow);
+                    _navigation.RecordCameraCheckpoint(robotCode,report.ArucoId);SaveLocked();
+                    return(true,"Camera checkpoint recorded; metric position and heading are unknown.");
+                }
                 if (report.MapRevision != map.Revision || report.LocalizationSource != "ARUCO_IMU" ||
                     report.HeadingDeg is not { } heading || !double.IsFinite(heading) || heading is < -180 or > 180 ||
                     report.ReprojectionErrorPx is not { } error || !double.IsFinite(error) || error is < 0 or > 2 ||

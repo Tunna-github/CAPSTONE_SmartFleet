@@ -24,7 +24,11 @@ public sealed class RobotCommandOutboxWorker(IServiceScopeFactory scopes, MqttSe
                     {
                         var commandId = id.GetString();
                         var current = await db.TaskInterventions.AnyAsync(c => c.CommandId == commandId, stoppingToken);
-                        if (current)
+                        var superseded = current && await db.TaskAssignments.AnyAsync(next =>
+                            next.AssignmentStatus == "ACTIVE" && next.AssignmentId != command.AssignmentId &&
+                            db.TaskAssignments.Any(old => old.AssignmentId == command.AssignmentId &&
+                                old.AssignmentStatus != "ACTIVE" && old.RobotId == next.RobotId), stoppingToken);
+                        if (current && !superseded)
                             await mqtt.PublishAsync(command.Topic, command.Payload, stoppingToken);
                         else
                         {

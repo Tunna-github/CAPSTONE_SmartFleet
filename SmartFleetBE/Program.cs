@@ -222,7 +222,8 @@ if (enableMqttWorkers)
         .AddHostedService<MqttMissionStatusWorker>();
 
     builder.Services.AddHostedService<MqttRobotTelemetryWorker>();
-    if (builder.Configuration.GetValue<bool>("Simulation:Enabled")) builder.Services.AddHostedService<MqttRobotPoseWorker>();
+    if (builder.Configuration.GetValue<bool>("Simulation:Enabled") || builder.Configuration.GetValue<bool>("PhysicalRobots:Enabled"))
+        builder.Services.AddHostedService<MqttRobotPoseWorker>();
     builder.Services.AddHostedService<RobotHealthWorker>();
     if (builder.Configuration.GetValue<bool>("DemoRoute:Enabled"))
         builder.Services.AddHostedService<QrDemoProgressWorker>();

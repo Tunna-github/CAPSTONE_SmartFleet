@@ -1,0 +1,27 @@
+{
+  "navigationMode": "MARKER_LINE_DEMO",
+  "demoEnabled": true,
+  "robotCode": "R01",
+  "mqttClientId": "smartfleet-physical-R01",
+  "brokerHost": "192.168.137.1",
+  "brokerPort": 1883,
+  "maxSpeedMps": 0.1,
+  "segmentTimeoutSeconds": 45,
+  "markerConfirmFrames": 2,
+  "lineLostTimeoutSeconds": 5,
+  "lineRoi": [
+    0.2,
+    0.9
+  ],
+  "lineBlackThreshold": 85,
+  "lineMinAreaPx": 80,
+  "lineKp": 0.6,
+  "maxLineSteerRad": 0.2,
+  "scanMountYawRad": "auto",
+  "battery": {
+    "address": 65,
+    "fullVoltage": 12.6,
+    "emptyVoltage": 9.0,
+    "source": "Existing battery_send.py voltage estimate; not a calibrated state-of-charge model"
+  }
+}

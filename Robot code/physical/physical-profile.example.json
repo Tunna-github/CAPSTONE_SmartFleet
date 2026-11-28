@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "commissioned": false,
+  "robotCode": "R01",
+  "brokerHost": "192.168.137.1",
+  "brokerPort": 1883,
+  "metersPerGridCell": 0.3,
+  "spacingStatus": "Approximate user estimate: 2.4 m outer marker-center span; measure before commissioning",
+  "arrivalRadiusM": null,
+  "intersectionClearanceM": null,
+  "maxSpeedMps": 0.1,
+  "segmentTimeoutSeconds": 19,
+  "maxVisionGapSeconds": null,
+  "directedLinks": false,
+  "encoderScaleValidated": false,
+  "scanMountYawRad": null,
+  "battery": {
+    "validated": false,
+    "address": 65,
+    "emptyVoltage": null,
+    "fullVoltage": null
+  },
+  "camera": {
+    "validated": false,
+    "imageSize": [
+      640,
+      480
+    ],
+    "cameraMatrix": null,
+    "distortionCoefficients": null,
+    "robotFromOpticalRotation": null,
+    "robotFromOpticalTranslation": null
+  },
+  "markers": [
+    {
+      "arucoId": 8,
+      "row": 2,
+      "col": 2,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    },
+    {
+      "arucoId": 1,
+      "row": 2,
+      "col": 6,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    },
+    {
+      "arucoId": 3,
+      "row": 2,
+      "col": 10,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    },
+    {
+      "arucoId": 0,
+      "row": 6,
+      "col": 2,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    },
+    {
+      "arucoId": 6,
+      "row": 6,
+      "col": 6,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": true
+    },
+    {
+      "arucoId": 2,
+      "row": 6,
+      "col": 10,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    },
+    {
+      "arucoId": 5,
+      "row": 10,
+      "col": 2,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    },
+    {
+      "arucoId": 7,
+      "row": 10,
+      "col": 6,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    },
+    {
+      "arucoId": 4,
+      "row": 10,
+      "col": 10,
+      "markerYawDeg": null,
+      "markerSizeM": null,
+      "isIntersection": false
+    }
+  ],
+  "links": [
+    [
+      "QR8",
+      "QR0"
+    ],
+    [
+      "QR8",
+      "QR1"
+    ],
+    [
+      "QR1",
+      "QR6"
+    ],
+    [
+      "QR1",
+      "QR3"
+    ],
+    [
+      "QR3",
+      "QR2"
+    ],
+    [
+      "QR0",
+      "QR5"
+    ],
+    [
+      "QR0",
+      "QR6"
+    ],
+    [
+      "QR6",
+      "QR7"
+    ],
+    [
+      "QR6",
+      "QR2"
+    ],
+    [
+      "QR2",
+      "QR4"
+    ],
+    [
+      "QR5",
+      "QR7"
+    ],
+    [
+      "QR7",
+      "QR4"
+    ]
+  ],
+  "mqttClientId": "smartfleet-physical-R01",
+  "maxOdometryGapM": null
+}

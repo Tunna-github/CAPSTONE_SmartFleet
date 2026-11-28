@@ -2,6 +2,7 @@ using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using SmartFleetBE.Model;
 
@@ -148,6 +149,20 @@ public sealed class MissionExecutionService(SmartFleetDbContext db, QrDemoRouteS
     public Task<VerificationResult> VerifyAsync(long id, int userId, VerificationRequest request, CancellationToken ct)
         => RetryAsync(() => VerifyCore(id, userId, request, ct), ct);
 
+    public static bool MatchesStationQr(string? scanned, string expected, int checkpointId)
+    {
+        scanned = scanned?.Trim();
+        if (scanned == expected) return true;
+        // A short QR code is resolved only inside this mission's frozen station
+        // and checkpoint. Never strip a namespace from a scanned foreign code.
+        var shortCode = Regex.Match(scanned ?? "", @"^QR([0-9]+)$", RegexOptions.IgnoreCase);
+        var savedCode = Regex.Match(expected, @"^(?:WH[0-9]+:)?QR([0-9]+)$", RegexOptions.IgnoreCase);
+        return shortCode.Success && savedCode.Success &&
+            int.TryParse(shortCode.Groups[1].Value, out var scannedId) &&
+            int.TryParse(savedCode.Groups[1].Value, out var savedId) &&
+            scannedId == checkpointId && savedId == checkpointId;
+    }
+
     private async Task<VerificationResult> VerifyCore(long id, int userId, VerificationRequest request, CancellationToken ct)
     {
         if (!Guid.TryParse(request.RequestId, out _) || request.Stage is not ("PICKUP" or "DELIVERY") ||
@@ -184,7 +199,9 @@ public sealed class MissionExecutionService(SmartFleetDbContext db, QrDemoRouteS
         if (request.Type == "QRCODE" && failures >= MaxQrAttempts)
             throw new InvalidOperationException("QR retry limit reached. Investigate and use a reasoned manual verification or Maintenance recovery.");
         var expected = request.Stage == "PICKUP" ? e.ExpectedPickupQr : e.ExpectedDeliveryQr;
-        var accepted = request.Type == "MANUAL" || request.ScannedQr?.Trim() == expected &&
+        var route = ReadRoute(e);
+        var checkpointId = route.Waypoints[request.Stage == "PICKUP" ? route.PickupWaypointIndex : route.Waypoints.Count - 1].ArucoId;
+        var accepted = request.Type == "MANUAL" || MatchesStationQr(request.ScannedQr, expected, checkpointId) &&
             (string.IsNullOrEmpty(e.PackageCode) || request.ScannedPackageCode?.Trim() == e.PackageCode);
         var result = accepted ? "VERIFIED" : "QR_OR_PACKAGE_MISMATCH";
         var now = DateTime.UtcNow;

@@ -86,6 +86,7 @@ public sealed class RobotPoseStore(TimeProvider? clock=null)
     private readonly object gate=new();
     private readonly Dictionary<string,RobotPose> poses=new(StringComparer.Ordinal);
     private string? runId;
+    private readonly HashSet<(string Robot,string Run)> retiredPhysicalRuns=[];
     private DateTimeOffset Now=>(clock??TimeProvider.System).GetUtcNow();
     public void BeginRun(string id)
     {
@@ -100,6 +101,29 @@ public sealed class RobotPoseStore(TimeProvider? clock=null)
         lock(gate)
         {
             if(runId!=pose.RunId || poses.TryGetValue(pose.RobotCode,out var old) && old.Sequence>=pose.Sequence) return false;
+            poses[pose.RobotCode]=pose;return true;
+        }
+    }
+    // Called only after the MQTT worker verifies an active PHYSICAL registry identity.
+    // These are estimated visualization poses, never evidence for traffic ownership.
+    public bool TryAcceptPhysical(RobotPose pose,WarehouseMapDocument map)
+    {
+        if(string.IsNullOrEmpty(pose.RunId) || pose.RunId.Length>64 || string.IsNullOrEmpty(pose.RobotCode) ||
+            pose.Sequence<0 || pose.Source!="ARUCO_IMU_ODOMETRY" || pose.Frame!="GRID_COL_ROW" ||
+            pose.MapRevision!=map.Revision || pose.CapturedAtUtc<Now.AddSeconds(-3) || pose.CapturedAtUtc>Now.AddSeconds(3) ||
+            !double.IsFinite(pose.X) || !double.IsFinite(pose.Y) || !double.IsFinite(pose.Yaw) || pose.Yaw is < -180 or > 180 ||
+            pose.X<-.5 || pose.X>map.Columns-.5 || pose.Y<-.5 || pose.Y>map.Rows-.5) return false;
+        lock(gate)
+        {
+            if(retiredPhysicalRuns.Contains((pose.RobotCode,pose.RunId))) return false;
+            if(poses.TryGetValue(pose.RobotCode,out var old)) {
+                if(old.Source!="ARUCO_IMU_ODOMETRY") return false;
+                if(old.RunId==pose.RunId && old.Sequence>=pose.Sequence) return false;
+                if(old.RunId!=pose.RunId) {
+                    if(pose.CapturedAtUtc<=old.CapturedAtUtc || retiredPhysicalRuns.Count>=1024) return false;
+                    retiredPhysicalRuns.Add((old.RobotCode,old.RunId));
+                }
+            }
             poses[pose.RobotCode]=pose;return true;
         }
     }

@@ -34,3 +34,8 @@ SmartFleetBE/App_Data/qr-demo-state.json.tmp
 Webots_Full_Mission_Controller/.smartfleet-safety-*.json
 Webots_Full_Mission_Controller/.smartfleet-charging-*.json
 Webots_Full_Mission_Controller/.smartfleet-charging-*.json.tmp
+
+# Physical installation calibration and live mission journals are per-device.
+Robot code/physical/physical-profile.json
+Robot code/physical/results/
+.physical-demo-export/

@@ -35,6 +35,9 @@ function VerificationForm({ mission, stage, onSaved, point }: { mission: Verific
     const attempts = stage === "PICKUP" ? mission.pickupQrAttempts : mission.deliveryQrAttempts;
     const locked = method === "QRCODE" && attempts >= mission.maxQrAttempts;
     const verificationCode = stage === "PICKUP" ? mission.pickupVerificationCode : mission.deliveryVerificationCode;
+    const checkpointId = stage === "PICKUP" ? mission.pickupArUcoId : mission.deliveryArUcoId;
+    const savedQr = verificationCode?.match(/^(?:WH[0-9]+:)?QR([0-9]+)$/i);
+    const shortCode = savedQr && Number(savedQr[1]) === checkpointId ? `QR${checkpointId}` : undefined;
     const disabled = busy || mission.held || !mission.stationPresenceFresh || locked || !confirmed ||
         (method === "MANUAL" ? !note.trim() : !verificationCode || !qr.trim() || mission.packageRequired && !packageCode.trim());
     async function submit(event: React.FormEvent) {
@@ -52,7 +55,9 @@ function VerificationForm({ mission, stage, onSaved, point }: { mission: Verific
             await onSaved();
         } catch (ex) {
             const failure = ex as { status?: number; message?: string };
-            setError(failure.message || "Verification failed");
+            setError(failure.status === 422 && failure.message === "QR_OR_PACKAGE_MISMATCH"
+                ? `The station QR or package does not match this mission. Use ${shortCode ? `${shortCode} or ` : ""}${verificationCode ?? "the saved station code"}${mission.packageRequired ? " and check the package code" : ""}.`
+                : failure.message || "Verification failed");
             // A definite mismatch is recorded. A lost response retains the ID so retry cannot duplicate a transfer.
             if (failure.status === 422) retry.current = null;
             await onSaved();
@@ -71,8 +76,9 @@ function VerificationForm({ mission, stage, onSaved, point }: { mission: Verific
         </label>
         {method === "QRCODE" ? <>
             <label className="block mt-3 text-sm">Station QR payload
-                <input className={fieldClass} value={qr} onChange={e => setQr(e.target.value)} maxLength={150} autoComplete="off" disabled={busy} />
+                <input className={fieldClass} value={qr} onChange={e => setQr(e.target.value)} placeholder={shortCode ?? verificationCode} maxLength={150} autoComplete="off" disabled={busy} />
             </label>
+            {shortCode && <p className="sf-notice mt-2" aria-label="Accepted station QR">Enter <strong className="font-mono">{shortCode}</strong> or scan the full station code <strong className="font-mono">{verificationCode}</strong>. This applies only to this mission's station.</p>}
             {verificationCode ? <p className="sf-notice mt-2" aria-label="Station verification code">Verification code saved for this mission: <strong className="font-mono">{verificationCode}</strong>
                 {(["P1", "D1"].includes(verificationCode)) && <span className="block mt-1">This mission retains its original code. Use the code saved above; new assignments use the updated station configuration.</span>}
             </p> : <p role="status" className="sf-notice mt-2">Waiting for this mission's saved verification code. Reload mission data before scanning.</p>}

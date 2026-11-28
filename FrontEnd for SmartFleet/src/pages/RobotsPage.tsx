@@ -53,6 +53,7 @@ export function RobotsPage() {
     const loadRobots = useCallback(async () => {
         const data = await getRobots();
         setRobots(data);
+        setError("");
     }, []);
 
     // MQTT -> BE -> SignalR -> React state. No GET polling is required.
@@ -236,7 +237,7 @@ export function RobotsPage() {
                     </div>
                 )}
 
-                {!loading && robots.length === 0 && (
+                {!loading && !error && robots.length === 0 && (
                     <div className="text-center py-12 rounded-2xl border border-dashed" style={{ borderColor: "var(--border-medium)", background: "var(--surface-2)" }}>
                         <p className="text-[14px]" style={{ color: "var(--text-muted)" }}>No robots found in the database.</p>
                     </div>

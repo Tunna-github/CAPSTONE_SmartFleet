@@ -12,11 +12,17 @@ public sealed class SharedDatabaseLease(IConfiguration config, IHostApplicationL
     {
         if (connection != null) return;
         var builder = new NpgsqlConnectionStringBuilder(config.GetConnectionString("DefaultConnection")) {
-            Pooling = false, KeepAlive = 5, CommandTimeout = 5, ApplicationName = "SmartFleet-coordinator-lease"
+            // Allow a brief WAN delay, but fail before the server's 30-second
+            // abandoned-owner timeout can release the coordination lock.
+            Pooling = false, KeepAlive = 5, CommandTimeout = 15, ApplicationName = "SmartFleet-coordinator-lease"
         };
         connection = new(builder.ConnectionString);
         try {
             await connection.OpenAsync(ct);
+            // A broken network can leave this server session alive after the
+            // backend has stopped. The two-second heartbeat keeps an active
+            // owner alive; an abandoned session expires and releases its lock.
+            await new NpgsqlCommand("SET idle_session_timeout = '30s'", connection).ExecuteNonQueryAsync(ct);
             var locked = await new NpgsqlCommand("SELECT pg_try_advisory_lock(490,20261128)", connection).ExecuteScalarAsync(ct);
             if (locked is not true) throw new InvalidOperationException("Another SmartFleet backend already controls this shared database. Use its web address; do not start another robot simulation.");
             await using var cmd = new NpgsqlCommand("""
@@ -39,8 +45,8 @@ public sealed class SharedDatabaseLease(IConfiguration config, IHostApplicationL
             while (await timer.WaitForNextTickAsync(ct))
                 await new NpgsqlCommand("SELECT 1", connection).ExecuteScalarAsync(ct);
         } catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-        catch (Exception) {
-            logger.LogCritical("Shared database coordinator connection was lost; stopping this backend and retaining robot safety holds.");
+        catch (Exception ex) {
+            logger.LogCritical(ex, "Shared database coordinator connection was lost; stopping this backend and retaining robot safety holds.");
             lifetime.StopApplication();
         }
     }

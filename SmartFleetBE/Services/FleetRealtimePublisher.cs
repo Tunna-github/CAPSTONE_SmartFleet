@@ -53,7 +53,7 @@ public sealed class FleetRealtimePublisher(
             new { robotCode, receivedAt,
                   telemetry.BatteryPercent, telemetry.BatteryVoltage,
                   telemetry.PositionX, telemetry.PositionY, telemetry.Heading,
-                  telemetry.LinearVelocity, telemetry.AngularVelocity,
+                  telemetry.LinearVelocity, telemetry.AngularVelocity, telemetry.EncoderDistanceM,
                   telemetry.CpuTemperature, telemetry.WifiSignalDbm }, ct);
 
     public async Task TaskUpdatedAsync(long taskId, CancellationToken ct = default)

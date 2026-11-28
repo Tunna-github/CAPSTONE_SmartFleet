@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-28",
+  "timezone": "Asia/Saigon",
+  "branch": "feat/aiven-warehouses-task-resume",
+  "scope": "Pre-commit handoff: automated software checks and separately identified earlier stationary/live-broker observations. No physical motion was commanded by these checks.",
+  "backend": {
+    "command": "dotnet test tests/SmartFleetBE.Tests/SmartFleetBE.Tests.csproj --no-restore --verbosity quiet",
+    "passed": 237,
+    "failed": 0,
+    "skipped": 0
+  },
+  "python": {
+    "command": "python -m unittest discover -s tests -p test_*.py",
+    "passed": 99,
+    "failed": 0,
+    "physicalModuleAndNotebookPython36Syntax": "passed",
+    "sourceNotebookOutputs": "empty"
+  },
+  "frontend": {
+    "typecheck": "passed: npx tsc --noEmit",
+    "productionBuild": "passed: npm run build; non-blocking existing bundle-size warning",
+    "browserCommand": "npx playwright test tests/verification.spec.ts tests/simulation.spec.ts --reporter=line",
+    "passed": 12,
+    "failed": 0,
+    "scope": "Mocked API browser tests. Existing test caught generic 503 normalization masking the backend's simulator diagnostic; corrected message precedence and reran both suites successfully. Mock SignalR transport warnings are not live backend failures."
+  },
+  "earlierJetsonObservations": {
+    "nativeImports": "Python 3.6.9 aarch64, NumPy 1.19.5, OpenCV 4.6.0; ARMV8 OpenBLAS setting, no package reinstall",
+    "stationary": "Raw camera QR6/line recognition, odometry/IMU/LiDAR and battery observed; final controller IDLE, connected, READY, applied velocity zero",
+    "navigationAck": "Real broker SCAN request received accepted SCAN on navigation-ack; injected motor callback was used to exercise agent transition without sending a driving command",
+    "task26": "Recovered to QUEUED after explicit physical/load confirmation; previous failed assignment/mission and verification history retained",
+    "dataChanges": "Earlier deployment registered/configured R03 and used audited recovery. Historical pre-deployment reports are not the current database state."
+  },
+  "privateConfiguration": "Private .env, Aiven CA/credentials, per-device profile, backups and active journals are excluded from Git. Copying source does not restore or migrate Aiven data.",
+  "pendingPhysicalAcceptance": [
+    "Observed complete QR6-to-QR7 pickup, physical travel and delivery verification",
+    "Measured actual speed and turning radius",
+    "Two physical robots at an intersection",
+    "Physical plus Webots intersection runtime acceptance"
+  ],
+  "knownLimits": [
+    "No automatic physical turn, U-turn or return-to-charge in the straight marker/line demo",
+    "Live configuration requires real fresh LiDAR; no-LiDAR exception is not enabled",
+    "Journal reset after server recovery still requires verified archival; restarting does not silently discard a mission hold",
+    "Aiven needs Internet and a single active backend coordinator"
+  ],
+  "runbook": "docs/physical-demo-home-test.md"
+}
